@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet>
+    <MetaInfo>
+        <TypeDefines></TypeDefines>
+        <Input></Input>
+        <Output></Output>
+        <Cache></Cache>
+    </MetaInfo>
+    <SubRuleSet>
+
+    </SubRuleSet>
+    <SubRuleSet>
+
+    </SubRuleSet>
+</RuleSet>
