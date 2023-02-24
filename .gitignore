@@ -3,3 +3,5 @@
 *.lib
 *.so
 *.dll
+/build/
+/out/

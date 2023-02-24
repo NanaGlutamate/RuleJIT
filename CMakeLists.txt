@@ -10,13 +10,13 @@ add_library(${PROJ_NAME} SHARED HowToUseLLJIT.cpp)
 
 # Find the libraries that correspond to the LLVM components
 # that we wish to use
-llvm_map_components_to_libnames(
-  llvm_libs 
-  Core
-  OrcJIT
-  Support
-  nativecodegen
-)
+# llvm_map_components_to_libnames(
+#   llvm_libs 
+#   Core
+#   OrcJIT
+#   Support
+#   nativecodegen
+# )
 
 # Link against LLVM libraries
-target_link_libraries(Test ${llvm_libs})
+# target_link_libraries(Test ${llvm_libs})
