@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet version="1.1">
+    <TypeDefines>
+        <TypeDefine type="Location">
+            <Variable name="altitude" type="double"/>
+            <Variable name="longitude" type="double"/>
+            <Variable name="latitude" type="double"/>
+        </TypeDefine>
+        <TypeDefine type="Vector3">
+            <Variable name="x" type="double"/>
+            <Variable name="y" type="double"/>
+            <Variable name="z" type="double"/>
+        </TypeDefine>
+    </TypeDefines>
+    <FunctionDefines>
+        <FunctionDefine type="normal">
+            <FunctionIdentifier>
+                <Name>add</Name>
+                <FunctionType>
+                    <Type>u</Type>
+                    <Type>u</Type>
+                    <Type>u</Type>
+                </FunctionType>
+                <Params>
+                    <Param>a</Param>
+                    <Param>b</Param>
+                </Params>
+            </FunctionIdentifier>
+            <ReturnExpression>
+                <Expression>a+b</Expression>
+            </ReturnExpression>
+        </FunctionDefine>
+        <FunctionDefine type="operator">
+            <FunctionIdentifier>
+                <Name>*</Name>
+                <FunctionType>
+                    <Type>Vector3</Type>
+                    <Type>Vector3</Type>
+                    <Type>f</Type>
+                </FunctionType>
+                <Params>
+                    <Param>a</Param>
+                    <Param>b</Param>
+                </Params>
+            </FunctionIdentifier>
+            <ReturnExpression>
+                <Expression>a.x*b.x+a.y*b.y+a.z*b.z</Expression>
+            </ReturnExpression>
+        </FunctionDefine>
+    </FunctionDefines>
+    <MetaInfo>
+        <Inputs>
+            <Param name="Input1" type="uint32">
+                <InitValue>12</InitValue>
+            </Param>
+        </Inputs>
+        <Outputs>
+            <Param name="Output1" type="uint32"/>
+        </Outputs>
+        <Caches>
+            <Param name="Cache1" type="uint32">
+                <InitValue>0</InitValue>
+            </Param>
+        </Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs>
+                    <Param name="Input1" type="uint32">
+                        <InitValue>12</InitValue>
+                    </Param>
+                </Inputs>
+                <Outputs>
+                    <Param name="Output1" type="uint32"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32">
+                        <InitValue>0</InitValue>
+                    </Param>
+                </Caches>
+            </MetaInfo>
+        </SubRuleSet>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs>
+                    <Param name="Input1" type="uint32">
+                        <InitValue>12</InitValue>
+                    </Param>
+                </Inputs>
+                <Outputs>
+                    <Param name="Output1" type="uint32"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32">
+                        <InitValue>0</InitValue>
+                    </Param>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Antecedent>
+                        <Expression>Input1!=0</Expression>
+                    </Antecedent>
+                    <AfterMath>
+                        <Assignment>
+                            <Target>Cache1</Target>
+                            <Value>
+                                <Expression>
+                                    <AST>
+                                        <FunctionCall>
+                                            <FunctionIdentifier>
+                                                <Name>add</Name>
+                                                <FunctionType>
+                                                    <Type>u</Type>
+                                                    <Type>u</Type>
+                                                    <Type>u</Type>
+                                                </FunctionType>
+                                            </FunctionIdentifier>
+                                            <Params>
+                                                <Variable>Cache1</Variable>
+                                                <Literal type="u">1</Literal>
+                                            </Params>
+                                        </FunctionCall>
+                                    </AST>
+                                </Expression>
+                            </Value>
+                        </Assignment>
+                    </AfterMath>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

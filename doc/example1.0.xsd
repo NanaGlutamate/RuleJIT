@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="RuleSet" type="RuleSet"/>
+
+    <xs:complexType name="RuleSet">
+        <xs:sequence>
+            <xs:element name="TypeDefines" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="TypeDefine" type="TypeDefine" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="MetaInfo" type="MetaInfo"/>
+            <xs:element name="SubRuleSets">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="SubRuleSet" type="SubRuleSet" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="version" type="xs:string"/>
+    </xs:complexType>
+    
+    <xs:complexType name="TypeDefine">
+        <xs:sequence>
+            <xs:element name="Variable" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:attribute name="name" type="xs:string"/>
+                    <xs:attribute name="type" type="xs:string"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="type" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="Param">
+        <xs:sequence>
+            <xs:element name="InitValue" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="name" type="xs:string"/>
+        <xs:attribute name="type" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="Params">
+        <xs:sequence>
+            <xs:element name="Param" type="Param" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="MetaInfo">
+        <xs:sequence>
+            <xs:element name="Inputs" type="Params"/>
+            <xs:element name="Outputs" type="Params"/>
+            <xs:element name="Caches" type="Params"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SubRuleSet">
+        <xs:sequence>
+            <xs:element name="MetaInfo" type="MetaInfo"/>
+            <xs:element name="Rules">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Rule" type="Rule" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Rule">
+        <xs:sequence>
+            <xs:element name="Antecedent">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Expression" type="Expression"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="AfterMath">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="Assignment" maxOccurs="unbounded">
+                            <xs:complexType>
+                                <xs:sequence>
+                                    <xs:element name="Target" type="xs:string"/>
+                                    <xs:element name="Value">
+                                        <xs:complexType>
+                                            <xs:sequence>
+                                                <xs:element name="Expression" type="Expression" maxOccurs="unbounded"/>
+                                            </xs:sequence>
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:sequence>
+                            </xs:complexType>
+                        </xs:element>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Expression">
+        <xs:simpleContent>
+            <xs:extension base="xs:string"/>
+        </xs:simpleContent>
+    </xs:complexType>
+</xs:schema>
