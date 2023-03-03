@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <set>
 
 #include "visitor.hpp"
 
@@ -10,17 +11,11 @@
 
 namespace rulejit {
 
-enum class VarType{
-    REAL = 1,
-    SIGNED = 2,
-    UNSIGHED = 4,
-    STRING = 8,
-    FUNCTION = 16,
-};
-
-struct FunctionType{
-    // f(A, B)->C = A->B->C
-    std::vector<VarType> functionType;
+std::set<std::string> buildInType{
+    "i64",
+    "u64",
+    "f64",
+    "char",
 };
 
 struct AST{
@@ -29,7 +24,7 @@ struct AST{
 };
 
 struct ExprAST : public AST {
-    VarType type;
+    std::string type;
 };
 
 struct IdentifierExprAST : public ExprAST{
@@ -52,13 +47,24 @@ struct DefAST : public AST {
     std::string name;
 };
 
+struct TypeDefAST : public DefAST {
+    ACCEPT_FUNCTION;
+    struct VarDef {
+        std::string type;
+        std::string name;
+    };
+    std::vector<VarDef> member;
+};
+
 struct VarDefAST : public DefAST {
     ACCEPT_FUNCTION;
+    std::string type;
     std::unique_ptr<ExprAST> defineValue;
 };
 
 struct FunctionDefAST : public DefAST {
     ACCEPT_FUNCTION;
+    std::string type;
     std::vector<std::unique_ptr<IdentifierExprAST>> params;
     std::unique_ptr<ExprAST> returnValue;
 };

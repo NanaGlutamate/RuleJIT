@@ -10,6 +10,7 @@ struct LiteralExprAST;
 struct FunctionCallExprAST;
 struct VarDefAST;
 struct FunctionDefAST;
+struct TypeDefAST;
 
 struct Visitor{
     PURE_VIRTUAL_VISIT_FUNCTION(IdentifierExprAST);
@@ -17,6 +18,7 @@ struct Visitor{
     PURE_VIRTUAL_VISIT_FUNCTION(FunctionCallExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(VarDefAST);
     PURE_VIRTUAL_VISIT_FUNCTION(FunctionDefAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(TypeDefAST);
     virtual ~Visitor() = default;
 };
 

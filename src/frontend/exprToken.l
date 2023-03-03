@@ -1,20 +1,23 @@
 %{
+#define YY_NO_UNISTD_H
 #include<stdio.h>
 %}
 
 IDENT [_a-zA-Z][_a-zA-Z0-9]*
 NUM (([1-9][0-9]*"."?[0-9]*)|(0"."?[0-9]*))(e-?(([1-9][0-9]*)|"0"))?
-SYM "+"|"-"|"*"|"/"|"("|")"|"<"|">"|">="|"<="|"=="|"!="|"&&"|"&"|"||"|"|"|"~"|"!"|","|"."|";"|"<<"|">>"|"""|"["|"]"
+STRING \"([^"]|\\\")*\"
+SYM .|&&|"||"|>=|<=|==|->|!=|>>|<<
 SPACE " "|\r|\n|\t
-KEYWORD and|or|not
+KEYWORD and|or|not|if|else|while|for|do|func|var
 
 %%
 
-{IDENT} {printf("ident ");}
-{NUM} {printf("num ");}
-{SYM} {printf("sym ");}
-{SPACE}
-. {printf("unknown: %c", *yytext);}
+{STRING}    {printf("string ");}
+{NUM}       {printf("num ");}
+{KEYWORD}   {printf("keyword ");}
+{IDENT}     {printf("ident ");}
+{SPACE}     {}
+{SYM}       {printf("sym ");}
 
 %%
 
