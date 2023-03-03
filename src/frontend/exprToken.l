@@ -1,21 +1,31 @@
 %{
+
+// CAUTION: input string should end line with '\n', not '\r\n'
+
 #define YY_NO_UNISTD_H
 #include<stdio.h>
+
 %}
 
-IDENT [_a-zA-Z][_a-zA-Z0-9]*
-NUM (([1-9][0-9]*"."?[0-9]*)|(0"."?[0-9]*))(e-?(([1-9][0-9]*)|"0"))?
+INT [1-9][0-9]*
+REAL (([1-9][0-9]*"."[0-9]*)|(0"."[0-9]*)|("."[0-9]+))(e-?(([1-9][0-9]*)|"0"))?
 STRING \"([^"]|\\\")*\"
+
+IDENT ("[]")*[_a-zA-Z][_a-zA-Z0-9]*
 SYM .|&&|"||"|>=|<=|==|->|!=|>>|<<
-SPACE " "|\r|\n|\t
-KEYWORD and|or|not|if|else|while|for|do|func|var
+ENDLINE ;|\n
+SPACE " "|\t|\r
+KEYWORD and|or|not|if|else|while|func|var|type
 
 %%
 
 {STRING}    {printf("string ");}
-{NUM}       {printf("num ");}
+{REAL}      {printf("real ");}
+{INT}       {printf("int ");}
+
 {KEYWORD}   {printf("keyword ");}
 {IDENT}     {printf("ident ");}
+{ENDLINE}   {printf("end-of-line ");}
 {SPACE}     {}
 {SYM}       {printf("sym ");}
 

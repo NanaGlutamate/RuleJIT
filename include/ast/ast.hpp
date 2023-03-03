@@ -15,7 +15,7 @@ std::set<std::string> buildInType{
     "i64",
     "u64",
     "f64",
-    "char",
+    "string",
 };
 
 struct AST{
@@ -25,28 +25,68 @@ struct AST{
 
 struct ExprAST : public AST {
     std::string type;
+    bool isArray(){return !type.empty() && type[0]=='[';}
 };
 
+// x
 struct IdentifierExprAST : public ExprAST{
     ACCEPT_FUNCTION;
     std::string name;
 };
 
+// vector.x (same as vector["x"]) | list[a+b] | make_vector(1, 2, 3).x
+struct MemberAccessExprAST : public ExprAST{
+    ACCEPT_FUNCTION;
+    std::unique_ptr<ExprAST> baseVar;
+    std::unique_ptr<ExprAST> memberToken;
+};
+
+// "abc" | 12 TODO:| 1e3
 struct LiteralExprAST : public ExprAST{
     ACCEPT_FUNCTION;
     std::string value;
 };
 
+// add(1+3)
 struct FunctionCallExprAST : public ExprAST{
     ACCEPT_FUNCTION;
     std::string functionName;
-    std::vector<std::unique_ptr<AST>> params;
+    std::vector<std::unique_ptr<ExprAST>> params;
 };
+
+// // {1, 2, 3} | Info{{"abc", 3}, 13} | Vector3{x: 1, y: 2, z: 3}
+// struct ComplexLiteralExprAST : public ExprAST{
+//     ACCEPT_FUNCTION;
+//     std::vector<std::unique_ptr<ExprAST>> members;
+// };
+
+// // if(a==0){1}else{2}
+// struct BranchExprAST : public ExprAST{
+//     ACCEPT_FUNCTION;
+//     std::unique_ptr<ExprAST> condition;
+//     std::unique_ptr<ExprAST> trueBranch;
+//     std::unique_ptr<ExprAST> falseBranch;
+// };
+
+// // while(x!=0){x+=1;x;}
+// struct LoopAST : public ExprAST{
+//     ACCEPT_FUNCTION;
+//     std::unique_ptr<ExprAST> condition;
+//     std::unique_ptr<ExprAST> body;
+// };
+
+// // var x i64 = 12; x;
+// struct SequensialExprAST : public ExprAST{
+//     ACCEPT_FUNCTION;
+//     std::vector<std::unique_ptr<AST>> preStatement;
+//     std::unique_ptr<ExprAST> value;
+// };
 
 struct DefAST : public AST {
     std::string name;
 };
 
+// type Vector3 struct {x f64; y f64; z f64;};
 struct TypeDefAST : public DefAST {
     ACCEPT_FUNCTION;
     struct VarDef {
@@ -56,17 +96,27 @@ struct TypeDefAST : public DefAST {
     std::vector<VarDef> member;
 };
 
+// var x []i64 = {1, 3, 4};
+// TODO: var x []i64 {1, 3, 4};
 struct VarDefAST : public DefAST {
     ACCEPT_FUNCTION;
     std::string type;
     std::unique_ptr<ExprAST> defineValue;
 };
 
-struct FunctionDefAST : public DefAST {
-    ACCEPT_FUNCTION;
-    std::string type;
-    std::vector<std::unique_ptr<IdentifierExprAST>> params;
-    std::unique_ptr<ExprAST> returnValue;
-};
+// // func add(i i64) i64 -> i+1;
+// // TODO: | func add i64 -> i64 -> i64 = a -> b -> a+b
+// struct FunctionDefAST : public DefAST {
+//     ACCEPT_FUNCTION;
+//     std::string type;
+//     std::vector<std::unique_ptr<IdentifierExprAST>> params;
+//     // std::vector<std::unique_ptr<AST>> funcBody;
+//     std::unique_ptr<ExprAST> returnValue;
+// };
+
+// struct TopLevelAST : public AST{
+//     ACCEPT_FUNCTION;
+//     std::vector<std::unique_ptr<AST>> statements;
+// };
 
 }
