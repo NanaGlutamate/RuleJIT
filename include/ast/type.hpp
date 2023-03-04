@@ -11,7 +11,7 @@
 
 namespace rulejit {
 
-std::set<std::string> buildInType{
+inline std::set<std::string> buildInType{
     // "i64",
     // "u64",
     "f64",
@@ -22,7 +22,7 @@ struct TypeInfo {
     virtual bool isArray() { return false; }
     virtual bool isFunction() { return false; }
     virtual bool isIdent() { return false; }
-    virtual TypeInfo *memberType(const std::string &ident) { return nullptr; }
+    virtual TypeInfo *getMemberType(const std::string &ident) { return nullptr; }
     // virtual bool isLegal(){return false;}
     virtual ~TypeInfo() = default;
 };
@@ -44,22 +44,23 @@ struct TypeIdent : public TypeInfo {
 struct SliceType : public TypeInfo {
     std::unique_ptr<TypeInfo> baseType;
     bool isArray() { return true; }
-    TypeInfo *memberType(const std::string &ident) { return baseType.get(); }
+    TypeInfo *getMemberType(const std::string &ident) { return baseType.get(); }
 };
 
 // (i64, i64):i64 (regard "func" as define keyword like var)
 struct FuncType : public TypeInfo {
     std::vector<std::unique_ptr<TypeInfo>> paramType;
+    // nullptr if no returns
     std::unique_ptr<TypeInfo> returnType;
     virtual bool isFunction() { return true; }
 };
 
 // {i64; i64} (access by '[num]' like tuple in python) | {x f32; y f32} (regard "type" as define keyword like var, TODO:
-// "struct", "class" and "dynamic" as specific identifier like "addable") TODO: static, and regard member function as
-// static func pointer
+// "struct", "class" and "dynamic" as attribute like "addable") TODO: static, and regard member function as static func
+// pointer
 struct DynamicType : public TypeInfo {
     std::vector<std::tuple<std::string, std::unique_ptr<TypeInfo>>> memberType;
-    TypeInfo *memberType(const std::string &ident) {
+    TypeInfo *getMemberType(const std::string &ident) {
         return std::get<1>(*std::find_if(memberType.begin(), memberType.end(),
                                          [&](auto &x) { return std::get<0>(x) == ident; }))
             //*std::ranges::find_if(memberType, [&](auto &x) { return std::get<0>(x) == ident; }))

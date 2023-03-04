@@ -24,29 +24,27 @@ REAL (([1-9][0-9]*"."[0-9]*)|(0"."[0-9]*)|("."[0-9]+))(e-?(([1-9][0-9]*)|"0"))?
 STRING \"([^"]|\\\")*\"
 
 IDENT [_a-zA-Z][_a-zA-Z0-9]*
-SYM .|&&|"||"|>=|<=|==|->|!=|>>|<<
+SYM [^0-9a-zA-Z_]|&&|"||"|>=|<=|==|->|!=|>>|<<|and|or|not|xor
 ENDLINE ;|\n
 SPACE " "|\t|\r
 END \0
-KEYWORD if|else|while|func|var|type|struct|class|dynamic|interface|extern
-LOGIC and|or|not|xor
+KEYWORD if|else|while|func|var|type|struct|class|dynamic|interface|extern|return
 
 COMMENT "//"[^\n]*
 
 %%
 
 <<EOF>>|{END}     {printf("EOF ");}
-{COMMENT}         {}
-{STRING}          {printf("string ");}
+{SPACE}           {}
 {REAL}            {printf("real ");}
 {INT}             {printf("int ");}
+{STRING}          {printf("string ");}
 
-{LOGIC}           {printf("logic ");}
 {KEYWORD}         {printf("keyword ");}
+{SYM}             {printf("sym ");}
 {IDENT}           {printf("ident ");}
 {ENDLINE}         {printf("end-of-line ");}
-{SPACE}           {}
-{SYM}             {printf("sym ");}
+{COMMENT}         {}
 
 %%
 

@@ -1,0 +1,1 @@
+add_executable(lexer_test ${FRONTEND_SRC} main.cpp)

@@ -6,8 +6,8 @@
 #include <set>
 #include <algorithm>
 
-#include "type.hpp"
-#include "astvisitor.hpp"
+#include "ast/type.hpp"
+#include "ast/astvisitor.hpp"
 
 #define ACCEPT_FUNCTION void accept(ASTVisitor& v) override {v.visit(*this);}
 
@@ -22,7 +22,7 @@ struct ExprAST : public AST {
     std::unique_ptr<TypeInfo> type;
 };
 
-struct AssignableExprAST : public AST {};
+struct AssignableExprAST : public ExprAST {};
 
 // x
 struct IdentifierExprAST : public AssignableExprAST{
@@ -50,7 +50,7 @@ struct FunctionCallExprAST : public ExprAST{
     std::vector<std::unique_ptr<ExprAST>> params;
 };
 
-// {1, 2, 3} | Info{Base{name: "abc", value: 3}, time: 13} | Vector3{x: 1, y: 2, z: 3}
+// []i64{1, 2, 3} | Info{Base{name: "abc", value: 3}, time: 13} | Vector3{x: 1, y: 2, z: 3}
 struct ComplexLiteralExprAST : public ExprAST{
     ACCEPT_FUNCTION;
     std::vector<std::unique_ptr<ExprAST>> members;
@@ -71,7 +71,7 @@ struct LoopAST : public ExprAST{
     std::unique_ptr<ExprAST> body;
 };
 
-// var x i64 = 12; x;
+// {var x i64 = 12; x;}
 struct SequensialExprAST : public ExprAST{
     ACCEPT_FUNCTION;
     std::vector<std::unique_ptr<AST>> preStatement;
@@ -108,7 +108,7 @@ struct VarDefAST : public DefAST {
     std::unique_ptr<ExprAST> defineValue;
 };
 
-// func add(i i64) i64 -> i+1;
+// func add(i i64): i64 -> i+1;
 // TODO: | func add i64 -> i64 -> i64 = a -> b -> a+b
 struct FunctionDefAST : public DefAST {
     ACCEPT_FUNCTION;
