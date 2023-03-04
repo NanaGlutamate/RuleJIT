@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lexer.h"
+#include "ast/ast.hpp"
 
 namespace rulejit {
 

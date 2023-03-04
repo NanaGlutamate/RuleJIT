@@ -16,6 +16,8 @@ struct BranchExprAST;
 struct LoopAST;
 struct SequensialExprAST;
 
+struct AssignmentAST;
+
 struct TypeDefAST;
 struct VarDefAST;
 struct FunctionDefAST;
@@ -31,6 +33,8 @@ struct ASTVisitor{
     VIRTUAL_VISIT_FUNCTION(BranchExprAST);
     VIRTUAL_VISIT_FUNCTION(LoopAST);
     VIRTUAL_VISIT_FUNCTION(SequensialExprAST);
+
+    VIRTUAL_VISIT_FUNCTION(AssignmentAST);
 
     VIRTUAL_VISIT_FUNCTION(TypeDefAST);
     VIRTUAL_VISIT_FUNCTION(VarDefAST);

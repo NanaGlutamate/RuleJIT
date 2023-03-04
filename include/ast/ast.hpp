@@ -6,44 +6,32 @@
 #include <set>
 #include <algorithm>
 
+#include "type.hpp"
 #include "astvisitor.hpp"
 
 #define ACCEPT_FUNCTION void accept(ASTVisitor& v) override {v.visit(*this);}
 
 namespace rulejit {
 
-std::set<std::string> buildInType{
-    // "i64",
-    // "u64",
-    "f64",
-    "string",
-};
-
 struct AST{
     virtual void accept(ASTVisitor&) = 0;
     virtual ~AST() = default;
 };
 
-struct TypeInfo{
-    std::vector<std::string> type;
-    bool isArray(){return !type.empty() && type[0][0]=='[' && type[0][type.size()-1]==']';}
-    bool isFunction(){return type.size()>4 && type[0]=="func" && type[1]=="(";}
-    bool isLegal(){}
-    // size_t getArrayLength(){return std::atod(type[0]);}
+struct ExprAST : public AST {
+    std::unique_ptr<TypeInfo> type;
 };
 
-struct ExprAST : public AST {
-    TypeInfo type;
-};
+struct AssignableExprAST : public AST {};
 
 // x
-struct IdentifierExprAST : public ExprAST{
+struct IdentifierExprAST : public AssignableExprAST{
     ACCEPT_FUNCTION;
     std::string name;
 };
 
 // vector.x (same as vector["x"]) | list[a+b] | make_vector(1, 2, 3).x
-struct MemberAccessExprAST : public ExprAST{
+struct MemberAccessExprAST : public AssignableExprAST{
     ACCEPT_FUNCTION;
     std::unique_ptr<ExprAST> baseVar;
     std::unique_ptr<ExprAST> memberToken;
@@ -87,6 +75,13 @@ struct LoopAST : public ExprAST{
 struct SequensialExprAST : public ExprAST{
     ACCEPT_FUNCTION;
     std::vector<std::unique_ptr<AST>> preStatement;
+    std::unique_ptr<ExprAST> value;
+};
+
+// x = 12 CAUTION: no returns and not an expression
+struct AssignmentAST : public AST{
+    ACCEPT_FUNCTION;
+    std::unique_ptr<AssignableExprAST> target;
     std::unique_ptr<ExprAST> value;
 };
 
