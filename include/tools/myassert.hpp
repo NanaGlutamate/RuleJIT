@@ -32,7 +32,7 @@ inline void my_assert(bool check,
 inline void my_assert(bool check, std::string message){
     if(!check){
         std::cout << message << std::endl;
-        throw std::logic_error("");
+        throw std::logic_error(message);
     }
 }
 
