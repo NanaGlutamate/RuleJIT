@@ -1,11 +1,11 @@
 get_property(dirs DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 
 file(TIMESTAMP ${CMAKE_CURRENT_SOURCE_DIR}/exprToken.l L_MODIFIED_TIME "%s")
-file(TIMESTAMP ${CMAKE_CURRENT_SOURCE_DIR}/lex.yy.c C_MODIFIED_TIME "%s")
+file(TIMESTAMP ${CMAKE_CURRENT_SOURCE_DIR}/lex.yy.cc C_MODIFIED_TIME "%s")
 
 if(C_MODIFIED_TIME EQUAL "" OR C_MODIFIED_TIME STRLESS L_MODIFIED_TIME)
-    message(STATUS "[flex call] regenerate lex.yy.c")
-    execute_process(COMMAND wsl flex exprToken.l WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    message(STATUS "[flex call] regenerate lex.yy.cc")
+    execute_process(COMMAND wsl flex -+ exprToken.l WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
 # ${CMAKE_CURRENT_SOURCE_DIR}/*.c 

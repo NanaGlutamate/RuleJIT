@@ -54,7 +54,7 @@ struct FunctionCallExprAST : public ExprAST{
     std::vector<std::unique_ptr<ExprAST>> params;
 };
 
-// // {1, 2, 3} | Info{{"abc", 3}, 13} | Vector3{x: 1, y: 2, z: 3}
+// // {1, 2, 3} | Info{Base{name: "abc", value: 3}, time: 13} | Vector3{x: 1, y: 2, z: 3}
 // struct ComplexLiteralExprAST : public ExprAST{
 //     ACCEPT_FUNCTION;
 //     std::vector<std::unique_ptr<ExprAST>> members;
