@@ -1,12 +1,12 @@
-import re
 import math
 import operator
-from typing import List, Dict, Tuple
+import re
+from typing import Dict, List, Tuple
 
 NumToken = re.compile('^[0-9.]+$')
 VarToken = re.compile('^[a-zA-Z][a-zA-Z0-9]*$')
 
-ops = {"<" : 10, ">" : 10, "+" : 20, "-" : 20, "*" : 30, "/" : 30}
+ops = {"<" : 10, ">" : 10, "+" : 20, "-" : 20, "*" : 30, "/" : 30, "." : 40}
 
 def isOp(s):
     return s in ops
@@ -90,24 +90,32 @@ def processPrim(stack):
         return stack, eval(stack.pop())
     elif isIdent(stack[-1]):
         name = stack.pop()
-        if not stack or stack[-1] != '(':
+        if not stack or (stack[-1] != '(' and stack[-1] != '['):
             return stack, name
-        stack.pop()
-        var = []
-        while stack:
-            if stack[-1] == ')':
-                stack.pop()
-                break
+        if stack[-1] == '(':
+            stack.pop()
+            var = []
+            while stack:
+                if stack[-1] == ')':
+                    stack.pop()
+                    break
+                stack, tree = processExpr(stack)
+                var.append(tree)
+                if not stack:
+                    raise Exception('unexpext eof')
+                exp_end = stack[-1]
+                if exp_end != ',' and exp_end != ')':
+                    raise Exception(f'expect "," or ")", found "{exp_end}"')
+                if exp_end == ',':
+                    stack.pop()
+            return stack, (name, *var)
+        elif stack[-1] == '[':
+            stack[-1].pop()
             stack, tree = processExpr(stack)
-            var.append(tree)
-            if not stack:
-                raise Exception('unexcept eof')
-            exp_end = stack[-1]
-            if exp_end != ',' and exp_end != ')':
-                raise Exception(f'expect "," or ")", found "{exp_end}"')
-            if exp_end == ',':
-                stack.pop()
-        return stack, (name, *var)
+            if stack.pop() != ']':
+                raise Exception('expect "]"')
+            return stack, ('-subscript', name, tree)
+            
 
 def processStr(s):
     tokens = [i for i in getTokens(s)][::-1]
@@ -126,6 +134,8 @@ fun = {
     'asin': math.asin,
     'acos': math.acos,
     'atan': math.atan,
+    '-subscript': lambda a, b: eval(a)[b],
+    '.': lambda a, b: eval(a)[b],
 }
 
 sin = math.sin
@@ -147,13 +157,19 @@ def evalTree(tree):
         return tree[-1]
 
 def test(s: str):
-    if not evalTree(processStr(s)) == eval(s):
+    tree = processStr(s)
+    print(f"tree: {tree}")
+    if not evalTree(tree) == eval(s):
         print(f'test not pass: \n\t{s}: {evalTree(processStr(s))} != {eval(s)}')
     else:
         print(f'test passed: {s}')
+
+array = [1,2,3,4,5]
+struct = {'zero': 0, 'pi': math.pi}
 
 if __name__ == '__main__':
     test('1+2+3*4*5+6')
     test('1+(2+3)*4+5')
     test('1+(2+(3)*4)+5')
     test('1+sin(2+(3)*4)+5')
+    test('struct.pi.z*2')

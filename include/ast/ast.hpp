@@ -4,28 +4,36 @@
 #include <vector>
 #include <string>
 #include <set>
+#include <algorithm>
 
-#include "visitor.hpp"
+#include "astvisitor.hpp"
 
-#define ACCEPT_FUNCTION void accept(Visitor& v) override {v.visit(*this);}
+#define ACCEPT_FUNCTION void accept(ASTVisitor& v) override {v.visit(*this);}
 
 namespace rulejit {
 
 std::set<std::string> buildInType{
-    "i64",
-    "u64",
+    // "i64",
+    // "u64",
     "f64",
     "string",
 };
 
 struct AST{
-    virtual void accept(Visitor&) = 0;
+    virtual void accept(ASTVisitor&) = 0;
     virtual ~AST() = default;
 };
 
+struct TypeInfo{
+    std::vector<std::string> type;
+    bool isArray(){return !type.empty() && type[0][0]=='[' && type[0][type.size()-1]==']';}
+    bool isFunction(){return type.size()>4 && type[0]=="func" && type[1]=="(";}
+    bool isLegal(){}
+    // size_t getArrayLength(){return std::atod(type[0]);}
+};
+
 struct ExprAST : public AST {
-    std::string type;
-    bool isArray(){return !type.empty() && type[0]=='[';}
+    TypeInfo type;
 };
 
 // x
@@ -54,39 +62,39 @@ struct FunctionCallExprAST : public ExprAST{
     std::vector<std::unique_ptr<ExprAST>> params;
 };
 
-// // {1, 2, 3} | Info{Base{name: "abc", value: 3}, time: 13} | Vector3{x: 1, y: 2, z: 3}
-// struct ComplexLiteralExprAST : public ExprAST{
-//     ACCEPT_FUNCTION;
-//     std::vector<std::unique_ptr<ExprAST>> members;
-// };
+// {1, 2, 3} | Info{Base{name: "abc", value: 3}, time: 13} | Vector3{x: 1, y: 2, z: 3}
+struct ComplexLiteralExprAST : public ExprAST{
+    ACCEPT_FUNCTION;
+    std::vector<std::unique_ptr<ExprAST>> members;
+};
 
-// // if(a==0){1}else{2}
-// struct BranchExprAST : public ExprAST{
-//     ACCEPT_FUNCTION;
-//     std::unique_ptr<ExprAST> condition;
-//     std::unique_ptr<ExprAST> trueBranch;
-//     std::unique_ptr<ExprAST> falseBranch;
-// };
+// if(a==0){1}else{2}
+struct BranchExprAST : public ExprAST{
+    ACCEPT_FUNCTION;
+    std::unique_ptr<ExprAST> condition;
+    std::unique_ptr<ExprAST> trueBranch;
+    std::unique_ptr<ExprAST> falseBranch;
+};
 
-// // while(x!=0){x+=1;x;}
-// struct LoopAST : public ExprAST{
-//     ACCEPT_FUNCTION;
-//     std::unique_ptr<ExprAST> condition;
-//     std::unique_ptr<ExprAST> body;
-// };
+// while(x!=0){x+=1;x;}
+struct LoopAST : public ExprAST{
+    ACCEPT_FUNCTION;
+    std::unique_ptr<ExprAST> condition;
+    std::unique_ptr<ExprAST> body;
+};
 
-// // var x i64 = 12; x;
-// struct SequensialExprAST : public ExprAST{
-//     ACCEPT_FUNCTION;
-//     std::vector<std::unique_ptr<AST>> preStatement;
-//     std::unique_ptr<ExprAST> value;
-// };
+// var x i64 = 12; x;
+struct SequensialExprAST : public ExprAST{
+    ACCEPT_FUNCTION;
+    std::vector<std::unique_ptr<AST>> preStatement;
+    std::unique_ptr<ExprAST> value;
+};
 
 struct DefAST : public AST {
     std::string name;
 };
 
-// type Vector3 struct {x f64; y f64; z f64;};
+// type Vector3 struct {x f64; y f64; z f64;} | type double f64 | TODO: type Reference<T> class {T item;}
 struct TypeDefAST : public DefAST {
     ACCEPT_FUNCTION;
     struct VarDef {
@@ -97,6 +105,7 @@ struct TypeDefAST : public DefAST {
 };
 
 // var x []i64 = {1, 3, 4};
+// TODO: var x [4]f64;
 // TODO: var x []i64 {1, 3, 4};
 struct VarDefAST : public DefAST {
     ACCEPT_FUNCTION;
@@ -104,19 +113,19 @@ struct VarDefAST : public DefAST {
     std::unique_ptr<ExprAST> defineValue;
 };
 
-// // func add(i i64) i64 -> i+1;
-// // TODO: | func add i64 -> i64 -> i64 = a -> b -> a+b
-// struct FunctionDefAST : public DefAST {
-//     ACCEPT_FUNCTION;
-//     std::string type;
-//     std::vector<std::unique_ptr<IdentifierExprAST>> params;
-//     // std::vector<std::unique_ptr<AST>> funcBody;
-//     std::unique_ptr<ExprAST> returnValue;
-// };
+// func add(i i64) i64 -> i+1;
+// TODO: | func add i64 -> i64 -> i64 = a -> b -> a+b
+struct FunctionDefAST : public DefAST {
+    ACCEPT_FUNCTION;
+    std::string type;
+    std::vector<std::unique_ptr<IdentifierExprAST>> params;
+    // std::vector<std::unique_ptr<AST>> funcBody;
+    std::unique_ptr<ExprAST> returnValue;
+};
 
-// struct TopLevelAST : public AST{
-//     ACCEPT_FUNCTION;
-//     std::vector<std::unique_ptr<AST>> statements;
-// };
+struct TopLevelAST : public AST{
+    ACCEPT_FUNCTION;
+    std::vector<std::unique_ptr<AST>> statements;
+};
 
 }

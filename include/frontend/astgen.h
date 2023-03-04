@@ -9,9 +9,9 @@ struct RuleSetASTGenerator{
 };
 
 struct ExprASTGenerator{
-    ExprASTGenerator():lexer(ExpressionLexer::getLexer()){};
+    ExprASTGenerator():lexer(){};
 private:
-    ExpressionLexer& lexer;
+    ExpressionLexer lexer;
 };
 
 }

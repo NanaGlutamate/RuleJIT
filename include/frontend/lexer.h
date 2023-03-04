@@ -2,26 +2,44 @@
 
 #include <type_traits>
 #include <string>
-#include <cctype>
+#include <iostream>
+#include <map>
+
 
 namespace rulejit {
 
+#define TOKEN(t) t
 enum class TokenType{
-    INT,
-    REAL,
-    STRING,
-    
-    IDENT,
-    SYM,
-    ENDLINE,
-    KEYWORD,
-    END,
+    TOKEN(INT),
+    TOKEN(REAL),
+    TOKEN(STRING),
+    TOKEN(IDENT),
+    TOKEN(SYM),
+    TOKEN(ENDLINE),
+    TOKEN(KEYWORD),
+    TOKEN(END),
 };
+#undef TOKEN
+#define TOKEN(t) {TokenType::t, #t}
+std::ostream& operator<<(std::ostream& o, TokenType type){
+    return o << std::map<TokenType, std::string>{
+        TOKEN(INT),
+        TOKEN(REAL),
+        TOKEN(STRING),
+        TOKEN(IDENT),
+        TOKEN(SYM),
+        TOKEN(ENDLINE),
+        TOKEN(KEYWORD),
+        TOKEN(END),
+    }[type];
+}
+#undef TOKEN
 
-template <typename Ele> class ExpressionLexer {
+class ExpressionLexer {
 public:
-    using BufferType = basic_string<Ele, char_traits<Ele>, allocator<Ele>>;
-    using BufferView = basic_string_view<Ele>;
+    using Ele = char;
+    using BufferType = std::string;
+    using BufferView = std::string_view;
     // static ExpressionLexer& getLexer(){static ExpressionLexer e; return e;}
     ExpressionLexer() = default;
     template<typename SrcTy>
@@ -33,19 +51,11 @@ public:
     BufferView pop(){BufferView tmp = top(); begin = next; extend(); return tmp;}
 private:
     bool charEqual(Ele e){return *next == e;}
-    void extend(){
-        if(begin == end || type == TokenType::END){
-            type = TokenType::END;
-            return;
-        }
-        while(charEqual(' ') || charEqual('\t'))next++;
-        begin = next;
-        if(isalpha(*begin) || begin)
-    }
+    void extend();
     void restartLexer(){begin = buffer.c_str(); next = begin; end = begin + buffer.size(); extend();}
-    Ele* begin;
-    Ele* next;
-    Ele* end;
+    const Ele* begin;
+    const Ele* next;
+    const Ele* end;
     TokenType type;
     BufferType buffer;
 };

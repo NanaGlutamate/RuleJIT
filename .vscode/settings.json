@@ -88,6 +88,8 @@
         "xlocbuf": "cpp",
         "xlocmes": "cpp",
         "xlocmon": "cpp",
-        "xloctime": "cpp"
+        "xloctime": "cpp",
+        "iostream": "cpp",
+        "source_location": "cpp"
     }
 }

@@ -10,4 +10,4 @@
 //#include "llvm/IR/Type.h"
 //#include "llvm/IR/Verifier.h"
 
-#include "frontend/irgen.h"
+#include "ir/irgen.h"

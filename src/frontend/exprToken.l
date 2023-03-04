@@ -1,21 +1,23 @@
 %{
 
-// CAUTION: input string should end line with '\n', not '\r\n'
+/****************************************************************
+%option c++
+%option yyclass="GeneratedLexer"
+%option batch
+*/
+// CAUTION: input string should end line with '\n', not '\r\n'; no unicode support
 
-// #define YY_NO_UNISTD_H
+#define YY_NO_UNISTD_H
 #include<stdio.h>
 
 %}
 
-%option c++
-%option yyclass="GeneratedLexer"
-%option batch
 
 INT [1-9][0-9]*|0
 REAL (([1-9][0-9]*"."[0-9]*)|(0"."[0-9]*)|("."[0-9]+))(e-?(([1-9][0-9]*)|"0"))?
 STRING \"([^"]|\\\")*\"
 
-IDENT ("[]")*[_a-zA-Z\x80-\xff][_a-zA-Z0-9\x80-\xff]*
+IDENT [_a-zA-Z][_a-zA-Z0-9]*
 SYM .|&&|"||"|>=|<=|==|->|!=|>>|<<
 ENDLINE ;|\n
 SPACE " "|\t|\r

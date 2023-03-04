@@ -1,18 +1,19 @@
 #pragma once
 
-#include <map>
-#include <string>
-#include <memory>
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 
-#include "ast/ast.hpp"
 #include "ast/astvisitor.hpp"
 
 namespace rulejit {
 
-struct ASTChecker : public ASTVisitor {
-    bool output;
-    // std::map<std::string, std::unique_ptr<DefAST>> context;
-    ASTChecker():output(true){};
+struct IRGenerator : public ASTVisitor {
     VISIT_FUNCTION(IdentifierExprAST);
     VISIT_FUNCTION(MemberAccessExprAST);
     VISIT_FUNCTION(LiteralExprAST);
