@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include "tools/myassert.hpp"
+#include "frontend/language.hpp"
 
 namespace rulejit {
 
@@ -46,7 +47,9 @@ class ExpressionLexer {
         const char *begin, *next;
         std::string info;
         operator bool() { return err; }
+        void clear() { err = false; }
     } errorHandler;
+
     enum class Guidence {
         NONE,
         START,
@@ -56,12 +59,23 @@ class ExpressionLexer {
     using BufferType = std::string;
     using BufferView = std::string_view;
     ExpressionLexer() = default;
-    template <typename SrcTy> ExpressionLexer& load(SrcTy &&expression) {
+    ExpressionLexer(const ExpressionLexer &e) = delete;
+    ExpressionLexer(ExpressionLexer &&e) : buffer(std::move(e.buffer)), errorHandler(e.errorHandler), type(e.type) {
+        begin = buffer.c_str();
+        next = e.next - e.begin + begin;
+        end = buffer.length() + begin;
+    }
+    template <typename SrcTy> ExpressionLexer &load(SrcTy &&expression) {
         buffer = std::forward<SrcTy>(expression);
-        restartLexer();
+        restart();
         return *this;
     }
-    template <typename ReceiveTy> ExpressionLexer &operator>>(ReceiveTy &dst) {
+    template <typename SrcTy> ExpressionLexer &operator<<(SrcTy &&expression) {
+        buffer = std::forward<SrcTy>(expression);
+        restart();
+        return *this;
+    }
+    template <typename ReceiveTy> ExpressionLexer &fill(ReceiveTy &dst, Guidence guidence) {
         if constexpr (std::is_same_v<ReceiveTy, std::string>) {
             if (type == TokenType::STRING) {
                 std::string dst_tmp;
@@ -73,13 +87,13 @@ class ExpressionLexer {
                     }
                 }
                 dst = std::move(dst_tmp);
-                pop();
+                pop(guidence);
             } else {
-                dst = popCopy();
+                dst = popCopy(guidence);
             }
         } else {
             std::stringstream tmp;
-            tmp << pop();
+            tmp << pop(guidence);
             tmp >> dst;
             my_assert(tmp.eof(), std::string("cannot change literl to type ") + typeid(ReceiveTy).name());
         }
@@ -100,16 +114,33 @@ class ExpressionLexer {
         extend(guidence);
         return tmp;
     }
-    template<typename Ty, typename This> requires std::is_same_v<ExpressionLexer, std::remove_all_extents_t<This>>
-    friend ExpressionLexer& operator|(Ty&&src, This&& e){
-        static ExpressionLexer real_e;
-        real_e = std::forward<This>(e);
-        real_e.load(std::forward<Ty>(src));
-        return real_e;
+    template <typename Ty> friend ExpressionLexer &operator|(Ty &&src, ExpressionLexer &e) {
+        e.load(std::forward<Ty>(src));
+        return e;
+    }
+    std::tuple<const char *, const char *, bool, rulejit::TokenType> getState(){
+        return std::make_tuple(begin, next, errorHandler.err, type);
+    }
+    void loadState(const std::tuple<const char *, const char *, bool, rulejit::TokenType>& s){
+        std::tie(begin, next, errorHandler.err, type) = s;
+    }
+    std::tuple<TokenType, std::string_view> foresee(size_t depth = 1) {
+        auto s = getState();
+        pop();
+        auto t = (depth == 1) ? std::make_tuple(type, top()) : foresee(depth - 1);
+        loadState(s);
+        return t;
+    }
+    void restart() {
+        errorHandler.clear();
+        begin = buffer.c_str();
+        next = begin;
+        end = begin + buffer.size();
+        extend(Guidence::START);
     }
 
-  protected:
-    char readEscape(char *&p) {
+  private:
+    char readEscape(const char *&p) {
         static const std::map<char, char> escape{
             {'n', '\n'},
             {'0', '\0'},
@@ -148,16 +179,6 @@ class ExpressionLexer {
     }
     bool charEqual(Ele e) { return *next == e; }
     void extend(Guidence guidence);
-    void restartLexer() {
-        errorHandler.err = false;
-        // auto noSpaceEnd =
-        //     std::remove_if(buffer.begin(), buffer.end(), [](auto c) { return c == ' ' || c == '\t' || c == '\r'; });
-        // buffer.erase(noSpaceEnd, buffer.end());
-        begin = buffer.c_str();
-        next = begin;
-        end = begin + buffer.size();
-        extend(Guidence::START);
-    }
     const Ele *begin;
     const Ele *next;
     const Ele *end;
@@ -175,9 +196,9 @@ class ExpressionLexer {
 //     };
 //     size_t current;
 //     std::vector<state> history;
-//     void restartLexer() {
+//     void restart() {
 //         current=0;
-//         ExpressionLexer::restartLexer();
+//         ExpressionLexer::restart();
 //         clear();
 //     }
 // };

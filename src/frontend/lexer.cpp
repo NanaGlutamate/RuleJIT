@@ -14,10 +14,6 @@ namespace {
 
 using namespace std::literals;
 
-std::set<std::string_view> keyWords{
-    "if", "else", "while", "func", "var", "type", "struct", "class", "dynamic", "extern", "return", "not",
-};
-
 } // namespace
 
 namespace rulejit {
@@ -25,7 +21,7 @@ namespace rulejit {
 void ExpressionLexer::extend(Guidence guidence) {
     if (begin == end) {
         // EOF | endline
-        if (type != TokenType::ENDLINE) {
+        if (type != TokenType::ENDLINE && guidence != Guidence::SEEK_ENDLINE) {
             type = TokenType::ENDLINE;
         } else {
             type = TokenType::END;
@@ -39,9 +35,9 @@ void ExpressionLexer::extend(Guidence guidence) {
     begin = next;
     if (isdigit(*next)) {
         // real | int literal
-        static std::regex integer(R"([1-9][0-9]*|0(?:x[0-9a-fA-F]*|b[0-1]*)?)",
+        static const std::regex integer(R"([1-9][0-9]*|0(?:x[0-9a-fA-F]*|b[0-1]*)?)",
                                   std::regex_constants::optimize | std::regex_constants::ECMAScript);
-        static std::regex real(
+        static const std::regex real(
             R"((?:(?:[1-9][0-9]*|0)\.[0-9]*(?:e-?[1-9][0-9]*)?)|(?:(?:[1-9][0-9]*|0)e-?[1-9][0-9]*))",
             std::regex_constants::optimize | std::regex_constants::ECMAScript);
         do {
@@ -77,7 +73,7 @@ void ExpressionLexer::extend(Guidence guidence) {
         } while (!charEqual('"'));
         next++;
     } else if (charEqual('_') || isalpha(*next) || *next >= 0x80) {
-        // keywords | identifier
+        // keywords | identifier | symbol(preOp)
         do {
             next++;
         } while (charEqual('_') || isalpha(*next) || isdigit(*next) || *next >= 0x80);
@@ -85,6 +81,9 @@ void ExpressionLexer::extend(Guidence guidence) {
         if (keyWords.find(indent) != keyWords.end()) {
             // keywords
             type = TokenType::KEYWORD;
+        }else if(preOp.find(indent) != preOp.end()){
+            // preOp
+            type = TokenType::SYM;
         } else {
             // identifier
             type = TokenType::IDENT;
@@ -95,6 +94,7 @@ void ExpressionLexer::extend(Guidence guidence) {
         next++;
         begin = next;
         auto reserve = begin;
+        // eat multi endline
         if (extend(guidence); type != TokenType::ENDLINE) {
             type = TokenType::ENDLINE;
             errorHandler.err = false;
@@ -114,12 +114,27 @@ void ExpressionLexer::extend(Guidence guidence) {
         }
         // symbol
         type = TokenType::SYM;
-        static std::regex symbol(R"(.|&&|\|\||>=|<=|==|->|!=|>>|<<)",
+        // TODO: move to language.hpp
+        static const std::regex symbol(R"(.|&&|\|\||>=|<=|==|->|!=|>>|<<)",
                                  std::regex_constants::optimize | std::regex_constants::ECMAScript);
         if (std::regex_match(std::string(begin, next - begin + 1), symbol)) {
             next++;
             if (std::regex_match(std::string(begin, next - begin + 1), symbol)) {
                 next++;
+            }
+        }
+        // eat ENDLINE
+        if (top() == "\\"){
+            auto store = begin;
+            if(charEqual('\r')){
+                next++;
+            }
+            if(charEqual('\n')){
+                next++;
+                begin=next;
+                return extend(guidence);
+            }else{
+                return setError("unknown character after '\\': "s + *next);
             }
         }
     }

@@ -9,14 +9,9 @@
 #include <tuple>
 #include <vector>
 
-namespace rulejit {
+#include "frontend/language.hpp"
 
-inline std::set<std::string> buildInType{
-    // "i64",
-    // "u64",
-    "f64",
-    "string",
-};
+namespace rulejit {
 
 // TYPE := IDENT | ARRAYTYPE | SLICETYPE | FUNCTYPE | COMPLEXTYPE
 struct TypeInfo {
@@ -50,8 +45,8 @@ struct SliceType : public TypeInfo {
     TypeInfo *getMemberType(const std::string &ident) { return baseType.get(); }
 };
 
-// FUNCTYPE := '(' (TYPE (',' TYPE)*)? ')' ':' TYPE
-// (i64, i64):i64 (regard "func" as define keyword like var)
+// FUNCTYPE := '(' (TYPE (',' TYPE)*)? ')' ('->' TYPE)?
+// (i64, i64)->i64 (regard "func" as define keyword like var)
 struct FuncType : public TypeInfo {
     std::vector<std::unique_ptr<TypeInfo>> paramType;
     // nullptr if no returns
@@ -59,7 +54,7 @@ struct FuncType : public TypeInfo {
     virtual bool isFunction() { return true; }
 };
 
-// COMPLEXTYPE := KEYWORD '{' (TYPE (ENDLINE TYPE)*)? '}'
+// COMPLEXTYPE := ('struct' | 'class' | 'dynamic') '{' (TYPE (ENDLINE TYPE)*)? '}'
 // {i64; i64} (access by '[num]' like tuple in python) | {x f32; y f32} (regard "type" as define keyword like var, TODO:
 // "struct", "class" and "dynamic" as attribute like "addable") TODO: static, and regard member function as static func
 // pointer
