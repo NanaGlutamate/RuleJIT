@@ -17,11 +17,6 @@ using namespace std::literals;
 std::set<std::string_view> keyWords{
     "if", "else", "while", "func", "var", "type", "struct", "class", "dynamic", "extern", "return", "not",
 };
-// std::set<std::string_view> infix{
-//     "and",
-//     "or",
-//     "xor",
-// };
 
 } // namespace
 
@@ -61,23 +56,12 @@ void ExpressionLexer::extend(Guidence guidence) {
         }else{
             return setError("unknow digit: "s + topCopy());
         }
-        // std::cmatch it1, it2;
-        // std::regex_search(begin, it1, integer, std::regex_constants::match_continuous);
-        // std::regex_search(begin, it2, real, std::regex_constants::match_continuous);
-        // if (it1[0].length() >= it2[0].length()) {
-        //     type = TokenType::INT;
-        //     next = begin + it1[0].length();
-        // } else {
-        //     type = TokenType::REAL;
-        //     next = begin + it2[0].length();
-        // }
     } else if (charEqual('"')) {
         // string literal
         type = TokenType::STRING;
         do {
             if (charEqual('\\')) {
                 next++;
-                // if (charEqual('"') || charEqual('\\') || charEqual('n') || charEqual('t') || charEqual('0')) {
                 if (charEqual('x')) {
                     if (next++; hex(*next) != -1) {
                         if (next++; hex(*next) != -1) {
@@ -101,9 +85,6 @@ void ExpressionLexer::extend(Guidence guidence) {
         if (keyWords.find(indent) != keyWords.end()) {
             // keywords
             type = TokenType::KEYWORD;
-        // } else if (infix.find(indent) != infix.end()) {
-        //     // symbol
-        //     type = TokenType::SYM;
         } else {
             // identifier
             type = TokenType::IDENT;
