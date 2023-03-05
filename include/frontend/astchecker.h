@@ -20,7 +20,7 @@ struct ASTChecker : public ASTVisitor {
     // VIRTUAL_VISIT_FUNCTION(ComplexLiteralExprAST);
     // VIRTUAL_VISIT_FUNCTION(BranchExprAST);
     // VIRTUAL_VISIT_FUNCTION(LoopAST);
-    // VIRTUAL_VISIT_FUNCTION(SequensialExprAST);
+    // VIRTUAL_VISIT_FUNCTION(BlockExprAST);
 
     // VIRTUAL_VISIT_FUNCTION(TypeDefAST);
     // VIRTUAL_VISIT_FUNCTION(VarDefAST);

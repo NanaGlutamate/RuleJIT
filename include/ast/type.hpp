@@ -18,6 +18,7 @@ inline std::set<std::string> buildInType{
     "string",
 };
 
+// TYPE := IDENT | ARRAYTYPE | SLICETYPE | FUNCTYPE | COMPLEXTYPE
 struct TypeInfo {
     virtual bool isArray() { return false; }
     virtual bool isFunction() { return false; }
@@ -27,6 +28,7 @@ struct TypeInfo {
     virtual ~TypeInfo() = default;
 };
 
+// IDENT
 // a
 struct TypeIdent : public TypeInfo {
     std::string name;
@@ -40,6 +42,7 @@ struct TypeIdent : public TypeInfo {
 //     bool isArray(){return true;}
 // };
 
+// SLICETYPE := '[' ']' TYPE
 // []a
 struct SliceType : public TypeInfo {
     std::unique_ptr<TypeInfo> baseType;
@@ -47,6 +50,7 @@ struct SliceType : public TypeInfo {
     TypeInfo *getMemberType(const std::string &ident) { return baseType.get(); }
 };
 
+// FUNCTYPE := '(' (TYPE (',' TYPE)*)? ')' ':' TYPE
 // (i64, i64):i64 (regard "func" as define keyword like var)
 struct FuncType : public TypeInfo {
     std::vector<std::unique_ptr<TypeInfo>> paramType;
@@ -55,6 +59,7 @@ struct FuncType : public TypeInfo {
     virtual bool isFunction() { return true; }
 };
 
+// COMPLEXTYPE := KEYWORD '{' (TYPE (ENDLINE TYPE)*)? '}'
 // {i64; i64} (access by '[num]' like tuple in python) | {x f32; y f32} (regard "type" as define keyword like var, TODO:
 // "struct", "class" and "dynamic" as attribute like "addable") TODO: static, and regard member function as static func
 // pointer

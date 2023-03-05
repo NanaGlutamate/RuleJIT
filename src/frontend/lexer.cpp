@@ -17,11 +17,11 @@ using namespace std::literals;
 std::set<std::string_view> keyWords{
     "if", "else", "while", "func", "var", "type", "struct", "class", "dynamic", "extern", "return", "not",
 };
-std::set<std::string_view> infix{
-    "and",
-    "or",
-    "xor",
-};
+// std::set<std::string_view> infix{
+//     "and",
+//     "or",
+//     "xor",
+// };
 
 } // namespace
 
@@ -37,7 +37,7 @@ void ExpressionLexer::extend(Guidence guidence) {
         }
         return;
     }
-    while (isspace(*next) && !charEqual('\n')) {
+    while (isspace(*next) && (!charEqual('\n') || guidence != Guidence::SEEK_ENDLINE)) {
         // SPACE
         next++;
     }
@@ -47,7 +47,6 @@ void ExpressionLexer::extend(Guidence guidence) {
         static std::regex integer(R"([1-9][0-9]*|0(?:x[0-9a-fA-F]*|b[0-1]*)?)",
                                   std::regex_constants::optimize | std::regex_constants::ECMAScript);
         static std::regex real(
-            // R"((?:(?:[1-9][0-9]*|0)e-?(?:[1-9][0-9]*|0))|(?:(?:[1-9][0-9]*\.[0-9]*)|(?:0\.[0-9]*)|(?:\.[0-9]+))(e-?(?:(?:[1-9][0-9]*)|0))?)",
             R"((?:(?:[1-9][0-9]*|0)\.[0-9]*(?:e-?[1-9][0-9]*)?)|(?:(?:[1-9][0-9]*|0)e-?[1-9][0-9]*))",
             std::regex_constants::optimize | std::regex_constants::ECMAScript);
         do {
@@ -94,7 +93,7 @@ void ExpressionLexer::extend(Guidence guidence) {
         } while (!charEqual('"'));
         next++;
     } else if (charEqual('_') || isalpha(*next) || *next >= 0x80) {
-        // keywords | symbol(infix) | identifier
+        // keywords | identifier
         do {
             next++;
         } while (charEqual('_') || isalpha(*next) || isdigit(*next) || *next >= 0x80);
@@ -102,9 +101,9 @@ void ExpressionLexer::extend(Guidence guidence) {
         if (keyWords.find(indent) != keyWords.end()) {
             // keywords
             type = TokenType::KEYWORD;
-        } else if (infix.find(indent) != infix.end()) {
-            // symbol
-            type = TokenType::SYM;
+        // } else if (infix.find(indent) != infix.end()) {
+        //     // symbol
+        //     type = TokenType::SYM;
         } else {
             // identifier
             type = TokenType::IDENT;

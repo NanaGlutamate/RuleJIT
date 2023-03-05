@@ -8,7 +8,7 @@ int main(){
     rulejit::ExpressionLexer lexer;
     while(std::getline(cin, input)){
         input.push_back('\n');
-        lexer.loadExpression(input);
+        lexer.load(input);
         while(lexer.tokenType()!=rulejit::TokenType::END){
             cout << lexer.tokenType() << '\t';
             if(lexer.tokenType()==rulejit::TokenType::STRING){
