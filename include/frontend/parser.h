@@ -4,9 +4,10 @@
 #include <type_traits>
 
 #include "ast/ast.hpp"
-#include "ast/type.hpp"
-#include "frontend/language.hpp"
+#include "defines/language.hpp"
 #include "frontend/lexer.h"
+#include "frontend/typecontext.hpp"
+
 #include "rapidxml-1.13/rapidxml.hpp"
 
 namespace rulejit {
@@ -14,19 +15,6 @@ namespace rulejit {
 // template <class T>
 // struct Parser{
 // };
-
-struct Context {
-    std::map<std::string, std::unique_ptr<TypeInfo>> typeDef;
-    std::map<std::string, std::unique_ptr<TypeInfo>> varDef;
-    std::map<std::string, std::unique_ptr<FuncType>> funcDef;
-    std::map<std::string, int> infixOp;
-    void clear() {
-        typeDef.clear();
-        varDef.clear();
-        funcDef.clear();
-        infixOp.clear();
-    }
-};
 
 struct RuleSetParser {
     RuleSetParser() = default;
@@ -52,14 +40,14 @@ struct ExpressionParser {
     ExpressionParser() = default;
     friend std::unique_ptr<ExprAST> operator|(ExpressionLexer &src, ExpressionParser &e) {
         e.bind(src);
-        auto tmp = e.parse();
+        auto tmp = e.parseExpr();
         e.lexer = nullptr;
         return std::move(tmp);
     }
-    ExpressionParser &loadContext(Context &c) {
-        context = std::addressof(c);
-        return *this;
-    }
+    // ExpressionParser &loadContext(ContextStack &c) {
+    //     context = std::addressof(c);
+    //     return *this;
+    // }
 
   private:
     bool err() { return errorHandler.err; }
@@ -73,17 +61,24 @@ struct ExpressionParser {
         return nullptr;
     }
 
-    std::unique_ptr<ExprAST> parse();
+    // std::unique_ptr<AST> parseExprOrAssign();
     std::unique_ptr<ExprAST> parseExpr();
-    std::unique_ptr<DefAST> parseDef();
-    std::unique_ptr<BlockExprAST> parseBlock();
-    std::unique_ptr<ExprAST> parseParent();
-    std::unique_ptr<ExprAST> parseCall();
-    std::string parseTypeName();
+    std::unique_ptr<ExprAST> parseBinOpRHS(size_t, std::unique_ptr<ExprAST>, bool ignoreBreak = false);
+    std::unique_ptr<ExprAST> parseUnary();
     std::unique_ptr<ExprAST> parsePrimary();
 
+    std::unique_ptr<BlockExprAST> parseBlock();
+    // std::unique_ptr<ExprAST> parseParent();
+    // assign
 
+    std::unique_ptr<DefAST> parseDef();
 
+    void eatBreak(){
+        if(lexer->top() == "\n"){
+            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+        }
+    }
+    
     ExpressionParser &bind(ExpressionLexer &elexer) { return changeSource(elexer).restart(); }
     ExpressionParser &changeSource(ExpressionLexer &elexer) {
         lexer = std::addressof(elexer);
@@ -94,10 +89,12 @@ struct ExpressionParser {
         return *this;
     };
     State state;
-    Context *context;
+    // ContextStack *context;
     ExpressionLexer *lexer;
     // TokenStream* stream;
 };
+
+// TODO: struct TopLevelParser {}; // infix and unary func must use after define, while normal func don't need to
 
 // auto tmp = s | lexer | parser | compiler;
 // TODO: auto tmp = cin | lexer | parser | interpreter;

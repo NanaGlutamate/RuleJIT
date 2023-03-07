@@ -1,0 +1,57 @@
+Token type: IDENT(contains symbol), unary, literal, type, op
+
+// TODO: regard type as a instance of type 'type', with operator{(token: value)*}, token is instance of type 'Token', not 'string'
+
+// Operator-Precedence Parsing
+EXPR := UNARYEXPR (op UNARYEXPR)*
+
+UNARYEXPR := unary UNARYEXPR | PRIMARYEXPR
+// Operator-Precedence Parsing
+PRIMARYEXPR := 
+    IDENT                                                                                          |
+    literal                                                                                        |
+    '(' EXPR ')'                                                                                   |
+    '{' (VARDEF | TYPEDEF | ASSIGNMENT | EXPR ENDLINE)* EXPR? '}'                                  |
+    (IDENT | COMPLEXTYPE | FUNCTYPE | SLICETYPE | ARRAYTYPE) '{' ((IDENT ':')? EXPR ENDLINE)* '}'  |
+    'if' '(' EXPR ')' EXPR ('else' EXPR)?                                                          |
+    'while' '(' EXPR ')' EXPR                                                                      | // return last EXPR's value while terminate
+    PRIMARYEXPR '.' IDENT                                                                          |
+    PRIMARYEXPR '(' EXPR ')'                                                                       
+FUNCCALL := FUNCCALL '(' (EXPR (',' EXPR)*)? ')' | MEMBERACCESS // TODO: PRIMARYEXPR PRIMARYEXPR* ENDLINE
+MEMBERACCESS := MEMBERACCESS '.' IDENT | FUNCCALL '[' EXPR ']'
+// TODO: unary lambda, such that can us function to replace 'if' and 'while'
+
+// TODO: LAMBDAEXPR := 'func' '(' (IDENT TYPE (',' IDENT TYPE)* )? ')' TYPE? '->' EXPR
+// TODO: CAPTURES := (VARDEF ENDLINE)*
+
+ASSIGNMENT := LEXPR '=' EXPR
+LEXPR := IDENT | MEMBERACCESS
+
+DEF := VARDEF | TYPEDEF | TYPEALIAS | FUNCDEF
+VARDEF := 'var' IDENT TYPE '=' EXPR TODO: var IDENT ':=' EXPR
+TYPEDEF := 'type' IDENT COMPLEXTYPE TODO: TYPE (| TYPE)*, may affect type check logic
+// CAUTION: set type alias to a unnamed complex type if not allowed
+TYPEALIAS := 'type' IDENT '=' TYPE
+// function define is global only TODO: bounded func
+// infix and unary do not participate in overload
+// 'func' can act as 'type' or 'var' to indicate DefAST;
+//     or can act as 'struct', 'dynamic' or 'class' to indicate type
+// 'type A struct{a i32;}', then A is struct{a i32;} and TYPE OF A is type struct{a i32}, 
+//     like after 'func a ():i32->1', type of a is func():i32
+FUNCDEF := 'func' IDENT '(' (IDENT TYPE (',' IDENT TYPE)* )? ')' (':' TYPE)? '->' EXPR
+
+// check context to confirm it ident a type
+TYPE := IDENT | COMPLEXTYPE | FUNCTYPE | SLICETYPE | ARRAYTYPE TODO: | IDENT+ (not suitable with func call IDENT+)
+SLICETYPE := '[' ']' TYPE // TODO:
+ARRAYTYPE := '[' NUM ']' TYPE
+// how to distinguish functype from lambda: functype will never present in start of EXPR
+FUNCTYPE := 'func' '(' (IDENT TYPE (',' IDENT TYPE)* )? ')' TYPE?
+COMPLEXTYPE := ('struct' | 'class' | 'dynamic') '{' (IDENT TYPE ENDLINE)* '}'
+
+// start syntax:
+TOPLEVEL := (EXPAND)* (EXPR | DEF) ENDLINE TOP | ()
+
+EXPAND := 'infix' IDENT  |
+          'unary' IDENT
+
+NUM | STRING | REAL

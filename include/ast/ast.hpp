@@ -18,9 +18,15 @@ struct AST{
     virtual ~AST() = default;
 };
 
-// EXPR := LEXPR | LITERAL | FUNCCALL | COMPLEX | BRANCH | LOOP | BLOCK | '(' EXPR ')'
+// EXPR := BINOP | LEXPR | LITERAL | FUNCCALL | COMPLEX | BRANCH | LOOP | BLOCK | '(' EXPR ')'
 struct ExprAST : public AST {
     std::unique_ptr<TypeInfo> type;
+};
+
+struct BinOpAST : public ExprAST {
+    std::unique_ptr<ExprAST> lhs;
+    std::string op;
+    std::unique_ptr<ExprAST> rhs;
 };
 
 // LEXPR := IDENT | MEMBER
@@ -45,6 +51,7 @@ struct MemberAccessExprAST : public AssignableExprAST{
 // "abc" | 12 | 1e3 TODO: | constexpr
 struct LiteralExprAST : public ExprAST{
     ACCEPT_FUNCTION;
+    using ExprAST::ExprAST;
     std::string value;
 };
 
@@ -72,7 +79,8 @@ struct BranchExprAST : public ExprAST{
 // []i64{1, 2, 3} | Info{base: Base{name: "abc", value: 3}, time: 13} | Vector3{x: 1, y: 2, z: 3}
 struct ComplexLiteralExprAST : public ExprAST{
     ACCEPT_FUNCTION;
-    std::vector<std::unique_ptr<ExprAST>> members;
+    using ExprAST::ExprAST;
+    std::vector<std::tuple<std::string, std::unique_ptr<ExprAST>>> members;
 };
 
 // LOOP := 'while' '(' EXPR ')' EXPR
@@ -95,6 +103,7 @@ struct BlockExprAST : public ExprAST{
 // x = 12 CAUTION: no returns and not an expression
 struct AssignmentAST : public AST{
     ACCEPT_FUNCTION;
+    std::unique_ptr<TypeInfo> type;
     std::unique_ptr<AssignableExprAST> target;
     std::unique_ptr<ExprAST> value;
 };

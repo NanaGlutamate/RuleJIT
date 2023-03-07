@@ -1,0 +1,3 @@
+
+
+infix fun foo()

@@ -2,8 +2,9 @@
 #include <regex>
 #include <set>
 
+#include "defines/language.hpp"
 #include "frontend/lexer.h"
-
+ 
 // extern "C" const int yy_nxt[][128];
 
 // extern "C" const int yy_accept[];
@@ -21,35 +22,40 @@ namespace rulejit {
 void ExpressionLexer::extend(Guidence guidence) {
     if (begin == end) {
         // EOF | endline
-        if (type != TokenType::ENDLINE && guidence != Guidence::SEEK_ENDLINE) {
+        if (type != TokenType::ENDLINE) {
             type = TokenType::ENDLINE;
         } else {
             type = TokenType::END;
         }
         return;
     }
-    while (isspace(*next) && (!charEqual('\n') || guidence != Guidence::SEEK_ENDLINE)) {
+    while (isspace(*next)) {
         // SPACE
-        next++;
+        if (guidence == Guidence::IGNORE_BREAK) {
+            next++;
+        } else if (charEqual('\n')) {
+            type = TokenType::ENDLINE;
+            return;
+        }
     }
     begin = next;
     if (isdigit(*next)) {
         // real | int literal
         static const std::regex integer(R"([1-9][0-9]*|0(?:x[0-9a-fA-F]*|b[0-1]*)?)",
-                                  std::regex_constants::optimize | std::regex_constants::ECMAScript);
+                                        std::regex_constants::optimize | std::regex_constants::ECMAScript);
         static const std::regex real(
             R"((?:(?:[1-9][0-9]*|0)\.[0-9]*(?:e-?[1-9][0-9]*)?)|(?:(?:[1-9][0-9]*|0)e-?[1-9][0-9]*))",
             std::regex_constants::optimize | std::regex_constants::ECMAScript);
         do {
             next++;
         } while (isdigit(*next) || isalpha(*next) || charEqual('.') || (charEqual('-') && *(next - 1) == 'e'));
-        if(std::regex_match(topCopy(), real)){
+        if (std::regex_match(topCopy(), real)) {
             // real
             type = TokenType::REAL;
-        }else if(std::regex_match(topCopy(), integer)){
+        } else if (std::regex_match(topCopy(), integer)) {
             // int
             type = TokenType::INT;
-        }else{
+        } else {
             return setError("unknow digit: "s + topCopy());
         }
     } else if (charEqual('"')) {
@@ -73,22 +79,19 @@ void ExpressionLexer::extend(Guidence guidence) {
         } while (!charEqual('"'));
         next++;
     } else if (charEqual('_') || isalpha(*next) || *next >= 0x80) {
-        // keywords | identifier | symbol(preOp)
+        // keywords | identifier
         do {
             next++;
         } while (charEqual('_') || isalpha(*next) || isdigit(*next) || *next >= 0x80);
         auto indent = top();
         if (keyWords.find(indent) != keyWords.end()) {
             // keywords
-            type = TokenType::KEYWORD;
-        }else if(preOp.find(indent) != preOp.end()){
-            // preOp
             type = TokenType::SYM;
         } else {
             // identifier
             type = TokenType::IDENT;
         }
-    } else if (charEqual(';') || charEqual('\n')) {
+    } else if (charEqual(';')) {
         // endline
         type = TokenType::ENDLINE;
         next++;
@@ -115,25 +118,20 @@ void ExpressionLexer::extend(Guidence guidence) {
         // symbol
         type = TokenType::SYM;
         // TODO: move to language.hpp
-        static const std::regex symbol(R"(.|&&|\|\||>=|<=|==|->|!=|>>|<<)",
-                                 std::regex_constants::optimize | std::regex_constants::ECMAScript);
-        if (std::regex_match(std::string(begin, next - begin + 1), symbol)) {
+        if (buildInMultiCharSymbol.contains(std::string_view(begin, next - begin + 1))) {
             next++;
-            if (std::regex_match(std::string(begin, next - begin + 1), symbol)) {
-                next++;
-            }
         }
         // eat ENDLINE
-        if (top() == "\\"){
+        if (top() == "\\") {
             auto store = begin;
-            if(charEqual('\r')){
+            if (charEqual('\r')) {
                 next++;
             }
-            if(charEqual('\n')){
+            if (charEqual('\n')) {
                 next++;
-                begin=next;
+                begin = next;
                 return extend(guidence);
-            }else{
+            } else {
                 return setError("unknown character after '\\': "s + *next);
             }
         }

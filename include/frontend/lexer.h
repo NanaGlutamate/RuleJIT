@@ -8,7 +8,6 @@
 #include <type_traits>
 
 #include "tools/myassert.hpp"
-#include "frontend/language.hpp"
 
 namespace rulejit {
 
@@ -19,9 +18,8 @@ enum class TokenType {
     TOKEN(REAL),
     TOKEN(STRING),
     TOKEN(IDENT),
-    TOKEN(SYM),
+    TOKEN(SYM), // symbol and keywords
     TOKEN(ENDLINE),
-    TOKEN(KEYWORD),
     TOKEN(END),
     TOKEN(UNKNOWN),
 };
@@ -32,10 +30,10 @@ enum class TokenType {
     { TokenType::t, #t }
 
 inline std::ostream &operator<<(std::ostream &o, TokenType type) {
-    return o << std::map<TokenType, std::string>{
-               TOKEN(INT),     TOKEN(REAL),    TOKEN(STRING), TOKEN(IDENT),   TOKEN(SYM),
-               TOKEN(ENDLINE), TOKEN(KEYWORD), TOKEN(END),    TOKEN(UNKNOWN),
-           }[type];
+    static const std::map<TokenType, std::string> table{
+        TOKEN(INT), TOKEN(REAL), TOKEN(STRING), TOKEN(IDENT), TOKEN(SYM), TOKEN(ENDLINE), TOKEN(END), TOKEN(UNKNOWN),
+    };
+    return o << table.find(type)->second;
 }
 
 #undef TOKEN
@@ -53,7 +51,7 @@ class ExpressionLexer {
     enum class Guidence {
         NONE,
         START,
-        SEEK_ENDLINE,
+        IGNORE_BREAK,
     };
     using Ele = char;
     using BufferType = std::string;
@@ -75,6 +73,7 @@ class ExpressionLexer {
         restart();
         return *this;
     }
+    template <typename ReceiveTy> ExpressionLexer &operator>>(ReceiveTy &dst) { return fill(dst, Guidence::NONE); }
     template <typename ReceiveTy> ExpressionLexer &fill(ReceiveTy &dst, Guidence guidence) {
         if constexpr (std::is_same_v<ReceiveTy, std::string>) {
             if (type == TokenType::STRING) {
@@ -100,17 +99,21 @@ class ExpressionLexer {
         return *this;
     }
     TokenType tokenType() { return type; }
+    void reExtend(Guidence guidence = Guidence::NONE) {
+        begin = next = pre;
+        extend(guidence);
+    }
     BufferType topCopy() { return BufferType(begin, next - begin); }
     BufferType popCopy(Guidence guidence = Guidence::NONE) {
         BufferType tmp = topCopy();
-        begin = next;
+        begin = pre = next;
         extend(guidence);
         return tmp;
     }
     BufferView top() { return BufferView(begin, next - begin); }
     BufferView pop(Guidence guidence = Guidence::NONE) {
         BufferView tmp = top();
-        begin = next;
+        begin = pre = next;
         extend(guidence);
         return tmp;
     }
@@ -118,10 +121,10 @@ class ExpressionLexer {
         e.load(std::forward<Ty>(src));
         return e;
     }
-    std::tuple<const char *, const char *, bool, rulejit::TokenType> getState(){
+    std::tuple<const char *, const char *, bool, rulejit::TokenType> getState() {
         return std::make_tuple(begin, next, errorHandler.err, type);
     }
-    void loadState(const std::tuple<const char *, const char *, bool, rulejit::TokenType>& s){
+    void loadState(const std::tuple<const char *, const char *, bool, rulejit::TokenType> &s) {
         std::tie(begin, next, errorHandler.err, type) = s;
     }
     std::tuple<TokenType, std::string_view> foresee(size_t depth = 1) {
@@ -134,8 +137,9 @@ class ExpressionLexer {
     void restart() {
         errorHandler.clear();
         begin = buffer.c_str();
-        next = begin;
+        pre = next = begin;
         end = begin + buffer.size();
+        type = TokenType::ENDLINE;
         extend(Guidence::START);
     }
 
@@ -179,6 +183,7 @@ class ExpressionLexer {
     }
     bool charEqual(Ele e) { return *next == e; }
     void extend(Guidence guidence);
+    const Ele *pre;
     const Ele *begin;
     const Ele *next;
     const Ele *end;
