@@ -99,10 +99,10 @@ class ExpressionLexer {
         return *this;
     }
     TokenType tokenType() { return type; }
-    void reExtend(Guidence guidence = Guidence::NONE) {
-        begin = next = pre;
-        extend(guidence);
-    }
+    // void reExtend(Guidence guidence = Guidence::NONE) {
+    //     begin = next = pre;
+    //     extend(guidence);
+    // }
     BufferType topCopy() { return BufferType(begin, next - begin); }
     BufferType popCopy(Guidence guidence = Guidence::NONE) {
         BufferType tmp = topCopy();

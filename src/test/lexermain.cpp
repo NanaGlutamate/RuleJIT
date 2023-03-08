@@ -9,7 +9,7 @@ int main(){
     while(std::getline(cin, input)){
         input.push_back('\n');
         lexer.load(input);
-        while(lexer.tokenType()!=rulejit::TokenType::END){
+        while(lexer.tokenType()!=rulejit::TokenType::ENDLINE){
             cout << lexer.tokenType() << '\t';
             if(lexer.tokenType()==rulejit::TokenType::STRING){
                 string tmp;

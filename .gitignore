@@ -3,6 +3,7 @@
 *.lib
 *.so
 *.dll
+*.pdb
 /build/
 /out/
 /.vs/

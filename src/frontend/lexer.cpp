@@ -4,7 +4,7 @@
 
 #include "defines/language.hpp"
 #include "frontend/lexer.h"
- 
+
 // extern "C" const int yy_nxt[][128];
 
 // extern "C" const int yy_accept[];
@@ -31,12 +31,12 @@ void ExpressionLexer::extend(Guidence guidence) {
     }
     while (isspace(*next)) {
         // SPACE
-        if (guidence == Guidence::IGNORE_BREAK) {
-            next++;
-        } else if (charEqual('\n')) {
+        if (guidence != Guidence::IGNORE_BREAK && charEqual('\n')) {
             type = TokenType::ENDLINE;
+            next++;
             return;
         }
+        next++;
     }
     begin = next;
     if (isdigit(*next)) {
@@ -56,7 +56,7 @@ void ExpressionLexer::extend(Guidence guidence) {
             // int
             type = TokenType::INT;
         } else {
-            return setError("unknow digit: "s + topCopy());
+            return setError("expect digit literal, found: "s + topCopy());
         }
     } else if (charEqual('"')) {
         // string literal
@@ -118,7 +118,8 @@ void ExpressionLexer::extend(Guidence guidence) {
         // symbol
         type = TokenType::SYM;
         // TODO: move to language.hpp
-        if (buildInMultiCharSymbol.contains(std::string_view(begin, next - begin + 1))) {
+        next++;
+        while (buildInMultiCharSymbol.contains(std::string_view(begin, next - begin + 1))) {
             next++;
         }
         // eat ENDLINE
@@ -132,7 +133,7 @@ void ExpressionLexer::extend(Guidence guidence) {
                 begin = next;
                 return extend(guidence);
             } else {
-                return setError("unknown character after '\\': "s + *next);
+                return setError("expect '\\n' after '\\', found: "s + *next);
             }
         }
     }

@@ -42,20 +42,32 @@ struct IdentifierExprAST : public AssignableExprAST {
 };
 
 // MEMBER := EXPR '.' IDENT | EXPR '[' EXPR ']'
-// vector.x (same as vector["x"]) | list[a+b] | make_vector(1, 2, 3).x
+// vector.x | make_vector(1, 2, 3).x
 struct MemberAccessExprAST : public AssignableExprAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<ExprAST> baseVar;
-    std::unique_ptr<ExprAST> memberToken;
-    MemberAccessExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar,
-                        std::unique_ptr<ExprAST> memberToken)
-        : AssignableExprAST(std::move(type)), baseVar(std::move(baseVar)), memberToken(std::move(memberToken)) {}
-    MemberAccessExprAST(std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> memberToken)
-        : MemberAccessExprAST(nullptr, std::move(baseVar), std::move(memberToken)) {}
+    std::string memberName;
+    template <typename S>
+    MemberAccessExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar, S &&memberName)
+        : AssignableExprAST(std::move(type)), baseVar(std::move(baseVar)), memberName(std::forward<S>(memberName)) {}
+    template <typename S>
+    MemberAccessExprAST(std::unique_ptr<ExprAST> baseVar, S &&memberName)
+        : MemberAccessExprAST(nullptr, std::move(baseVar), std::forward<S>(memberName)) {}
+};
+
+// ARRAYINDEX := EXPR '[' (EXPR (',' EXPR)*)? ']'
+struct ArrayIndexExprAST : public AssignableExprAST {
+    ACCEPT_FUNCTION;
+    std::unique_ptr<ExprAST> baseVar;
+    std::unique_ptr<ExprAST> index;
+    ArrayIndexExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> index)
+        : AssignableExprAST(std::move(type)), baseVar(std::move(baseVar)), index(std::move(index)) {}
+    ArrayIndexExprAST(std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> index)
+        : ArrayIndexExprAST(nullptr, std::move(baseVar), std::move(index)) {}
 };
 
 // LITERAL
-// "abc" | 12 | 1e3 TODO: | constexpr
+// "abc" | 12 | 1e3 TODO: | named literal: constexpr
 struct LiteralExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::string value;
@@ -98,7 +110,8 @@ struct BranchExprAST : public ExprAST {
 };
 
 // TODO:
-// COMPLEX := (SLICETYPE | ARRAYTYPE) '{' (EXPR (',' EXPR)*)? '}' | IDENT '{' (IDENT ':' EXPR (',' IDENT ':' EXPR)*)?
+// COMPLEX := (SLICETYPE | ARRAYTYPE | IDENT) '{' (EXPR (',' EXPR)*)? '}' | IDENT '{' (IDENT ':' EXPR (',' IDENT ':'
+// EXPR)*)?
 // '}'
 // []i64{1, 2, 3} | Info{base: Base{name: "abc", value: 3}, time: 13} | Vector3{x: 1, y: 2, z: 3}
 struct ComplexLiteralExprAST : public ExprAST {
@@ -129,10 +142,10 @@ struct BlockExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::vector<std::unique_ptr<AST>> preStatement;
     std::unique_ptr<ExprAST> value;
-    template<typename V>
+    template <typename V>
     BlockExprAST(std::unique_ptr<TypeInfo> type, V &&preStatement, std::unique_ptr<ExprAST> value)
         : ExprAST(std::move(type)), preStatement(std::forward<V>(preStatement)), value(std::move(value)) {}
-    template<typename V>
+    template <typename V>
     BlockExprAST(V &&preStatement, std::unique_ptr<ExprAST> value)
         : BlockExprAST(nullptr, std::forward<V>(preStatement), std::move(value)) {}
 };
@@ -141,21 +154,16 @@ struct BlockExprAST : public ExprAST {
 // x = 12 CAUTION: no returns and not an expression
 struct AssignmentAST : public AST {
     ACCEPT_FUNCTION;
-    std::unique_ptr<TypeInfo> type;
     std::unique_ptr<AssignableExprAST> target;
     std::unique_ptr<ExprAST> value;
-    AssignmentAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<AssignableExprAST> target,
-                  std::unique_ptr<ExprAST> value)
-        : type(std::move(type)), target(std::move(target)), value(std::move(value)) {}  
     AssignmentAST(std::unique_ptr<AssignableExprAST> target, std::unique_ptr<ExprAST> value)
-        : AssignmentAST(nullptr, std::move(target), std::move(value)) {}
+        : target(std::move(target)), value(std::move(value)) {}
 };
 
 // DEF := TYPEDEF | VARDEF | FUNCDEF
 struct DefAST : public AST {
     std::string name;
-    template <typename S>
-    DefAST(S &&name) : name(std::forward<S>(name)) {}
+    template <typename S> DefAST(S &&name) : name(std::forward<S>(name)) {}
 };
 
 // TYPEDEF := 'type' IDENT TYPE ('|' TYPE)*
@@ -163,8 +171,13 @@ struct DefAST : public AST {
 struct TypeDefAST : public DefAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<TypeInfo> type;
+    enum class TypeDefType {
+        NORMAL,
+        ALIAS,
+    } typeDefType;
     template <typename S>
-    TypeDefAST(S &&name, std::unique_ptr<TypeInfo> type) : DefAST(std::forward<S>(name)), type(std::move(type)) {}
+    TypeDefAST(S &&name, std::unique_ptr<TypeInfo> type, TypeDefType typeDefType = TypeDefType::NORMAL)
+        : DefAST(std::forward<S>(name)), type(std::move(type)), typeDefType(typeDefType) {}
 };
 
 // VARDEF := 'var' IDENT TYPE ('='? EXPR)? TODO: | 'var' IDENT ':=' EXPR
@@ -177,9 +190,15 @@ struct VarDefAST : public DefAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<TypeInfo> type;
     std::unique_ptr<ExprAST> defineValue;
+    enum class VarDefType {
+        NORMAL,
+        AUTO,
+    } varDefType;
     template <typename S>
-    VarDefAST(S &&name, std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> defineValue)
-        : DefAST(std::forward<S>(name)), type(std::move(type)), defineValue(std::move(defineValue)) {}
+    VarDefAST(S &&name, std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> defineValue,
+              VarDefType varDefType = VarDefType::NORMAL)
+        : DefAST(std::forward<S>(name)), type(std::move(type)), defineValue(std::move(defineValue)),
+          varDefType(varDefType) {}
 };
 
 // FUNCDEF := 'func' IDENT '(' (IDENT? TYPE (',' IDENT? TYPE)*)? ')' ('->' TYPE)? ':' EXPR | 'extern' IDENT '(' (IDENT?
@@ -190,10 +209,15 @@ struct FunctionDefAST : public DefAST {
     std::unique_ptr<TypeInfo> type;
     std::vector<std::unique_ptr<IdentifierExprAST>> params;
     std::unique_ptr<ExprAST> returnValue;
+    enum class FuncDefType {
+        NORMAL,
+        MEMBER,
+    } funcDefType;
     template <typename S, typename V>
-    FunctionDefAST(S &&name, std::unique_ptr<TypeInfo> type, V &&params, std::unique_ptr<ExprAST> returnValue)
+    FunctionDefAST(S &&name, std::unique_ptr<TypeInfo> type, V &&params, std::unique_ptr<ExprAST> returnValue,
+                   FuncDefType funcDefType = FuncDefType::NORMAL)
         : DefAST(std::forward<S>(name)), type(std::move(type)), params(std::forward<V>(params)),
-          returnValue(std::move(returnValue)) {}
+          returnValue(std::move(returnValue)), funcDefType(funcDefType) {}
 };
 
 // TODO: INFIX
@@ -209,8 +233,7 @@ struct FunctionDefAST : public DefAST {
 struct TopLevelAST : public AST {
     ACCEPT_FUNCTION;
     std::vector<std::unique_ptr<AST>> statements;
-    template <typename V>
-    TopLevelAST(V &&statements) : statements(std::forward<V>(statements)) {}
+    template <typename V> TopLevelAST(V &&statements) : statements(std::forward<V>(statements)) {}
 };
 
 } // namespace rulejit

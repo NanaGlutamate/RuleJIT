@@ -9,6 +9,7 @@ namespace rulejit {
 
 struct IdentifierExprAST;
 struct MemberAccessExprAST;
+struct ArrayIndexExprAST;
 struct LiteralExprAST;
 struct FunctionCallExprAST;
 struct BranchExprAST;
@@ -29,6 +30,7 @@ struct ASTVisitor{
     ASTVisitor() = default;
     PURE_VIRTUAL_VISIT_FUNCTION(IdentifierExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(MemberAccessExprAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(ArrayIndexExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(LiteralExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(FunctionCallExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(BranchExprAST);

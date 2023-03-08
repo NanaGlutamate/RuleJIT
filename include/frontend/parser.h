@@ -51,34 +51,34 @@ struct ExpressionParser {
 
   private:
     bool err() { return errorHandler.err; }
-    std::nullptr_t setError(const std::string &info) {
+    [[noreturn]] std::nullptr_t setError(const std::string &info) {
         errorHandler = {
             true,
             lexer->tokenType(),
             lexer->top(),
             info,
         };
-        return nullptr;
+        throw std::logic_error("Parse Error: "+info);
+        // return nullptr;
     }
 
     // std::unique_ptr<AST> parseExprOrAssign();
-    std::unique_ptr<ExprAST> parseExpr();
-    std::unique_ptr<ExprAST> parseBinOpRHS(size_t, std::unique_ptr<ExprAST>, bool ignoreBreak = false);
+    std::unique_ptr<ExprAST> parseExpr(bool ignoreBreak = false);
+    std::unique_ptr<ExprAST> parseBinOpRHS(Priority priority, std::unique_ptr<ExprAST> lhs, bool ignoreBreak = false);
     std::unique_ptr<ExprAST> parseUnary();
     std::unique_ptr<ExprAST> parsePrimary();
 
     std::unique_ptr<BlockExprAST> parseBlock();
-    // std::unique_ptr<ExprAST> parseParent();
-    // assign
 
     std::unique_ptr<DefAST> parseDef();
+    std::unique_ptr<std::vector<std::unique_ptr<IdentifierExprAST>>> parseParamList();
 
-    void eatBreak(){
-        if(lexer->top() == "\n"){
+    void eatBreak() {
+        if (lexer->top() == "\n") {
             lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
         }
     }
-    
+
     ExpressionParser &bind(ExpressionLexer &elexer) { return changeSource(elexer).restart(); }
     ExpressionParser &changeSource(ExpressionLexer &elexer) {
         lexer = std::addressof(elexer);
