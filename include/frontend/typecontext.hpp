@@ -24,6 +24,7 @@ struct ContextFrame {
 };
 
 struct ContextStack {
+    ContextGlobal global;
     std::vector<ContextFrame> stack;
     // ContextStack(){
     //     std::map<std::string, int> tmp;

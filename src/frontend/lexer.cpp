@@ -22,7 +22,7 @@ namespace rulejit {
 void ExpressionLexer::extend(Guidence guidence) {
     while (isspace(*next)) {
         // SPACE
-        if (guidence != Guidence::IGNORE_BREAK && charEqual('\n')) {
+        if (!config.ignoreAllBreak && guidence != Guidence::IGNORE_BREAK && charEqual('\n')) {
             type = TokenType::ENDLINE;
             next++;
             return;

@@ -1,6 +1,6 @@
 Token type: IDENT(contains symbol), unary, literal, type, op
 
-// TODO: 
+// TODO: return / continue@sym
 // TODO: pointer
 // TODO: restriction List<a> Node | a List<a> to builde a type system
 // TODO: function accept type as a input
@@ -58,7 +58,7 @@ COMPLEXTYPE := ('struct' | 'class' | 'dynamic') '{' (IDENT TYPE ENDLINE)* '}'
 // start syntax:
 TOPLEVEL := PACKAGE TOPLEVEL | (EXPAND)* (EXPR | DEF) ENDLINE TOP | () TODO: MARCO TOPLEVEL
 
-// use C func: import [func(f64,f64):f64] c.cos
+// use C func: import [func(f64,f64):f64] cstdlib.cos
 PACKAGE := 'export' IDENT ('.' IDENT)* | 'import' ('[' IDENT ']')* IDENT ('.' IDENT)*
 
 EXPAND := 'infix' IDENT  |

@@ -33,9 +33,9 @@ inline const std::set<std::string_view> buildInMultiCharSymbol{
 };
 
 inline const std::map<std::string, Priority> reloadableBuildInInfix{
-    {"*", 100},  {"/", 100}, {"+", 90},   {"-", 90},  {"<<", 80}, {">>", 80}, {">", 70},
-    {"<", 70},   {">=", 70}, {"<=", 70},  {"==", 60}, {"!=", 60}, {"&", 50},  {"^", 40},
-    {"xor", 40}, {"|", 30},  {"and", 20}, {"&&", 20}, {"||", 10}, {"or", 10},
+    {"*", 100}, {"/", 100},  {"%", 100}, {"+", 90},   {"-", 90},  {"<<", 80}, {">>", 80},
+    {">", 70},  {"<", 70},   {">=", 70}, {"<=", 70},  {"==", 60}, {"!=", 60}, {"&", 50},
+    {"^", 40},  {"xor", 40}, {"|", 30},  {"and", 20}, {"&&", 20}, {"||", 10}, {"or", 10},
 };
 
 inline const std::set<std::string_view> defKeyWords{
@@ -45,8 +45,8 @@ inline const std::set<std::string_view> defKeyWords{
 };
 
 inline const std::set<std::string_view> keyWords{
-    "if",     "else",   "until", "func", "var", "type", "struct",   "class",  "dynamic",
-    "extern", "return", "and",   "or",   "not", "xor",  "continue", "import", "export",
+    "if",  "else", "until", "func", "var",      "type",   "struct", "class", "dynamic", "extern", "return",
+    "and", "or",   "not",   "xor",  "continue", "import", "export", "while", "for",
 };
 
 inline const std::set<std::string_view> typeIndicator{
