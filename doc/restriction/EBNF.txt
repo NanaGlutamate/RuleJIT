@@ -57,7 +57,9 @@ COMPLEXTYPE := ('struct' | 'class' | 'dynamic') '{' (IDENT TYPE ENDLINE)* '}'
 // TODO: should allow top-level epxr?
 // start syntax:
 TOPLEVEL := PACKAGE TOPLEVEL | (EXPAND)* (EXPR | DEF) ENDLINE TOP | () TODO: MARCO TOPLEVEL
-PACKAGE := 'export' IDENT ('.' IDENT)* | 'import' IDENT ('.' IDENT)*
+
+// use C func: import [func(f64,f64):f64] c.cos
+PACKAGE := 'export' IDENT ('.' IDENT)* | 'import' ('[' IDENT ']')* IDENT ('.' IDENT)*
 
 EXPAND := 'infix' IDENT  |
           'unary' IDENT

@@ -42,29 +42,29 @@ struct IdentifierExprAST : public AssignableExprAST {
 };
 
 // MEMBER := EXPR '.' IDENT | EXPR '[' EXPR ']'
-// vector.x | make_vector(1, 2, 3).x
+// vector.x (equals to vector["x"](literal string only)) | make_vector(1, 2, 3).x
 struct MemberAccessExprAST : public AssignableExprAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<ExprAST> baseVar;
-    std::string memberName;
-    template <typename S>
-    MemberAccessExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar, S &&memberName)
-        : AssignableExprAST(std::move(type)), baseVar(std::move(baseVar)), memberName(std::forward<S>(memberName)) {}
-    template <typename S>
-    MemberAccessExprAST(std::unique_ptr<ExprAST> baseVar, S &&memberName)
-        : MemberAccessExprAST(nullptr, std::move(baseVar), std::forward<S>(memberName)) {}
+    // TODO: x[1, 2, 3]
+    std::unique_ptr<ExprAST> memberToken;
+    MemberAccessExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> memberToken)
+        : AssignableExprAST(std::move(type)), baseVar(std::move(baseVar)), memberToken(std::move(memberToken)) {}
+    MemberAccessExprAST(std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> memberToken)
+        : MemberAccessExprAST(nullptr, std::move(baseVar), std::move(memberToken)) {}
 };
 
-// ARRAYINDEX := EXPR '[' (EXPR (',' EXPR)*)? ']'
-struct ArrayIndexExprAST : public AssignableExprAST {
-    ACCEPT_FUNCTION;
-    std::unique_ptr<ExprAST> baseVar;
-    std::unique_ptr<ExprAST> index;
-    ArrayIndexExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> index)
-        : AssignableExprAST(std::move(type)), baseVar(std::move(baseVar)), index(std::move(index)) {}
-    ArrayIndexExprAST(std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> index)
-        : ArrayIndexExprAST(nullptr, std::move(baseVar), std::move(index)) {}
-};
+// // ARRAYINDEX := EXPR '[' (EXPR (',' EXPR)*)? ']'
+// // type vector{x int;y int;z int};vector["x"] shall pass?
+// struct ArrayIndexExprAST : public AssignableExprAST {
+//     ACCEPT_FUNCTION;
+//     std::unique_ptr<ExprAST> baseVar;
+//     std::unique_ptr<ExprAST> index;
+//     ArrayIndexExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> index)
+//         : AssignableExprAST(std::move(type)), baseVar(std::move(baseVar)), index(std::move(index)) {}
+//     ArrayIndexExprAST(std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> index)
+//         : ArrayIndexExprAST(nullptr, std::move(baseVar), std::move(index)) {}
+// };
 
 // LITERAL
 // "abc" | 12 | 1e3 TODO: | named literal: constexpr
@@ -98,15 +98,15 @@ struct FunctionCallExprAST : public ExprAST {
 struct BranchExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<ExprAST> condition;
-    std::unique_ptr<ExprAST> trueBranch;
-    std::unique_ptr<ExprAST> falseBranch;
+    std::unique_ptr<ExprAST> trueExpr;
+    std::unique_ptr<ExprAST> falseExpr;
     BranchExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> condition,
-                  std::unique_ptr<ExprAST> trueBranch, std::unique_ptr<ExprAST> falseBranch)
-        : ExprAST(std::move(type)), condition(std::move(condition)), trueBranch(std::move(trueBranch)),
-          falseBranch(std::move(falseBranch)) {}
-    BranchExprAST(std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> trueBranch,
-                  std::unique_ptr<ExprAST> falseBranch)
-        : BranchExprAST(nullptr, std::move(condition), std::move(trueBranch), std::move(falseBranch)) {}
+                  std::unique_ptr<ExprAST> trueExpr, std::unique_ptr<ExprAST> falseExpr)
+        : ExprAST(std::move(type)), condition(std::move(condition)), trueExpr(std::move(trueExpr)),
+          falseExpr(std::move(falseExpr)) {}
+    BranchExprAST(std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> trueExpr,
+                  std::unique_ptr<ExprAST> falseExpr)
+        : BranchExprAST(nullptr, std::move(condition), std::move(trueExpr), std::move(falseExpr)) {}
 };
 
 // TODO:

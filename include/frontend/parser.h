@@ -1,6 +1,8 @@
 #pragma once
 
+#include <format>
 #include <map>
+#include <source_location>
 #include <type_traits>
 
 #include "ast/ast.hpp"
@@ -51,14 +53,16 @@ struct ExpressionParser {
 
   private:
     bool err() { return errorHandler.err; }
-    [[noreturn]] std::nullptr_t setError(const std::string &info) {
+    [[noreturn]] std::nullptr_t setError(const std::string &info,
+                                         const std::source_location location = std::source_location::current()) {
         errorHandler = {
             true,
             lexer->tokenType(),
             lexer->top(),
             info,
         };
-        throw std::logic_error("Parse Error: "+info);
+        throw std::logic_error(std::format("Parse Error in {}::{}, line{}: {}", location.file_name(),
+                                           location.function_name(), location.line(), info));
         // return nullptr;
     }
 

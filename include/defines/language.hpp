@@ -29,7 +29,7 @@ using Priority = size_t;
 
 // A "<=" B := (*A) = B
 inline const std::set<std::string_view> buildInMultiCharSymbol{
-    "==", "!=", ">=", "<=", "&&", "||", "->", "...", ">>", "<<", "<=",
+    "==", "!=", ">=", "<=", "&&", "||", "->", "..", ">>", "<<", "<-",
 };
 
 inline const std::map<std::string, Priority> reloadableBuildInInfix{
@@ -45,8 +45,8 @@ inline const std::set<std::string_view> defKeyWords{
 };
 
 inline const std::set<std::string_view> keyWords{
-    "if",      "else",   "until",  "func", "var", "type", "struct", "class",
-    "dynamic", "extern", "return", "and",  "or",  "not",  "xor", "continue",
+    "if",     "else",   "until", "func", "var", "type", "struct",   "class",  "dynamic",
+    "extern", "return", "and",   "or",   "not", "xor",  "continue", "import", "export",
 };
 
 inline const std::set<std::string_view> typeIndicator{

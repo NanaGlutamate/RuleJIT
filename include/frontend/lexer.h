@@ -29,12 +29,14 @@ enum class TokenType {
 #define TOKEN(t)                                                                                                       \
     { TokenType::t, #t }
 
-inline std::ostream &operator<<(std::ostream &o, TokenType type) {
+inline std::string to_string(TokenType t) {
     static const std::map<TokenType, std::string> table{
         TOKEN(INT), TOKEN(REAL), TOKEN(STRING), TOKEN(IDENT), TOKEN(SYM), TOKEN(ENDLINE), TOKEN(END), TOKEN(UNKNOWN),
     };
-    return o << table.find(type)->second;
+    return table.find(t)->second;
 }
+
+inline std::ostream &operator<<(std::ostream &o, TokenType type) { return o << to_string(type); }
 
 #undef TOKEN
 

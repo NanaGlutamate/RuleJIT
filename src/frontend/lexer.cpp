@@ -20,15 +20,6 @@ using namespace std::literals;
 namespace rulejit {
 
 void ExpressionLexer::extend(Guidence guidence) {
-    if (begin == end) {
-        // EOF | endline
-        if (type != TokenType::ENDLINE) {
-            type = TokenType::ENDLINE;
-        } else {
-            type = TokenType::END;
-        }
-        return;
-    }
     while (isspace(*next)) {
         // SPACE
         if (guidence != Guidence::IGNORE_BREAK && charEqual('\n')) {
@@ -37,6 +28,15 @@ void ExpressionLexer::extend(Guidence guidence) {
             return;
         }
         next++;
+    }
+    if (begin == end) {
+        // EOF | endline
+        if (type != TokenType::ENDLINE) {
+            type = TokenType::ENDLINE;
+        } else {
+            type = TokenType::END;
+        }
+        return;
     }
     begin = next;
     if (isdigit(*next)) {
