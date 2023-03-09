@@ -1,13 +1,23 @@
 #include "frontend/parser.h"
 #include "ast/type.hpp"
 
-// TODO: check poped token is as expected
-// TODO: def name check: not literal, not keyword etc. (exceptionally, func def name can be sym)
+// TODO: check if poped token is as expected
+// TODO: check assign to assignment
+// TODO: parseExpr with param char endWith='\n' to ignore break
+
+namespace {
+
+constexpr inline auto IGNORE_BREAK = rulejit::ExpressionLexer::Guidence::IGNORE_BREAK;
+
+}
 
 namespace rulejit {
 
 // EXPR := UNARYEXPR (op UNARYEXPR)*
 std::unique_ptr<ExprAST> ExpressionParser::parseExpr(bool ignoreBreak) {
+    if (lexer->tokenType() == TokenType::SYM && defKeyWords.contains(lexer->top())) {
+        return parseDef();
+    }
     return parseBinOpRHS(0, parseUnary(), ignoreBreak);
 }
 
@@ -17,23 +27,30 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBinOpRHS(Priority priority, std:
         Priority prec;
         auto op = lexer->topCopy();
         if (auto it = reloadableBuildInInfix.find(op); it == reloadableBuildInInfix.end()) {
-            return lhs;
-        } else {
-            prec = it->second;
-            if (prec < priority) {
+            if (lexer->tokenType() == TokenType::IDENT) {
+                // regard as user defined infix
+                prec = UserDefinedPriority;
+            } else {
                 return lhs;
             }
+        } else {
+            prec = it->second;
         }
-        lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+        if (prec < priority) {
+            return lhs;
+        }
+        lexer->pop(IGNORE_BREAK);
         auto rhs = parseUnary();
         if (ignoreBreak && lexer->top() == "\n") {
-            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+            lexer->pop(IGNORE_BREAK);
         }
         std::string nextOp = lexer->topCopy();
-        if (auto it = reloadableBuildInInfix.find(nextOp); it != reloadableBuildInInfix.end()) {
-            if (prec < it->second) {
-                rhs = parseBinOpRHS(prec + 1, std::move(rhs));
-            }
+        if (auto it = reloadableBuildInInfix.find(nextOp);
+            (it != reloadableBuildInInfix.end() && prec < it->second) ||
+            (lexer->tokenType() == TokenType::IDENT && prec < UserDefinedPriority)) {
+            rhs = parseBinOpRHS(prec + 1, std::move(rhs));
+        } else if (priority == AssignPriority + 1 && it->second == AssignPriority) {
+            return setError("assign to a assignment is not allowed");
         }
         std::vector<std::unique_ptr<ExprAST>> args;
         args.push_back(std::move(lhs));
@@ -44,14 +61,13 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBinOpRHS(Priority priority, std:
 // cannot return unary function; returned unary function act as normal function
 // UNARYEXPR := unary UNARYEXPR | MEMBERACCESS
 std::unique_ptr<ExprAST> ExpressionParser::parseUnary() {
-    if (reloadableBuildInUnary.contains(lexer->topCopy())) {
-        auto op = lexer->popCopy(ExpressionLexer::Guidence::IGNORE_BREAK);
-        std::vector<std::unique_ptr<ExprAST>> args;
-        args.push_back(parseUnary());
-        return std::make_unique<FunctionCallExprAST>(std::make_unique<IdentifierExprAST>(op), std::move(args));
-    } else {
+    if (!reloadableBuildInUnary.contains(lexer->topCopy())) {
         return parsePrimary();
     }
+    auto op = lexer->popCopy(IGNORE_BREAK);
+    std::vector<std::unique_ptr<ExprAST>> args;
+    args.push_back(parseUnary());
+    return std::make_unique<FunctionCallExprAST>(std::make_unique<IdentifierExprAST>(op), std::move(args));
 }
 // PRIMARYEXPR :=
 //     IDENT                                                                                          |
@@ -76,50 +92,66 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
             lhs = std::make_unique<IdentifierExprAST>(typeInfo.idents[0]);
         } else {
             // ComplexLiteral
-            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-            std::vector<std::tuple<std::string, std::unique_ptr<ExprAST>>> members;
+            lexer->pop(IGNORE_BREAK);
+            std::vector<std::tuple<std::unique_ptr<ExprAST>, std::unique_ptr<ExprAST>>> members;
+            // bool requireDesignated = false;
             while (lexer->top() != "}") {
-                if (lexer->tokenType() == TokenType::IDENT) {
-                    auto state = lexer->getState();
-                    std::string key;
-                    key = lexer->popCopy(ExpressionLexer::Guidence::IGNORE_BREAK);
-                    if (lexer->top() == ":") {
-                        auto var = parseExpr(true);
-                        eatBreak();
-                        members.push_back({std::move(key), std::move(var)});
-                        if (lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK) != ",") {
-                            return setError("expected \",\" in complex type literal expression, found: " +
-                                            lexer->topCopy());
-                        }
-                        continue;
+                bool requireDesignated = false;
+                std::unique_ptr<rulejit::ExprAST> key;
+                if (lexer->top() == ".") {
+                    requireDesignated = true;
+                    lexer->pop(IGNORE_BREAK);
+                    auto ident = lexer->popCopy(IGNORE_BREAK);
+                    key = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(StringType), std::move(ident));
+                } else {
+                    key = parseExpr(true);
+                }
+                if (lexer->top() == ":") {
+                    lexer->pop(IGNORE_BREAK);
+                    auto value = parseExpr(true);
+                    // eatBreak();
+                    members.push_back(std::make_tuple(std::move(key), std::move(value)));
+                    if (lexer->top() == ",") {
+                        lexer->pop(IGNORE_BREAK);
                     }
-                    lexer->loadState(state);
-                }
-                members.push_back({"", parseExpr(true)});
-                if (lexer->top() == ",") {
-                    lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+                } else if (lexer->top() == ",") {
+                    if (requireDesignated) {
+                        return setError("designated initializer must have value");
+                    }
+                    lexer->pop(IGNORE_BREAK);
+                    members.push_back(std::make_tuple(nop(), std::move(key)));
+                } else {
+                    return setError("invalid symbol found in complex literal: " + lexer->topCopy());
                 }
             }
-            if (lexer->pop() != "}") {
-                return setError("expected \"}\" in complex type literal expression, found: " + lexer->topCopy());
-            }
+            lexer->pop();
             lhs = std::make_unique<ComplexLiteralExprAST>(std::make_unique<TypeInfo>(typeInfo), std::move(members));
         }
     } else if (lexer->tokenType() == TokenType::INT || lexer->tokenType() == TokenType::REAL) {
         // Literal
         lhs = std::make_unique<LiteralExprAST>(
-            std::make_unique<TypeInfo>(std::vector<std::string>{std::string(typeident::RealType)}), lexer->popCopy());
+            std::make_unique<TypeInfo>(std::vector<std::string>{std::string(typeident::RealTypeIdent)}),
+            lexer->popCopy());
     } else if (lexer->tokenType() == TokenType::STRING) {
         // Literal
         std::string tmp;
         (*lexer) >> tmp;
         lhs = std::make_unique<LiteralExprAST>(
-            std::make_unique<TypeInfo>(std::vector<std::string>{std::string(typeident::StringType)}), std::move(tmp));
+            std::make_unique<TypeInfo>(std::vector<std::string>{std::string(typeident::StringTypeIdent)}),
+            std::move(tmp));
     } else if (lexer->top() == "(") {
-        // Parent
-        lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-        lhs = parseExpr(true);
-        eatBreak();
+        // Parent | tokenized symbol
+        auto state = lexer->getState();
+        lexer->pop();
+        auto inner = lexer->tokenType();
+        if (auto sym = lexer->popCopy(); inner == TokenType::SYM && lexer->top() == ")") {
+            lhs = std::make_unique<IdentifierExprAST>(std::move(sym));
+        } else {
+            lexer->loadState(state);
+            lexer->pop(IGNORE_BREAK);
+            lhs = parseExpr(true);
+            eatBreak();
+        }
         if (lexer->pop() != ")") {
             return setError("mismatch \")\"");
         }
@@ -128,37 +160,37 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         lhs = parseBlock();
     } else if (lexer->top() == "if") {
         // branch
-        lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-        if (lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK) != "(") {
+        lexer->pop(IGNORE_BREAK);
+        if (lexer->pop(IGNORE_BREAK) != "(") {
             return setError("expected \"(\" after \"if\", found: " + lexer->topCopy());
         }
         auto cond = parseExpr(true);
         eatBreak();
-        if (lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK) != ")") {
+        if (lexer->pop(IGNORE_BREAK) != ")") {
             return setError("expected \")\" after \"if\", found: " + lexer->topCopy());
         }
-        auto trueExpr = parseExpr(true);
+        auto trueExpr = parseExpr();
         std::unique_ptr<rulejit::ExprAST> falseExpr;
-        if(lexer->top() == "else") {
-            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-            falseExpr = parseExpr(true);
+        if (lexer->top() == "else") {
+            lexer->pop(IGNORE_BREAK);
+            falseExpr = parseExpr();
         } else {
-            falseExpr = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(voidType), "");
+            falseExpr = nop();
         }
-        lhs = std::make_unique<BranchExprAST>(std::move(cond), std::move(trueExpr),  std::move(falseExpr));
+        lhs = std::make_unique<BranchExprAST>(std::move(cond), std::move(trueExpr), std::move(falseExpr));
     } else if (lexer->top() == "while") {
         // while
-        lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-        if (lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK) != "(") {
+        lexer->pop(IGNORE_BREAK);
+        if (lexer->pop(IGNORE_BREAK) != "(") {
             return setError("expected \"(\" after \"while\", found: " + lexer->topCopy());
         }
         auto cond = parseExpr(true);
         eatBreak();
-        if (lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK) != ")") {
+        if (lexer->pop(IGNORE_BREAK) != ")") {
             return setError("expected \")\" after \"while\", found: " + lexer->topCopy());
         }
         auto expr = parseExpr(true);
-        lhs = std::make_unique<LoopAST>(std::move(cond), std::move(expr));
+        lhs = std::make_unique<LoopAST>(nop(), std::move(cond), std::move(expr));
     } else {
         return setError("unexcepted token: \"" + lexer->topCopy() + "\" in expression");
     }
@@ -166,18 +198,18 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         // FuncCall | MemberAccess
         if (lexer->top() == ".") {
             // member access
-            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+            lexer->pop(IGNORE_BREAK);
             if (lexer->tokenType() != TokenType::IDENT) {
                 return setError("expected ident after \".\", found: " + lexer->topCopy());
             }
             std::string ident = lexer->popCopy();
             lhs = std::make_unique<MemberAccessExprAST>(
-                std::move(lhs),
-                std::make_unique<LiteralExprAST>(
-                    std::make_unique<TypeInfo>(std::vector<std::string>{std::string(typeident::StringType)}), ident));
+                std::move(lhs), std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(std::vector<std::string>{
+                                                                     std::string(typeident::StringTypeIdent)}),
+                                                                 ident));
         } else if (lexer->top() == "(") {
             // function call
-            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+            lexer->pop(IGNORE_BREAK);
             std::vector<std::unique_ptr<ExprAST>> args;
             while (lexer->top() != ")") {
                 auto arg = parseExpr(true);
@@ -186,7 +218,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
                 if (lexer->top() != ",") {
                     break;
                 } else {
-                    lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+                    lexer->pop(IGNORE_BREAK);
                 }
             }
             if (lexer->pop() != ")") {
@@ -195,7 +227,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
             lhs = std::make_unique<FunctionCallExprAST>(std::move(lhs), std::move(args));
         } else if (lexer->top() == "[") {
             // array access
-            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+            lexer->pop(IGNORE_BREAK);
             auto index = parseExpr(true);
             if (lexer->pop() != "]") {
                 return setError("expected \"]\" in array access expression, found: " + lexer->topCopy());
@@ -208,43 +240,15 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
     return lhs;
 }
 
-std::unique_ptr<BlockExprAST> ExpressionParser::parseBlock() {
+std::unique_ptr<ExprAST> ExpressionParser::parseBlock() {
     // Block
-    lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-    std::vector<std::unique_ptr<AST>> statements;
-    std::unique_ptr<AST> last;
+    lexer->pop(IGNORE_BREAK);
+    std::vector<std::unique_ptr<AST>> exprs;
     while (lexer->top() != "}") {
-        if (last) {
-            statements.push_back(std::move(last));
-        }
-        if (defKeyWords.contains(lexer->top())) {
-            // defs
-            last = parseDef();
-        } else {
-            // expr | assign
-            auto lhs = parseUnary();
-            if (lexer->top() != "=") {
-                // expr
-                last = parseBinOpRHS(0, std::move(lhs));
-            } else {
-                // assign
-                lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-                auto rhs = parseExpr();
-                if (!rhs) {
-                    return nullptr;
-                }
-                // TODO: <- assign to pointer
-                if (dynamic_cast<AssignableExprAST *>(lhs.get()) == nullptr) {
-                    return setError("can not assign to non assignable expression");
-                }
-                last = std::make_unique<AssignmentAST>(
-                    std::unique_ptr<AssignableExprAST>(dynamic_cast<AssignableExprAST *>(lhs.release())),
-                    std::move(rhs));
-            }
-        }
+        exprs.push_back(parseExpr());
 
         if (lexer->tokenType() == TokenType::ENDLINE) {
-            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+            lexer->pop(IGNORE_BREAK);
         } else if (lexer->top() != "}") {
             return setError("mismatched \"}\", found: " + lexer->topCopy());
         }
@@ -252,37 +256,45 @@ std::unique_ptr<BlockExprAST> ExpressionParser::parseBlock() {
     if (lexer->pop() != "}") {
         return setError("expected \"}\" in block expression, found: " + lexer->topCopy());
     }
-    if (dynamic_cast<ExprAST *>(last.get()) == nullptr) {
-        statements.push_back(std::move(last));
-        last = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(voidType), "");
+    if (exprs.empty()) {
+        return nop();
     }
-    return std::make_unique<BlockExprAST>(std::move(statements),
-                                          std::unique_ptr<ExprAST>(dynamic_cast<ExprAST *>(last.release())));
+    return std::make_unique<BlockExprAST>(std::move(exprs));
 }
 
-std::unique_ptr<DefAST> ExpressionParser::parseDef() {
+std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
     if (lexer->top() == "var") {
         // var def
-        lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-        auto indent = lexer->popCopy(ExpressionLexer::Guidence::IGNORE_BREAK);
+        lexer->pop(IGNORE_BREAK);
+        auto indent = lexer->popCopy(IGNORE_BREAK);
         // TODO: ":=" def
         auto type = (*lexer) | TypeParser();
         eatBreak();
-        if (lexer->popCopy(ExpressionLexer::Guidence::IGNORE_BREAK) != "=") {
+        if (lexer->popCopy(IGNORE_BREAK) != "=") {
             return setError("expected \"=\" in var definition, found: " + lexer->topCopy());
         }
         return std::make_unique<VarDefAST>(indent, std::make_unique<TypeInfo>(type), parseExpr());
     } else if (lexer->top() == "func") {
         // func def
-        lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+        lexer->pop(IGNORE_BREAK);
         // TODO: operator[]
-        std::string name = lexer->popCopy(ExpressionLexer::Guidence::IGNORE_BREAK);
-        TypeInfo type{{"func", "("}};
+        if (lexer->tokenType() != TokenType::IDENT && lexer->tokenType() != TokenType::SYM) {
+            return setError("expected symbol or ident as function name, found: " + lexer->topCopy());
+        }
+        FunctionDefAST::FuncDefType funcType = FunctionDefAST::FuncDefType::NORMAL;
+        std::string name = lexer->popCopy(IGNORE_BREAK);
+        if (lexer->top() == "infix") {
+            funcType = FunctionDefAST::FuncDefType::INFIX;
+            lexer->pop(IGNORE_BREAK);
+        }
+        TypeInfo type{std::vector<std::string>{"func", "("}};
         auto params = parseParamList();
         eatBreak();
-        FunctionDefAST::FuncDefType funcType;
         if (lexer->top() == "(") {
             // member func
+            if (funcType == FunctionDefAST::FuncDefType::INFIX) {
+                return setError("infix member function is not supported");
+            }
             if (params->size() != 1) {
                 return setError("member function must have only one accepter");
             }
@@ -306,33 +318,35 @@ std::unique_ptr<DefAST> ExpressionParser::parseDef() {
         type.idents.push_back(")");
         type.idents.push_back(":");
 
+        // TODO: remove ":"
         if (lexer->top() == ":") {
             // return type
-            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+            lexer->pop(IGNORE_BREAK);
             auto returnType = (*lexer) | TypeParser();
             if (!returnType) {
                 return setError("expected return type in function definition after \":\", found: " + lexer->topCopy());
             }
-            eatBreak();
             type.idents.push_back(returnType.toString());
         } else {
             // no return type
             type.idents.push_back("");
         }
-        if (lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK) != "->") {
-            return setError("expected \"->\" in function definition, found: " + lexer->topCopy());
+        eatBreak();
+        if (lexer->top() != "{" && lexer->pop(IGNORE_BREAK) != "->") {
+            return setError("expected \"->\" if returned value not a Block expression in function definition, found: " +
+                            lexer->topCopy());
         }
         auto expr = parseExpr();
         return std::make_unique<FunctionDefAST>(std::move(name), std::make_unique<TypeInfo>(type), std::move(*params),
                                                 std::move(expr), funcType);
     } else if (lexer->top() == "type") {
         // type def
-        lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-        auto name = lexer->popCopy(ExpressionLexer::Guidence::IGNORE_BREAK);
+        lexer->pop(IGNORE_BREAK);
+        auto name = lexer->popCopy(IGNORE_BREAK);
         // TODO: type alias
         auto type = (*lexer) | TypeParser();
         return std::make_unique<TypeDefAST>(std::move(name), std::make_unique<TypeInfo>(type));
-    } else  {
+    } else {
         return setError("expect definition keywords like \"var\", \"func\" or \"type\", found: " + lexer->topCopy());
     }
 }
@@ -340,12 +354,12 @@ std::unique_ptr<DefAST> ExpressionParser::parseDef() {
 std::unique_ptr<std::vector<std::unique_ptr<IdentifierExprAST>>> ExpressionParser::parseParamList() {
     std::unique_ptr<std::vector<std::unique_ptr<IdentifierExprAST>>> ret =
         std::make_unique<std::vector<std::unique_ptr<IdentifierExprAST>>>();
-    lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+    lexer->pop(IGNORE_BREAK);
     while (lexer->top() != ")") {
         if (lexer->tokenType() != TokenType::IDENT) {
             return setError("except identifier in param list, found: " + lexer->topCopy());
         }
-        auto ident = lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+        auto ident = lexer->pop(IGNORE_BREAK);
         ret->push_back(
             std::make_unique<IdentifierExprAST>(std::make_unique<TypeInfo>((*lexer) | TypeParser()), std::move(ident)));
         eatBreak();
@@ -353,7 +367,7 @@ std::unique_ptr<std::vector<std::unique_ptr<IdentifierExprAST>>> ExpressionParse
             return setError("expect \",\" after single param, found: " + lexer->topCopy());
         }
         if (lexer->top() == ",") {
-            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+            lexer->pop(IGNORE_BREAK);
             if (lexer->top() == ")") {
                 return setError("param list should not end with \",\"");
             }

@@ -1,5 +1,7 @@
 #pragma once
 
+// member pointer of AST is permitted not to be nullptr
+
 #include <algorithm>
 #include <memory>
 #include <set>
@@ -8,6 +10,8 @@
 
 #include "ast/astvisitor.hpp"
 #include "ast/type.hpp"
+
+using ASTTokenType = std::string;
 
 #define ACCEPT_FUNCTION                                                                                                \
     void accept(ASTVisitor *v) override { v->visit(*this); }
@@ -19,37 +23,42 @@ struct AST {
     virtual ~AST() = default;
 };
 
+template <typename T> bool isType(AST *ast) { return dynamic_cast<T *>(ast) != nullptr; };
+
+template <typename T> std::unique_ptr<T> asType(std::unique_ptr<AST> ast) { return std::unique_ptr<T>(ast.release()); };
+
 // EXPR := BINOP | LEXPR | LITERAL | FUNCCALL | COMPLEX | BRANCH | LOOP | BLOCK | '(' EXPR ')'
 struct ExprAST : public AST {
     std::unique_ptr<TypeInfo> type;
     ExprAST(std::unique_ptr<TypeInfo> type) : type(std::move(type)) {}
 };
 
-// LEXPR := IDENT | MEMBER
-struct AssignableExprAST : public ExprAST {
-    AssignableExprAST(std::unique_ptr<TypeInfo> type) : ExprAST(std::move(type)) {}
-};
+// // LEXPR := IDENT | MEMBER
+// struct AssignableExprAST : public ExprAST {
+//     AssignableExprAST(std::unique_ptr<TypeInfo> type) : ExprAST(std::move(type)) {}
+// };
 
 // IDENT
 // x
-struct IdentifierExprAST : public AssignableExprAST {
+struct IdentifierExprAST : public ExprAST {
     ACCEPT_FUNCTION;
-    std::string name;
+    ASTTokenType name;
     template <typename S>
     IdentifierExprAST(std::unique_ptr<TypeInfo> type, S &&name)
-        : AssignableExprAST(std::move(type)), name(std::forward<S>(name)) {}
+        : ExprAST(std::move(type)), name(std::forward<S>(name)) {}
     template <typename S> IdentifierExprAST(S &&name) : IdentifierExprAST(nullptr, std::forward<S>(name)) {}
 };
 
 // MEMBER := EXPR '.' IDENT | EXPR '[' EXPR ']'
 // vector.x (equals to vector["x"](literal string only)) | make_vector(1, 2, 3).x
-struct MemberAccessExprAST : public AssignableExprAST {
+struct MemberAccessExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<ExprAST> baseVar;
     // TODO: x[1, 2, 3]
     std::unique_ptr<ExprAST> memberToken;
-    MemberAccessExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> memberToken)
-        : AssignableExprAST(std::move(type)), baseVar(std::move(baseVar)), memberToken(std::move(memberToken)) {}
+    MemberAccessExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar,
+                        std::unique_ptr<ExprAST> memberToken)
+        : ExprAST(std::move(type)), baseVar(std::move(baseVar)), memberToken(std::move(memberToken)) {}
     MemberAccessExprAST(std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> memberToken)
         : MemberAccessExprAST(nullptr, std::move(baseVar), std::move(memberToken)) {}
 };
@@ -60,7 +69,8 @@ struct MemberAccessExprAST : public AssignableExprAST {
 //     ACCEPT_FUNCTION;
 //     std::unique_ptr<ExprAST> baseVar;
 //     std::unique_ptr<ExprAST> index;
-//     ArrayIndexExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> index)
+//     ArrayIndexExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST>
+//     index)
 //         : AssignableExprAST(std::move(type)), baseVar(std::move(baseVar)), index(std::move(index)) {}
 //     ArrayIndexExprAST(std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> index)
 //         : ArrayIndexExprAST(nullptr, std::move(baseVar), std::move(index)) {}
@@ -100,8 +110,8 @@ struct BranchExprAST : public ExprAST {
     std::unique_ptr<ExprAST> condition;
     std::unique_ptr<ExprAST> trueExpr;
     std::unique_ptr<ExprAST> falseExpr;
-    BranchExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> condition,
-                  std::unique_ptr<ExprAST> trueExpr, std::unique_ptr<ExprAST> falseExpr)
+    BranchExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> trueExpr,
+                  std::unique_ptr<ExprAST> falseExpr)
         : ExprAST(std::move(type)), condition(std::move(condition)), trueExpr(std::move(trueExpr)),
           falseExpr(std::move(falseExpr)) {}
     BranchExprAST(std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> trueExpr,
@@ -116,7 +126,7 @@ struct BranchExprAST : public ExprAST {
 // []i64{1, 2, 3} | Info{base: Base{name: "abc", value: 3}, time: 13} | Vector3{x: 1, y: 2, z: 3}
 struct ComplexLiteralExprAST : public ExprAST {
     ACCEPT_FUNCTION;
-    std::vector<std::tuple<std::string, std::unique_ptr<ExprAST>>> members;
+    std::vector<std::tuple<std::unique_ptr<ExprAST>, std::unique_ptr<ExprAST>>> members;
     template <typename V>
     ComplexLiteralExprAST(std::unique_ptr<TypeInfo> type, V &&members)
         : ExprAST(std::move(type)), members(std::forward<V>(members)) {}
@@ -128,56 +138,80 @@ struct ComplexLiteralExprAST : public ExprAST {
 // while(x!=0){x+=1;x;}
 struct LoopAST : public ExprAST {
     ACCEPT_FUNCTION;
+    ASTTokenType label;
+    std::unique_ptr<ExprAST> init;
     std::unique_ptr<ExprAST> condition;
     std::unique_ptr<ExprAST> body;
-    LoopAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> body)
-        : ExprAST(std::move(type)), condition(std::move(condition)), body(std::move(body)) {}
-    LoopAST(std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> body)
-        : LoopAST(nullptr, std::move(condition), std::move(body)) {}
+    template <typename S>
+    LoopAST(std::unique_ptr<TypeInfo> type, S &&label, std::unique_ptr<ExprAST> init,
+            std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> body)
+        : type(std::move(type)), label(std::forward<S>(label)), init(std::move(init)), condition(std::move(condition)),
+          body(std::move(body)) {}
+    template <typename S>
+    LoopAST(S &&label, std::unique_ptr<ExprAST> init, std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> body)
+        : LoopAST(nullptr, std::forward<S>(label), std::move(init), std::move(condition), std::move(body)) {}
+    LoopAST(std::unique_ptr<ExprAST> init, std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> body)
+        : LoopAST(nullptr, "", std::move(init), std::move(condition), std::move(body)) {}
 };
 
 // BLOCK := '{' ((EXPR | DEF | ASSIGN) ENDLINE)* EXPR ENDLINE? '}'
 // {var x i64 = 12; x;}
 struct BlockExprAST : public ExprAST {
     ACCEPT_FUNCTION;
-    std::vector<std::unique_ptr<AST>> preStatement;
-    std::unique_ptr<ExprAST> value;
-    template <typename V>
-    BlockExprAST(std::unique_ptr<TypeInfo> type, V &&preStatement, std::unique_ptr<ExprAST> value)
-        : ExprAST(std::move(type)), preStatement(std::forward<V>(preStatement)), value(std::move(value)) {}
-    template <typename V>
-    BlockExprAST(V &&preStatement, std::unique_ptr<ExprAST> value)
-        : BlockExprAST(nullptr, std::forward<V>(preStatement), std::move(value)) {}
+    std::vector<std::unique_ptr<ExprAST>> exprs;
+    // std::unique_ptr<ExprAST> value;
+    BlockExprAST(std::unique_ptr<TypeInfo> type, std::vector<std::unique_ptr<ExprAST>> &&exprs)
+        : ExprAST(std::move(type)), exprs(std::move(exprs)) {}
+    BlockExprAST(std::vector<std::unique_ptr<ExprAST>> &&exprs) : BlockExprAST(nullptr, std::move(exprs)) {}
 };
 
-// ASSIGN := LEXPR '=' EXPR
-// x = 12 CAUTION: no returns and not an expression
-struct AssignmentAST : public AST {
+// // ASSIGN := LEXPR '=' EXPR
+// // x = 12 CAUTION: no returns and not an expression
+// struct AssignmentAST : public AST {
+//     ACCEPT_FUNCTION;
+//     std::unique_ptr<AssignableExprAST> target;
+//     std::unique_ptr<ExprAST> value;
+//     AssignmentAST(std::unique_ptr<AssignableExprAST> target, std::unique_ptr<ExprAST> value)
+//         : target(std::move(target)), value(std::move(value)) {}
+// };
+
+struct NoReturnExprAST : public ExprAST {
+    NoReturnExprAST() : ExprAST(std::make_unique<TypeInfo>(NoInstanceType)) {}
+};
+
+struct ControlFlowAST : public NoReturnExprAST {
     ACCEPT_FUNCTION;
-    std::unique_ptr<AssignableExprAST> target;
+    enum class ControlFlowType {
+        BREAK,
+        CONTINUE,
+        RETURN,
+    } controlFlowType;
+    ASTTokenType label;
+    // may nullptr
     std::unique_ptr<ExprAST> value;
-    AssignmentAST(std::unique_ptr<AssignableExprAST> target, std::unique_ptr<ExprAST> value)
-        : target(std::move(target)), value(std::move(value)) {}
+    template <typename S>
+    ControlFlowAST(ControlFlowType controlFlowType, S &&label, std::unique_ptr<ExprAST> value)
+        : controlFlowType(controlFlowType), label(std::forward<S>(label)), value(std::move(value)) {}
 };
 
 // DEF := TYPEDEF | VARDEF | FUNCDEF
-struct DefAST : public AST {
-    std::string name;
-    template <typename S> DefAST(S &&name) : name(std::forward<S>(name)) {}
+struct DefAST : public NoReturnExprAST {
+    ASTTokenType name;
+    template <typename S> DefAST(S &&name) : name(std::forward<S>(name)), NoReturnExprAST() {}
 };
 
 // TYPEDEF := 'type' IDENT TYPE ('|' TYPE)*
 // type Vector3 struct {x f64; y f64; z f64;} | type double f64 | TODO: type Reference<T> class {T item;}
 struct TypeDefAST : public DefAST {
     ACCEPT_FUNCTION;
-    std::unique_ptr<TypeInfo> type;
+    std::unique_ptr<TypeInfo> definedType;
     enum class TypeDefType {
         NORMAL,
         ALIAS,
     } typeDefType;
     template <typename S>
-    TypeDefAST(S &&name, std::unique_ptr<TypeInfo> type, TypeDefType typeDefType = TypeDefType::NORMAL)
-        : DefAST(std::forward<S>(name)), type(std::move(type)), typeDefType(typeDefType) {}
+    TypeDefAST(S &&name, std::unique_ptr<TypeInfo> definedType, TypeDefType typeDefType = TypeDefType::NORMAL)
+        : DefAST(std::forward<S>(name)), definedType(std::move(definedType)), typeDefType(typeDefType) {}
 };
 
 // VARDEF := 'var' IDENT TYPE ('='? EXPR)? TODO: | 'var' IDENT ':=' EXPR
@@ -188,16 +222,16 @@ struct TypeDefAST : public DefAST {
 // TODO: var x []i64 {1, 3, 4};
 struct VarDefAST : public DefAST {
     ACCEPT_FUNCTION;
-    std::unique_ptr<TypeInfo> type;
-    std::unique_ptr<ExprAST> defineValue;
+    std::unique_ptr<TypeInfo> valueType;
+    std::unique_ptr<ExprAST> definedValue;
     enum class VarDefType {
         NORMAL,
         AUTO,
     } varDefType;
     template <typename S>
-    VarDefAST(S &&name, std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> defineValue,
+    VarDefAST(S &&name, std::unique_ptr<TypeInfo> valueType, std::unique_ptr<ExprAST> definedValue,
               VarDefType varDefType = VarDefType::NORMAL)
-        : DefAST(std::forward<S>(name)), type(std::move(type)), defineValue(std::move(defineValue)),
+        : DefAST(std::forward<S>(name)), valueType(std::move(valueType)), definedValue(std::move(definedValue)),
           varDefType(varDefType) {}
 };
 
@@ -206,34 +240,43 @@ struct VarDefAST : public DefAST {
 // TODO: | func add i64 -> i64 -> i64 = a -> b -> a+b
 struct FunctionDefAST : public DefAST {
     ACCEPT_FUNCTION;
-    std::unique_ptr<TypeInfo> type;
+    std::unique_ptr<TypeInfo> funcType;
     std::vector<std::unique_ptr<IdentifierExprAST>> params;
     std::unique_ptr<ExprAST> returnValue;
     enum class FuncDefType {
         NORMAL,
         MEMBER,
+        INFIX,
     } funcDefType;
     template <typename S, typename V>
-    FunctionDefAST(S &&name, std::unique_ptr<TypeInfo> type, V &&params, std::unique_ptr<ExprAST> returnValue,
+    FunctionDefAST(S &&name, std::unique_ptr<TypeInfo> funcType, V &&params, std::unique_ptr<ExprAST> returnValue,
                    FuncDefType funcDefType = FuncDefType::NORMAL)
-        : DefAST(std::forward<S>(name)), type(std::move(type)), params(std::forward<V>(params)),
+        : DefAST(std::forward<S>(name)), funcType(std::move(funcType)), params(std::forward<V>(params)),
           returnValue(std::move(returnValue)), funcDefType(funcDefType) {}
 };
 
-// TODO: INFIX
+decltype(auto) nop() { return std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(NoInstanceType), ""); }
 
-// TODO: EXTERNFUNC
+// // symbol table operations
+// struct SymbolCommandAST : public NoReturnExprAST {
+//     ACCEPT_FUNCTION;
+//     enum class SymbolCommandTypeAST {
+//         IMPORT,
+//         EXPORT,
+//         EXTERN,
+//     } symbolCommandType;
+//     ASTTokenType params;
+// };
 
-// TODO: MACRODEF
-
-// TODO:
-// var x i32 = 1
-//     + 12 //legal?
-// TOP := (EXPR | DEF | ASSIGN) ENDLINE TOP | ()
-struct TopLevelAST : public AST {
-    ACCEPT_FUNCTION;
-    std::vector<std::unique_ptr<AST>> statements;
-    template <typename V> TopLevelAST(V &&statements) : statements(std::forward<V>(statements)) {}
-};
+// // TODO:
+// // var x i32 = 1
+// //     + 12 //legal?
+// // TOP := PACKAGECOMMAND TOP | TOPEXPR
+// // TOPEXPR := (EXPR | DEF | ASSIGN) ENDLINE TOPEXPR | ()
+// struct TopLevelAST : public AST {
+//     ACCEPT_FUNCTION;
+//     std::vector<std::unique_ptr<AST>> statements;
+//     template <typename V> TopLevelAST(V &&statements) : statements(std::forward<V>(statements)) {}
+// };
 
 } // namespace rulejit

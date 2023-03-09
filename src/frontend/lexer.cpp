@@ -22,7 +22,7 @@ namespace rulejit {
 void ExpressionLexer::extend(Guidence guidence) {
     while (isspace(*next)) {
         // SPACE
-        if (!config.ignoreAllBreak && guidence != Guidence::IGNORE_BREAK && charEqual('\n')) {
+        if (!config::ignoreAllBreak && guidence != Guidence::IGNORE_BREAK && charEqual('\n')) {
             type = TokenType::ENDLINE;
             next++;
             return;
@@ -39,7 +39,20 @@ void ExpressionLexer::extend(Guidence guidence) {
         return;
     }
     begin = next;
-    if (isdigit(*next)) {
+    if (charEqual('_') || isalpha(*next) || *next < 0) {
+        // keywords | identifier
+        do {
+            next++;
+        } while (charEqual('_') || isalpha(*next) || isdigit(*next) || *next < 0);
+        auto indent = top();
+        if (keyWords.find(indent) != keyWords.end()) {
+            // keywords
+            type = TokenType::SYM;
+        } else {
+            // identifier
+            type = TokenType::IDENT;
+        }
+    } else if (isdigit(*next)) {
         // real | int literal
         static const std::regex integer(R"([1-9][0-9]*|0(?:x[0-9a-fA-F]*|b[0-1]*)?)",
                                         std::regex_constants::optimize | std::regex_constants::ECMAScript);
@@ -78,19 +91,6 @@ void ExpressionLexer::extend(Guidence guidence) {
             next++;
         } while (!charEqual('"'));
         next++;
-    } else if (charEqual('_') || isalpha(*next) || *next >= 0x80) {
-        // keywords | identifier
-        do {
-            next++;
-        } while (charEqual('_') || isalpha(*next) || isdigit(*next) || *next >= 0x80);
-        auto indent = top();
-        if (keyWords.find(indent) != keyWords.end()) {
-            // keywords
-            type = TokenType::SYM;
-        } else {
-            // identifier
-            type = TokenType::IDENT;
-        }
     } else if (charEqual(';')) {
         // endline
         type = TokenType::ENDLINE;
@@ -115,9 +115,11 @@ void ExpressionLexer::extend(Guidence guidence) {
             begin = next;
             return extend(guidence);
         }
+        if (charEqual('`')){
+            // TODO: tokenized symbol? like `+(a, b) // return a+b
+        }
         // symbol
         type = TokenType::SYM;
-        // TODO: move to language.hpp
         next++;
         while (buildInMultiCharSymbol.contains(std::string_view(begin, next - begin + 1))) {
             next++;

@@ -34,6 +34,11 @@ namespace rulejit {
 // all unnamed complex type is NOT equal to each other
 struct TypeInfo {
     std::vector<std::string> idents;
+    TypeInfo() = default;
+    template <typename S>
+    TypeInfo(S&& s):idents(std::forward<S>(s)){};
+    TypeInfo(TypeInfo&& t) = default;
+    TypeInfo(const TypeInfo& t) = default;
     // bool isFunction(){
     //     return idents.size() > 1 && idents[0] == "func";
     //     // TODO: named function
@@ -90,7 +95,10 @@ struct TypeInfo {
     TypeInfo memberType(std::string token);
 };
 
-inline const TypeInfo voidType{};
+inline const TypeInfo NoInstanceType{std::vector<std::string>{std::string(typeident::NoInstanceTypeIdent)}};
+inline const TypeInfo StringType{std::vector<std::string>{std::string(typeident::StringTypeIdent)}};
+inline const TypeInfo IntType{std::vector<std::string>{std::string(typeident::IntTypeIdent)}};
+inline const TypeInfo RealType{std::vector<std::string>{std::string(typeident::RealTypeIdent)}};
 
 struct TypeParser {
     // may leave '\n' as a ENDLINE

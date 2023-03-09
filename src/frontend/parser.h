@@ -8,7 +8,6 @@
 #include "ast/ast.hpp"
 #include "defines/language.hpp"
 #include "frontend/lexer.h"
-#include "frontend/typecontext.hpp"
 
 #include "rapidxml-1.13/rapidxml.hpp"
 
@@ -72,9 +71,9 @@ struct ExpressionParser {
     std::unique_ptr<ExprAST> parseUnary();
     std::unique_ptr<ExprAST> parsePrimary();
 
-    std::unique_ptr<BlockExprAST> parseBlock();
+    std::unique_ptr<ExprAST> parseBlock();
 
-    std::unique_ptr<DefAST> parseDef();
+    std::unique_ptr<ExprAST> parseDef();
     std::unique_ptr<std::vector<std::unique_ptr<IdentifierExprAST>>> parseParamList();
 
     void eatBreak() {

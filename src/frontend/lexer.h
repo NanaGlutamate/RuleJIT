@@ -49,9 +49,6 @@ class ExpressionLexer {
         operator bool() { return err; }
         void clear() { err = false; }
     } errorHandler;
-    struct Config {
-        bool ignoreAllBreak = false;
-    } config;
     enum class Guidence {
         NONE,
         START,

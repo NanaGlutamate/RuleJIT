@@ -87,7 +87,9 @@ struct ASTPrinter : public ASTVisitor {
         for (auto &[key, value] : v.members) {
             buffer << ", ";
             printIndent();
-            buffer << "(\"" << key << "\", ";
+            buffer << "(\"";
+            key->accept(this);
+            buffer << "\", ";
             value->accept(this);
             buffer << ")";
         }
@@ -110,29 +112,22 @@ struct ASTPrinter : public ASTVisitor {
     VISIT_FUNCTION(BlockExprAST) {
         buffer << "(block";
         cnt++;
-        for (auto &value : v.preStatement) {
+        for (auto &value : v.exprs) {
             buffer << ", ";
             printIndent();
             value->accept(this);
         }
-        buffer << ", ";
-        printIndent();
-        v.value->accept(this);
         cnt--;
         printIndent();
         buffer << ")";
     }
-    VISIT_FUNCTION(AssignmentAST) {
-        buffer << "(assign, ";
-        cnt++;
-        printIndent();
-        v.target->accept(this);
-        buffer << ", ";
-        printIndent();
-        v.value->accept(this);
-        cnt--;
-        printIndent();
-        buffer << ")";
+    VISIT_FUNCTION(ControlFlowAST) {
+        std::string type = std::map<ControlFlowAST::ControlFlowType, std::string>{
+            {ControlFlowAST::ControlFlowType::BREAK, "BREAK"},
+            {ControlFlowAST::ControlFlowType::CONTINUE, "CONTINUE"},
+            {ControlFlowAST::ControlFlowType::RETURN, "RETURN"},
+        }.find(v.controlFlowType)->second;
+        buffer << std::format("[{}]@{}", type, v.label);
     }
     VISIT_FUNCTION(TypeDefAST) {
         buffer << "(typeDef, ";
@@ -156,7 +151,7 @@ struct ASTPrinter : public ASTVisitor {
         buffer << v.type->toString();
         buffer << ", ";
         printIndent();
-        v.defineValue->accept(this);
+        v.definedValue->accept(this);
         cnt--;
         printIndent();
         buffer << ")";
@@ -185,9 +180,9 @@ struct ASTPrinter : public ASTVisitor {
         printIndent();
         buffer << ")";
     }
-    VISIT_FUNCTION(TopLevelAST){
-        buffer << "[toplevel]";
-    }
+    // VISIT_FUNCTION(TopLevelAST){
+    //     buffer << "[toplevel]";
+    // }
 
   private:
     void printIndent() {

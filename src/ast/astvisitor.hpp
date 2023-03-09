@@ -17,13 +17,17 @@ struct ComplexLiteralExprAST;
 struct LoopAST;
 struct BlockExprAST;
 
-struct AssignmentAST;
+// struct AssignmentAST;
+
+struct ControlFlowAST;
 
 struct TypeDefAST;
 struct VarDefAST;
 struct FunctionDefAST;
 
-struct TopLevelAST;
+// struct SymbolCommandAST;
+
+// struct TopLevelAST;
 
 struct ASTVisitor{
     bool unexpectType;
@@ -38,13 +42,17 @@ struct ASTVisitor{
     VIRTUAL_VISIT_FUNCTION(LoopAST);
     VIRTUAL_VISIT_FUNCTION(BlockExprAST);
 
-    VIRTUAL_VISIT_FUNCTION(AssignmentAST);
+    // VIRTUAL_VISIT_FUNCTION(AssignmentAST);
+
+    VIRTUAL_VISIT_FUNCTION(ControlFlowAST);
 
     VIRTUAL_VISIT_FUNCTION(TypeDefAST);
     VIRTUAL_VISIT_FUNCTION(VarDefAST);
     VIRTUAL_VISIT_FUNCTION(FunctionDefAST);
 
-    VIRTUAL_VISIT_FUNCTION(TopLevelAST);
+    // VIRTUAL_VISIT_FUNCTION(SymbolCommandAST);
+
+    // VIRTUAL_VISIT_FUNCTION(TopLevelAST);
     virtual ~ASTVisitor() = default;
 };
 

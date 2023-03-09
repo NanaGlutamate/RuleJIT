@@ -9,7 +9,7 @@ find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-include_directories(AFTER ${PROJECT_SOURCE_DIR}/include)
+include_directories(AFTER ${PROJECT_SOURCE_DIR}/src)
 include_directories(AFTER ${PROJECT_SOURCE_DIR}/extern)
 include_directories(AFTER ${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})

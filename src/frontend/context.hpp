@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma once
+
 #include <map>
 #include <string>
 #include <tuple>
@@ -9,6 +11,10 @@
 #include "defines/language.hpp"
 
 namespace rulejit{
+
+struct SymbolTable{
+    std::string getFuncOverloadSymbol(){}
+}
 
 struct ContextGlobal {
     std::map<std::string, std::vector<size_t>> memberFuncRegister;
@@ -86,7 +92,7 @@ struct ContextStack {
     //         return {true, it->second};
     //     }
     //     if(layer == 0){
-    //         return {false, voidType};
+    //         return {false, NoInstanceType};
     //     }
     //     return seekTypeAlias(s, layer-1);
     // }
@@ -122,7 +128,7 @@ struct ContextStack {
     //         return {true, it->second};
     //     }
     //     if(layer == 0){
-    //         return {false, voidType};
+    //         return {false, NoInstanceType};
     //     }
     //     return seekFuncDef(param, layer-1);
     // }
@@ -134,7 +140,7 @@ struct ContextStack {
     //         return {true, it->second};
     //     }
     //     if(layer == 0){
-    //         return {false, voidType};
+    //         return {false, NoInstanceType};
     //     }
     //     return seekVarDef(s, layer-1);
     // }
@@ -146,7 +152,7 @@ struct ContextStack {
     //         return {true, it->second};
     //     }
     //     if(layer == 0){
-    //         return {false, voidType};
+    //         return {false, NoInstanceType};
     //     }
     //     return seekTypeDef(s, layer-1);
     // }
