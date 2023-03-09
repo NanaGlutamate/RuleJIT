@@ -10,6 +10,7 @@
 
 #include "ast/astvisitor.hpp"
 #include "ast/type.hpp"
+#include "defines/typedef.hpp"
 
 using ASTTokenType = std::string;
 
@@ -145,7 +146,7 @@ struct LoopAST : public ExprAST {
     template <typename S>
     LoopAST(std::unique_ptr<TypeInfo> type, S &&label, std::unique_ptr<ExprAST> init,
             std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> body)
-        : type(std::move(type)), label(std::forward<S>(label)), init(std::move(init)), condition(std::move(condition)),
+        : ExprAST(std::move(type)), label(std::forward<S>(label)), init(std::move(init)), condition(std::move(condition)),
           body(std::move(body)) {}
     template <typename S>
     LoopAST(S &&label, std::unique_ptr<ExprAST> init, std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> body)
@@ -255,7 +256,7 @@ struct FunctionDefAST : public DefAST {
           returnValue(std::move(returnValue)), funcDefType(funcDefType) {}
 };
 
-decltype(auto) nop() { return std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(NoInstanceType), ""); }
+inline decltype(auto) nop() { return std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(NoInstanceType), ""); }
 
 // // symbol table operations
 // struct SymbolCommandAST : public NoReturnExprAST {

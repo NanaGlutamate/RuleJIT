@@ -1,3 +1,7 @@
+add_subdirectory(defines)
+add_subdirectory(ast)
+add_subdirectory(tools)
+
 add_subdirectory(frontend)
 
 add_subdirectory(ir)

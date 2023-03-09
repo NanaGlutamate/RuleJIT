@@ -33,7 +33,7 @@ struct StaticBaseGarbageCollector {
         } init;
         size_t ret;
         if (memberRefNum == 0 && valueSize <= 4) {
-            // small value object optimization
+            // TODO: small value object optimization
         }
         if (unused.empty()) {
             managedObjects.push_back(
@@ -60,6 +60,7 @@ struct StaticBaseGarbageCollector {
         if (tar == 0) {
             return;
         }
+        // TODO: small value object
         managedObjects[tar].refCounter--;
         if (managedObjects[tar].refCounter == 0) {
             unused.push(tar);
@@ -70,7 +71,7 @@ struct StaticBaseGarbageCollector {
     };
     static size_t *getData(size_t ref) {
         if (isSmallValueObject(ref)) {
-            // small value object
+            // TODO: small value object
         }
     }
     static void retain(size_t tar) { managedObjects[tar].refCounter++; };

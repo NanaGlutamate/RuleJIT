@@ -189,6 +189,10 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         if (lexer->pop(IGNORE_BREAK) != ")") {
             return setError("expected \")\" after \"while\", found: " + lexer->topCopy());
         }
+        if(lexer->top()=="@"){
+            // labeled
+            lexer->pop(IGNORE_BREAK);
+        }
         auto expr = parseExpr(true);
         lhs = std::make_unique<LoopAST>(nop(), std::move(cond), std::move(expr));
     } else {
@@ -243,7 +247,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
 std::unique_ptr<ExprAST> ExpressionParser::parseBlock() {
     // Block
     lexer->pop(IGNORE_BREAK);
-    std::vector<std::unique_ptr<AST>> exprs;
+    std::vector<std::unique_ptr<ExprAST>> exprs;
     while (lexer->top() != "}") {
         exprs.push_back(parseExpr());
 

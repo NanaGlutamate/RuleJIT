@@ -95,11 +95,6 @@ struct TypeInfo {
     TypeInfo memberType(std::string token);
 };
 
-inline const TypeInfo NoInstanceType{std::vector<std::string>{std::string(typeident::NoInstanceTypeIdent)}};
-inline const TypeInfo StringType{std::vector<std::string>{std::string(typeident::StringTypeIdent)}};
-inline const TypeInfo IntType{std::vector<std::string>{std::string(typeident::IntTypeIdent)}};
-inline const TypeInfo RealType{std::vector<std::string>{std::string(typeident::RealTypeIdent)}};
-
 struct TypeParser {
     // may leave '\n' as a ENDLINE
     // that means, last 'pop' called by TypeParser is with no Guidence
@@ -220,88 +215,5 @@ inline TypeInfo TypeInfo::memberType(std::string token) {
         }
     }
 }
-
-// // TYPE := IDENT | ARRAYTYPE | SLICETYPE | FUNCTYPE | COMPLEXTYPE
-// struct TypeInfo {
-//     virtual bool isArray() { return false; }
-//     virtual bool isFunction() { return false; }
-//     virtual bool isIdent() { return false; }
-//     virtual TypeInfo *getMemberType(const std::string &ident) { return nullptr; }
-//     // virtual bool isLegal(){return false;}
-//     virtual std::unique_ptr<TypeInfo> copy() = 0;
-//     virtual ~TypeInfo() = default;
-// };
-
-// // IDENT
-// // a
-// struct TypeIdent : public TypeInfo {
-//     std::string name;
-//     std::unique_ptr<TypeInfo> copy() override {
-//         return std::make_unique<TypeIdent>(name);
-//     }
-//     virtual bool isIdent() { return true; }
-// };
-
-// // // [4]a | TODO: [5,5]a
-// // struct ArrayType : public TypeInfo{
-// //     size_t len;
-// //     std::unique_ptr<TypeInfo> baseType;
-// //     bool isArray(){return true;}
-// // };
-
-// // SLICETYPE := '[' ']' TYPE
-// // []a
-// struct SliceType : public TypeInfo {
-//     std::unique_ptr<TypeInfo> baseType;
-//     bool isArray() { return true; }
-//     TypeInfo *getMemberType(const std::string &ident) { return baseType.get(); }
-//     std::unique_ptr<TypeInfo> copy() override {
-//         return std::make_unique<SliceType>(baseType->copy());
-//     }
-// };
-
-// // FUNCTYPE := '(' (TYPE (',' TYPE)*)? ')' ('->' TYPE)?
-// // (i64, i64)->i64 (regard "func" as define keyword like var)
-// struct FuncType : public TypeInfo {
-//     std::vector<std::unique_ptr<TypeInfo>> paramType;
-//     // nullptr if no returns
-//     std::unique_ptr<TypeInfo> returnType;
-//     std::unique_ptr<TypeInfo> copy() override {
-//         std::vector<std::unique_ptr<TypeInfo>> tmp;
-//         for(auto& p : paramType){
-//             tmp.push_back(p->copy());
-//         }
-//         return std::make_unique<FuncType>(
-//             std::move(tmp),
-//             returnType->copy()
-//         );
-//     }
-//     virtual bool isFunction() { return true; }
-// };
-
-// // COMPLEXTYPE := ('struct' | 'class' | 'dynamic') '{' (TYPE (ENDLINE TYPE)*)? '}'
-// // {i64; i64} (access by '[num]' like tuple in python) | {x f32; y f32} (regard "type" as define keyword like var,
-// TODO:
-// // "struct", "class" and "dynamic" as attribute like "addable") TODO: static, and regard member function as static
-// func
-// // pointer
-// struct DynamicType : public TypeInfo {
-//     std::vector<std::tuple<std::string, std::unique_ptr<TypeInfo>>> memberType;
-//     TypeInfo *getMemberType(const std::string &ident) {
-//         return std::get<1>(*std::find_if(memberType.begin(), memberType.end(),
-//                                          [&](auto &x) { return std::get<0>(x) == ident; }))
-//             //*std::ranges::find_if(memberType, [&](auto &x) { return std::get<0>(x) == ident; }))
-//             .get();
-//     }
-//     std::unique_ptr<TypeInfo> copy() override {
-//         std::vector<std::tuple<std::string, std::unique_ptr<TypeInfo>>> tmp;
-//         for(auto& p : memberType){
-//             tmp.push_back(std::make_tuple(std::get<0>(p), std::get<1>(p)->copy()));
-//         }
-//         return std::make_unique<DynamicType>(
-//             std::move(tmp)
-//         );
-//     }
-// };
 
 } // namespace rulejit

@@ -27,7 +27,6 @@ if(MSVC)
   string(APPEND CMAKE_CXX_FLAGS " /permissive- /Zc:__cplusplus")
 endif()
 
-add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(extern)
 
