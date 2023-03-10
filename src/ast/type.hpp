@@ -35,8 +35,8 @@ namespace rulejit {
 struct TypeInfo {
     std::vector<std::string> idents;
     TypeInfo() = default;
-    template <typename S>
-    TypeInfo(S&& s):idents(std::forward<S>(s)){};
+    TypeInfo(std::vector<std::string>&& s):idents(std::move(s)){};
+    TypeInfo(const std::vector<std::string>& s):idents(s){};
     TypeInfo(TypeInfo&& t) = default;
     TypeInfo(const TypeInfo& t) = default;
     // bool isFunction(){
@@ -106,11 +106,8 @@ struct TypeParser {
     static TypeInfo parse(ExpressionLexer &e) {
         TypeInfo info;
         constexpr auto ignore_break = ExpressionLexer::Guidence::IGNORE_BREAK;
-        while (e.top() == "[" || e.top() == "*") {
-            if (e.top() == "*") {
-                info.idents.push_back("*");
-                e.pop(ignore_break);
-            } else {
+        while (e.top() == "[" || e.top() == "*" || e.top() == "const") {
+            if (e.top() == "[") {
                 // '[' ']' *type
                 // slice type: {"[]", *type}
                 // TODO: '[' (num | ...) ']' *type
@@ -120,6 +117,9 @@ struct TypeParser {
                 if (e.pop(ignore_break) != "]") {
                     return error("mismatch \"[\" in slice type");
                 }
+            } else {
+                info.idents.push_back(e.topCopy());
+                e.pop(ignore_break);
             }
         }
         if (e.top() == "func") {
@@ -147,11 +147,10 @@ struct TypeParser {
             }
             e.pop();
             info.idents.push_back(")");
-            info.idents.push_back(":");
             if (e.top() != ":") {
-                info.idents.push_back("");
                 return info;
             } else {
+                info.idents.push_back(":");
                 e.pop(ignore_break);
             }
             if (e.top() == "\n") {

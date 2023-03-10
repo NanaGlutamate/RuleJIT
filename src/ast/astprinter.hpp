@@ -25,7 +25,7 @@ struct ASTPrinter : public ASTVisitor {
         if (isIndent) {
             indent = true;
             cnt = 0;
-        }else{
+        } else {
             indent = false;
         }
         unexpectType = false;
@@ -98,12 +98,18 @@ struct ASTPrinter : public ASTVisitor {
         buffer << ")";
     }
     VISIT_FUNCTION(LoopAST) {
-        buffer << "(loop, ";
+        buffer << "(loop" << (v.label == "" ? "" : "@" + v.label) << ", ";
         cnt++;
         printIndent();
+        buffer << "[init]";
+        v.init->accept(this);
+        buffer << ", ";
+        printIndent();
+        buffer << "[condition]";
         v.condition->accept(this);
         buffer << ", ";
         printIndent();
+        buffer << "[return]";
         v.body->accept(this);
         cnt--;
         printIndent();
@@ -122,11 +128,14 @@ struct ASTPrinter : public ASTVisitor {
         buffer << ")";
     }
     VISIT_FUNCTION(ControlFlowAST) {
-        std::string type = std::map<ControlFlowAST::ControlFlowType, std::string>{
-            {ControlFlowAST::ControlFlowType::BREAK, "BREAK"},
-            {ControlFlowAST::ControlFlowType::CONTINUE, "CONTINUE"},
-            {ControlFlowAST::ControlFlowType::RETURN, "RETURN"},
-        }.find(v.controlFlowType)->second;
+        std::string type =
+            std::map<ControlFlowAST::ControlFlowType, std::string>{
+                {ControlFlowAST::ControlFlowType::BREAK, "BREAK"},
+                {ControlFlowAST::ControlFlowType::CONTINUE, "CONTINUE"},
+                {ControlFlowAST::ControlFlowType::RETURN, "RETURN"},
+            }
+                .find(v.controlFlowType)
+                ->second;
         buffer << std::format("[{}]@{}", type, v.label);
     }
     VISIT_FUNCTION(TypeDefAST) {
@@ -136,7 +145,7 @@ struct ASTPrinter : public ASTVisitor {
         buffer << v.name;
         buffer << ", ";
         printIndent();
-        buffer << v.type->toString();
+        buffer << v.definedType->toString();
         cnt--;
         printIndent();
         buffer << ")";
@@ -148,7 +157,7 @@ struct ASTPrinter : public ASTVisitor {
         buffer << v.name;
         buffer << ", ";
         printIndent();
-        buffer << v.type->toString();
+        buffer << v.valueType->toString();
         buffer << ", ";
         printIndent();
         v.definedValue->accept(this);
@@ -163,7 +172,7 @@ struct ASTPrinter : public ASTVisitor {
         buffer << v.name;
         buffer << ", ";
         printIndent();
-        buffer << v.type->toString();
+        buffer << v.funcType->toString();
         buffer << ", ";
         printIndent();
         buffer << "(";

@@ -13,6 +13,7 @@ inline constexpr std::string_view NoInstanceTypeIdent{""};
 inline constexpr std::string_view StringTypeIdent{"string"};
 inline constexpr std::string_view RealTypeIdent{"f64"};
 inline constexpr std::string_view IntTypeIdent{"f64"};
+inline constexpr std::string_view AutoTypeIdent{"auto"};
 
 } // namespace typeident
 
@@ -72,7 +73,7 @@ inline const std::map<std::string, Priority> reloadableBuildInInfix{
     {"&&", 20},
     {"||", 10},
     {"or", 10},
-    
+
     {":", UserDefinedPriority},
     {"`", UserDefinedPriority},
     {"~", UserDefinedPriority},
@@ -90,13 +91,19 @@ inline const std::set<std::string_view> defKeyWords{
     "type",
 };
 
+inline const std::set<std::string_view> commandKeyWords{
+    "import",
+    "export",
+    "extern",
+};
+
 inline const std::set<std::string_view> keyWords{
-    "if",     "else", "until", "func", "var", "type",     "struct", "class",  "dynamic", "extern",
-    "return", "and",  "or",    "not",  "xor", "continue", "import", "export", "while",   "for",
+    "if",  "else", "until", "func", "var",      "type",   "struct", "class", "dynamic", "extern", "return",
+    "and", "or",   "not",   "xor",  "continue", "import", "export", "while", "for",     "const",
 };
 
 inline const std::set<std::string_view> typeIndicator{
-    "struct", "class", "dynamic", "func", "[", "closure",
+    "struct", "class", "dynamic", "func", "[", "const", "*",
 };
 
 inline const std::set<std::string_view> lambdaKeyWords{

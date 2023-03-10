@@ -1,2 +1,0 @@
-add_subdirectory(cq)
-add_subdirectory(dynamictype)

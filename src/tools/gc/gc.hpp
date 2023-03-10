@@ -5,17 +5,26 @@
 #include <stack>
 #include <vector>
 
-namespace rulejit {
+#define __RULEJIT_GC_DEBUG_ASSERTION
 
+// struct content{
+//     int32_t referenceCount, totalCount;
+//     size_t reference[referenceCount];
+//     size_t value[totalCount - referenceCount];
+//     content nextFram[];
+// };
+
+namespace rulejit {
 // template<typename Alloc = std::allocator<size_t>>
-struct StaticBaseGarbageCollector {
+struct [[deprecated]]_StaticBaseGarbageCollector {
     using ManagedReference = size_t;
     static void assign(ManagedReference *tar, ManagedReference src) {
         release(*tar);
         *tar = src;
         retain(src);
     }
-    static ManagedReference *getValuePointer(ManagedReference ref) {
+    static void *getValuePointer(ManagedReference ref) {
+        if(isSmallValueObject(ref)){}
         return managedObjects[ref].data.get() + managedObjects[ref].memberRefNum;
     }
     static ManagedReference *getNthRefMemberPtr(ManagedReference ref, size_t index) {
@@ -24,11 +33,10 @@ struct StaticBaseGarbageCollector {
     static ManagedReference getNthRefMember(ManagedReference ref, size_t index) {
         return managedObjects[ref].data.get()[index];
     }
-    static ManagedReference alloc(size_t valueSize, size_t memberRefNum) {
+    static ManagedReference alloc(size_t memberRefNum, size_t valueSize) {
         inline static struct InitJob {
             InitJob() {
                 managedObjects.reserve(1024);
-                freeList.reserve(8);
             }
         } init;
         size_t ret;
@@ -52,10 +60,33 @@ struct StaticBaseGarbageCollector {
         }
         return ret;
     }
-    template <typename T> static ManagedReference alloc(size_t memberRefNum) { return alloc(sizeof(T), memberRefNum); }
+    template <typename T> static ManagedReference alloc(size_t memberRefNum) { return alloc(memberRefNum, sizeof(T)); }
     // template <size_t Length>
     // struct ManagedObject : public ManagedObjectBase{};
   private:
+    static void fullGC(){}
+    consteval static size_t mask(){return (size_t(1) << sizeof(size_t) * 8 - 1);}
+    constexpr static bool isSmallValueObject(size_t ref) { return ref & mask(); }
+    // small value object optimization
+    struct alignas(4 * 128 * sizeof(size_t)) FreeList {
+        struct alignas(4 * sizeof(size_t)) Node {
+            union{
+                size_t data[4];
+                Node* next;
+            };
+        } data[128];
+        FreeList(Node*& head) {
+            Node* tmp = head;
+            for (size_t i = 0; i < 128; i++) {
+                data[i].next = tmp;
+                tmp = data + i;
+            }
+            head = tmp;
+        }
+    };
+    inline static std::list<FreeList> freeList;
+    inline static FreeList::Node* head = nullptr;
+
     static void release(size_t tar) {
         if (tar == 0) {
             return;
@@ -80,27 +111,14 @@ struct StaticBaseGarbageCollector {
         // size_t size;
         std::unique_ptr<size_t[]> data;
         size_t refCounter;
-        size_t memberRefNum;
+        union{
+            size_t memberRefNum;
+
+        };
     };
     inline static std::stack<size_t> unused;
     // root node, cannot referenced
     inline static std::vector<ManagedObjectBase> managedObjects{{nullptr, 1, 0}};
-    // small value object optimization
-    struct alignas(4 * 128 * sizeof(size_t)) FreeList {
-        FreeList(size_t start) {
-            for (size_t i = 0; i < 128; i++) {
-                data[i].data[0] = start - i;
-            }
-        }
-        struct alignas(4 * sizeof(size_t)) Node {
-            size_t data[4];
-        };
-        Node data[128];
-    };
-    inline static std::vector<FreeList> freeList;
-    inline static size_t border = size_t(-1);
-    inline static size_t head = size_t(-1);
-    static bool isSmallValueObject(size_t ref) { return ref > border; }
 };
 
 } // namespace rulejit

@@ -22,6 +22,9 @@ namespace rulejit {
 void ExpressionLexer::extend(Guidence guidence) {
     while (isspace(*next)) {
         // SPACE
+        if (charEqual('\n')){
+            linePointer.push_back(next);
+        }
         if (!config::ignoreAllBreak && guidence != Guidence::IGNORE_BREAK && charEqual('\n')) {
             type = TokenType::ENDLINE;
             next++;
@@ -29,6 +32,7 @@ void ExpressionLexer::extend(Guidence guidence) {
         }
         next++;
     }
+    begin = next;
     if (begin == end) {
         // EOF | endline
         if (type != TokenType::ENDLINE) {
@@ -38,7 +42,6 @@ void ExpressionLexer::extend(Guidence guidence) {
         }
         return;
     }
-    begin = next;
     if (charEqual('_') || isalpha(*next) || *next < 0) {
         // keywords | identifier
         do {

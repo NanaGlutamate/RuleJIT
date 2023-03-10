@@ -13,6 +13,7 @@ inline const TypeInfo NoInstanceType{std::vector<std::string>{std::string(typeid
 inline const TypeInfo StringType{std::vector<std::string>{std::string(typeident::StringTypeIdent)}};
 inline const TypeInfo IntType{std::vector<std::string>{std::string(typeident::IntTypeIdent)}};
 inline const TypeInfo RealType{std::vector<std::string>{std::string(typeident::RealTypeIdent)}};
+inline const TypeInfo AutoType{std::vector<std::string>{std::string(typeident::AutoTypeIdent)}};
 
 inline const std::map<std::string, std::map<TypeInfo, size_t>> buildInFunc{
     {"+", 
@@ -33,6 +34,41 @@ inline const std::map<std::string, std::map<TypeInfo, size_t>> buildInFunc{
     {"/", 
         {
             {make_type("func(f64,f64):f64"), 0},
+        }
+    },
+    {">", 
+        {
+            {make_type("func(f64,f64):f64"), 0},
+        }
+    },
+    {"<", 
+        {
+            {make_type("func(f64,f64):f64"), 0},
+        }
+    },
+    {">=", 
+        {
+            {make_type("func(f64,f64):f64"), 0},
+        }
+    },
+    {"<=", 
+        {
+            {make_type("func(f64,f64):f64"), 0},
+        }
+    },
+    {"==", 
+        {
+            {make_type("func(f64,f64):f64"), 0},
+        }
+    },
+    {"!=", 
+        {
+            {make_type("func(f64,f64):f64"), 0},
+        }
+    },
+    {"!", 
+        {
+            {make_type("func(f64):f64"), 0},
         }
     },
 };

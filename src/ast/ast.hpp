@@ -137,6 +137,7 @@ struct ComplexLiteralExprAST : public ExprAST {
 
 // LOOP := 'while' '(' EXPR ')' EXPR
 // while(x!=0){x+=1;x;}
+// {init;while(condition){body})}, init and body must have same type
 struct LoopAST : public ExprAST {
     ACCEPT_FUNCTION;
     ASTTokenType label;
@@ -238,7 +239,7 @@ struct VarDefAST : public DefAST {
 
 // FUNCDEF := 'func' IDENT '(' (IDENT? TYPE (',' IDENT? TYPE)*)? ')' ('->' TYPE)? ':' EXPR | 'extern' IDENT '(' (IDENT?
 // TYPE (',' IDENT? TYPE)*)? ')' ('->' TYPE)?
-// TODO: | func add i64 -> i64 -> i64 = a -> b -> a+b
+// TODO: return lambda
 struct FunctionDefAST : public DefAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<TypeInfo> funcType;
@@ -248,6 +249,7 @@ struct FunctionDefAST : public DefAST {
         NORMAL,
         MEMBER,
         INFIX,
+        LAMBDA,
     } funcDefType;
     template <typename S, typename V>
     FunctionDefAST(S &&name, std::unique_ptr<TypeInfo> funcType, V &&params, std::unique_ptr<ExprAST> returnValue,
@@ -259,6 +261,10 @@ struct FunctionDefAST : public DefAST {
 inline decltype(auto) nop() { return std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(NoInstanceType), ""); }
 
 // // symbol table operations
+// // EXTERN := 'extern' real_extern_token/*for extern type, is underlying type in script*/ ('as' used_token token_type_for_type_check)?
+// // extern type u64 as Vector3 struct {x f64; y f64; z f64;}
+// // extern func vadd(u64, u64):u64 as +(Vector3, Vector3):Vector3
+// // extern func memberAccess(u64, u64):f64 as .(Vector3, const string):f64
 // struct SymbolCommandAST : public NoReturnExprAST {
 //     ACCEPT_FUNCTION;
 //     enum class SymbolCommandTypeAST {

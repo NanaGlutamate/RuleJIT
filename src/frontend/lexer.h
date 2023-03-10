@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "tools/myassert.hpp"
 
@@ -60,7 +61,7 @@ class ExpressionLexer {
     ExpressionLexer() = default;
     ExpressionLexer(const ExpressionLexer &e) = delete;
     ExpressionLexer(ExpressionLexer &&e) : buffer(std::move(e.buffer)), errorHandler(e.errorHandler), type(e.type) {
-        begin = buffer.c_str();
+        begin = buffer.data();
         next = e.next - e.begin + begin;
         end = buffer.length() + begin;
     }
@@ -112,6 +113,10 @@ class ExpressionLexer {
         return tmp;
     }
     BufferView top() { return BufferView(begin, next - begin); }
+    char topChar() {
+        my_assert(begin + 1 == next, "topChar() only can call on a single char");
+        return *begin;
+    }
     BufferView pop(Guidence guidence = Guidence::NONE) {
         BufferView tmp = top();
         begin = pre = next;
@@ -136,13 +141,17 @@ class ExpressionLexer {
         return t;
     }
     void restart() {
+        linePointer.clear();
+        linePointer.push_back(buffer.data());
         errorHandler.clear();
-        begin = buffer.c_str();
+        begin = buffer.data();
         pre = next = begin;
         end = begin + buffer.size();
         type = TokenType::ENDLINE;
         extend(Guidence::START);
     }
+    size_t beginIndex() const { return begin - buffer.data(); }
+    std::vector<const char *> linePointer;
 
   private:
     char readEscape(const char *&p) {
@@ -190,6 +199,7 @@ class ExpressionLexer {
     const Ele *end;
     TokenType type;
     BufferType buffer;
+    // std::istream *stream;
 };
 
 // struct BufferedExpressionLexer : public ExpressionLexer {

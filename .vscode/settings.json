@@ -92,6 +92,7 @@
         "iostream": "cpp",
         "source_location": "cpp",
         "regex": "cpp",
-        "*.def": "cpp"
+        "*.def": "cpp",
+        "unordered_set": "cpp"
     }
 }
