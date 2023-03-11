@@ -66,6 +66,19 @@ struct ASTPrinter : public ASTVisitor {
         printIndent();
         buffer << ")";
     }
+    VISIT_FUNCTION(BinOpExprAST) {
+        buffer << "(" << v.op;
+        cnt++;
+        buffer << ", ";
+        printIndent();
+        v.lhs->accept(this);
+        buffer << ", ";
+        printIndent();
+        v.rhs->accept(this);
+        cnt--;
+        printIndent();
+        buffer << ")";
+    }
     VISIT_FUNCTION(BranchExprAST) {
         buffer << "(branch, ";
         cnt++;

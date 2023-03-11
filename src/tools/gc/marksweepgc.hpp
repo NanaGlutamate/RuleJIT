@@ -1,8 +1,9 @@
 #pragma once
 
-#define __RULEJIT_GC_DEBUG
+#include "defines/marco.hpp"
 
 #ifdef __RULEJIT_GC_DEBUG
+#include "tools/myassert.hpp"
 #include <format>
 #include <iostream>
 #include <string>
@@ -15,7 +16,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "soa.hpp"
+#include "tools/gc/soa.hpp"
 
 // struct content{
 //     uint32_t referenceCount, totalCount;
@@ -26,6 +27,9 @@
 
 namespace rulejit {
 
+// TODO: destructor support
+// std::vector<std::function<void(uint64_t*)>> funcTable;
+// std::unordered_map<uint64_t*, size_t> destructorBinding;
 struct StaticMarkSweepGarbageCollector {
     using DataType = uint64_t;
     struct Data {
@@ -58,8 +62,14 @@ struct StaticMarkSweepGarbageCollector {
         dst->soacnt = sign;
         dst->referenceCount = referenceCount;
         static struct Init2 {
-            Init2(Data *dst) { root = dst; }
-        } init2(dst);
+            Init2(Data *dst, size_t counter, size_t ref) {
+                root = dst;
+#ifdef __RULEJIT_GC_DEBUG
+                my_assert(counter == 0, "root must have no value");
+                log("INIT", std::format("init root node with {} member reference", ref));
+#endif
+            }
+        } init2(dst, valueCount, referenceCount);
         return dst->data;
     }
     static void releaseLastAllocated() {

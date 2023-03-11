@@ -14,7 +14,7 @@ inline void my_assert(bool check,
     using namespace std;
     if(!check){
         cout << format("error: {}\nin file {}, line {}", message, location.file_name(), location.line()) << endl;
-        abort();//throw std::runtime_error{""};
+        throw std::runtime_error{""};
     }
 }
 

@@ -4,6 +4,7 @@
 #include <set>
 #include <string>
 #include <tuple>
+#include <memory>
 
 #include "ast/type.hpp"
 
@@ -14,6 +15,14 @@ inline const TypeInfo StringType{std::vector<std::string>{std::string(typeident:
 inline const TypeInfo IntType{std::vector<std::string>{std::string(typeident::IntTypeIdent)}};
 inline const TypeInfo RealType{std::vector<std::string>{std::string(typeident::RealTypeIdent)}};
 inline const TypeInfo AutoType{std::vector<std::string>{std::string(typeident::AutoTypeIdent)}};
+
+inline std::unique_ptr<TypeInfo> getAuto(){
+    return std::make_unique<TypeInfo>(AutoType);
+}
+
+inline std::unique_ptr<TypeInfo> getNoInstance(){
+    return std::make_unique<TypeInfo>(NoInstanceType);
+}
 
 inline const std::map<std::string, std::map<TypeInfo, size_t>> buildInFunc{
     {"+", 

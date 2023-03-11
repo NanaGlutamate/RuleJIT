@@ -12,6 +12,7 @@ struct MemberAccessExprAST;
 // struct ArrayIndexExprAST;
 struct LiteralExprAST;
 struct FunctionCallExprAST;
+struct BinOpExprAST;
 struct BranchExprAST;
 struct ComplexLiteralExprAST;
 struct LoopAST;
@@ -29,6 +30,22 @@ struct FunctionDefAST;
 
 // struct TopLevelAST;
 
+// struct Foo : public ASTVisitor{
+//     VISIT_FUNCTION(IdentifierExprAST);
+//     VISIT_FUNCTION(MemberAccessExprAST);
+//     VISIT_FUNCTION(LiteralExprAST);
+//     VISIT_FUNCTION(FunctionCallExprAST);
+//     VISIT_FUNCTION(BinOpExprAST);
+//     VISIT_FUNCTION(BranchExprAST);
+//     VISIT_FUNCTION(ComplexLiteralExprAST);
+//     VISIT_FUNCTION(LoopAST);
+//     VISIT_FUNCTION(BlockExprAST);
+//     VISIT_FUNCTION(ControlFlowAST);
+//     VISIT_FUNCTION(TypeDefAST);
+//     VISIT_FUNCTION(VarDefAST);
+//     VISIT_FUNCTION(FunctionDefAST);
+// };
+
 struct ASTVisitor{
     bool unexpectType;
     ASTVisitor() = default;
@@ -37,6 +54,7 @@ struct ASTVisitor{
     // PURE_VIRTUAL_VISIT_FUNCTION(ArrayIndexExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(LiteralExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(FunctionCallExprAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(BinOpExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(BranchExprAST);
     VIRTUAL_VISIT_FUNCTION(ComplexLiteralExprAST);
     VIRTUAL_VISIT_FUNCTION(LoopAST);

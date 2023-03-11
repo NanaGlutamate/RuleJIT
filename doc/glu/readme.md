@@ -31,6 +31,8 @@ after `type Vector2 struct{x f64; y f64};var v := Vector2{.x: 1, .y: 2}`, `v["x"
 
 ## function definition
 
+only support top-level function definitions for now.
+
 1. base function definition:
    `func foo(a i32, b i32):i32->a + b`
    1. additionally, if returned expression is a Block expr, `->` can omitted like
@@ -39,9 +41,10 @@ after `type Vector2 struct{x f64; y f64};var v := Vector2{.x: 1, .y: 2}`, `v["x"
       `func foo(a i32){}` 
    3. TODO: type inferrence
       `func foo(a i32)->a`
-   above statements is suitable for definition types down.
+   above statements is suitable for definition types followed.
 2. member function definition:
    `func add(a i32)(b i32):i32->a+b`
+   `func add(a *i32)(b i32):i32->a+b`
 3. user defined infix operator:
    `func is infix(a i32, b i32):i32->a==b`
 4. operator overload
@@ -101,10 +104,10 @@ will create a new scope
 
 1. Anonymous structs are automatically given names that are not duplicated, so anonymous structs are defined differently in different places, but different instance types of anonymous structs defined in the same place are the same
    `var a struct{i i32} = struct{i i32}{.i: 0} // wrong, use tuple instead`
-   `func a():struct{i i32}`
-2. TODO: auto type tramsform guide
+2. member function call to assignable expression will automatically call it's pointer's member function if possible.
+3. TODO: auto type tramsform guide
    `type i64(i32) = to64 // where to64 is func(i32):i64`
 
 ### tokenized symbol
 
-`(+)(1, 2) //return 3`
+TODO: `(+)(1, 2) //return 3`

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "defines/marco.hpp"
+
 #include <list>
 #include <memory>
 #include <stack>

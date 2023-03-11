@@ -20,7 +20,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseExpr(bool ignoreBreak, bool allo
     auto start = lexer->beginIndex();
     if (lexer->tokenType() == TokenType::SYM) {
         if (defKeyWords.contains(lexer->top())) {
-            // move function def to primary(may have overload `fun not (func fun():bool):bool->!fun()`)
+            // move function def to primary(may have overload `func not (fun func():bool):bool->!func()`)
             ret = parseDef();
         } else if (commandKeyWords.contains(lexer->top())) {
             ret = parseCommand();
@@ -68,10 +68,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBinOpRHS(Priority priority, std:
                 return setError("assign to a assignment is not allowed");
             }
         }
-        std::vector<std::unique_ptr<ExprAST>> args;
-        args.push_back(std::move(lhs));
-        args.push_back(std::move(rhs));
-        lhs = std::make_unique<FunctionCallExprAST>(std::make_unique<IdentifierExprAST>(op), std::move(args));
+        lhs = std::make_unique<BinOpExprAST>(op, std::move(lhs), std::move(rhs));
     }
 }
 
@@ -248,8 +245,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
             }
             std::string ident = lexer->popCopy();
             lhs = std::make_unique<MemberAccessExprAST>(
-                std::move(lhs), std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(std::vector<std::string>{
-                                                                     std::string(typeident::StringTypeIdent)}),
+                std::move(lhs), std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(StringType),
                                                                  ident));
         } else if (lexer->top() == "(") {
             // function call
@@ -316,12 +312,18 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         }
         auto indent = lexer->popCopy(IGNORE_BREAK);
         // TODO: ":=" def
-        auto type = (*lexer) | TypeParser();
-        eatBreak();
-        if (lexer->popCopy(IGNORE_BREAK) != "=") {
-            return setError("expected \"=\" in var definition, found: " + lexer->topCopy());
+        std::unique_ptr<TypeInfo> type;
+        if (lexer->top() == ":=") {
+            lexer->pop(IGNORE_BREAK);
+            type = std::make_unique<TypeInfo>(AutoType);
+        } else {
+            type = std::make_unique<TypeInfo>((*lexer) | TypeParser());
+            eatBreak();
+            if (lexer->popCopy(IGNORE_BREAK) != "=") {
+                return setError("expected \"=\" in var definition, found: " + lexer->topCopy());
+            }
         }
-        return std::make_unique<VarDefAST>(indent, std::make_unique<TypeInfo>(type), parseExpr());
+        return std::make_unique<VarDefAST>(indent, std::move(type), parseExpr());
     } else if (lexer->top() == "func") {
         // func def
         lexer->pop(IGNORE_BREAK);
@@ -330,8 +332,11 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         if (nameType != TokenType::IDENT && nameType != TokenType::SYM) {
             return setError("expected symbol or ident as function name, found: " + lexer->topCopy());
         }
-        std::string name = lexer->popCopy(IGNORE_BREAK);
         FunctionDefAST::FuncDefType funcType = FunctionDefAST::FuncDefType::NORMAL;
+        if(nameType==TokenType::SYM){
+            funcType = FunctionDefAST::FuncDefType::INFIX;
+        }
+        std::string name = lexer->popCopy(IGNORE_BREAK);
         if (lexer->top() == "infix") {
             if (nameType == TokenType::SYM) {
                 return setError("operator overload is aotomatically infix or unary");
@@ -339,7 +344,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             funcType = FunctionDefAST::FuncDefType::INFIX;
             lexer->pop(IGNORE_BREAK);
         }
-        // TODO: marco, param expr expressed as a fun():Any; &&, || can and only can be defined through marco
+        // TODO: marco, param expr expressed as a func():Any; &&, || can and only can be defined through marco
         TypeInfo type{std::vector<std::string>{"func", "("}};
         auto params = parseParamList();
         eatBreak();
@@ -357,9 +362,6 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             for (auto &param : (*param1)) {
                 params->push_back(std::move(param));
             }
-        } else {
-            // normal func
-            funcType = FunctionDefAST::FuncDefType::NORMAL;
         }
         for (auto &param : (*params)) {
             type.idents.push_back(param->type->toString());

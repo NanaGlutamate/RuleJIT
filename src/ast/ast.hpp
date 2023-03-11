@@ -1,6 +1,6 @@
 #pragma once
 
-// member pointer of AST is permitted not to be nullptr
+// member pointer of AST to AST is permitted not to be nullptr; type pointer to nullptr means auto type
 
 #include <algorithm>
 #include <memory>
@@ -85,7 +85,7 @@ struct LiteralExprAST : public ExprAST {
     template <typename S>
     LiteralExprAST(std::unique_ptr<TypeInfo> type, S &&value)
         : ExprAST(std::move(type)), value(std::forward<S>(value)) {}
-    template <typename S> LiteralExprAST(S &&value) : LiteralExprAST(nullptr, std::forward<S>(value)) {}
+    // template <typename S> LiteralExprAST(S &&value) : LiteralExprAST(nullptr, std::forward<S>(value)) {}
 };
 
 // FUNCCALL := IDENT '(' (EXPR (',' EXPR)*)? ')'
@@ -102,6 +102,17 @@ struct FunctionCallExprAST : public ExprAST {
     template <typename V>
     FunctionCallExprAST(std::unique_ptr<ExprAST> functionIdent, V &&params)
         : FunctionCallExprAST(nullptr, std::move(functionIdent), std::forward<V>(params)) {}
+};
+
+
+struct BinOpExprAST : public ExprAST {
+    ACCEPT_FUNCTION;
+    std::string op;
+    std::unique_ptr<ExprAST> lhs, rhs;
+    BinOpExprAST(std::unique_ptr<TypeInfo> type, std::string op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
+        : ExprAST(std::move(type)), op(std::move(op)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+    BinOpExprAST(std::string op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs):
+        BinOpExprAST(nullptr, std::move(op), std::move(lhs), std::move(rhs)) {}
 };
 
 // BRANCH := 'if' '(' EXPR ')' EXPR 'else' EXPR
@@ -189,7 +200,7 @@ struct ControlFlowAST : public NoReturnExprAST {
         RETURN,
     } controlFlowType;
     ASTTokenType label;
-    // may nullptr
+    // never nullptr, use nop instead
     std::unique_ptr<ExprAST> value;
     template <typename S>
     ControlFlowAST(ControlFlowType controlFlowType, S &&label, std::unique_ptr<ExprAST> value)

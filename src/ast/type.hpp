@@ -46,9 +46,9 @@ struct TypeInfo {
     operator bool() const { return isValid(); }
     // TODO: unnamed complex type or array/slice of unnamed complex type not equal
     bool operator==(const TypeInfo &other) const {
-        if (isComplexType() || other.isComplexType()) {
-            return false;
-        }
+        // if (isComplexType() || other.isComplexType()) {
+        //     return false;
+        // }
         if (idents.size() != other.idents.size()) {
             return false;
         }
@@ -61,9 +61,13 @@ struct TypeInfo {
             ++it1;
             ++it2;
         }
+        return true;
     }
     bool isValid() const { return idents.size() >= 1 && idents[0] != ""; }
     std::string baseType() const {
+        if (!isValid()) {
+            return "";
+        }
         std::string res;
         auto it = idents.begin();
         while (it != idents.end() && (*it == "[]" || *it == "*")) {
@@ -86,10 +90,13 @@ struct TypeInfo {
         }
         return res;
     }
-    bool isSingleToken() const { return idents.size() == 1; }
+    bool isFunctionType() const {
+        return isValid() && idents[0] == "func";
+    }
+    bool isSingleToken() const { return isValid() && idents.size() == 1; }
     bool isDefinedType() const { return isSingleToken() && !buildInType.contains(idents[0]); }
     bool isComplexType() const {
-        return idents.size() > 1 && (idents[0] == "struct" || idents[0] == "class" || idents[0] == "dynamic");
+        return isValid() && idents.size() > 1 && (idents[0] == "struct" || idents[0] == "class" || idents[0] == "dynamic");
     }
     // {"struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"}
     TypeInfo memberType(std::string token);

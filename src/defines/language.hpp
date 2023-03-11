@@ -98,13 +98,13 @@ inline const std::set<std::string_view> commandKeyWords{
 };
 
 inline const std::set<std::string_view> keyWords{
-    "if",  "else", "until", "func", "var",      "type",   "struct", "class", "dynamic", "extern", "return",
-    "and", "or",   "not",   "xor",  "continue", "import", "export", "while", "for",     "const",
+    "if", "else", "until", "func",     "var",    "type",   "struct", "class", "dynamic", "extern", "return", "and",
+    "or", "not",  "xor",   "continue", "import", "export", "while",  "for",   "const",   "auto",   "as",
 };
 
-inline const std::set<std::string_view> typeIndicator{
-    "struct", "class", "dynamic", "func", "[", "const", "*",
-};
+// inline const std::set<std::string_view> typeIndicator{
+//     "struct", "class", "dynamic", "func", "[", "const", "*", "auto",
+// };
 
 inline const std::set<std::string_view> lambdaKeyWords{
     "func",
