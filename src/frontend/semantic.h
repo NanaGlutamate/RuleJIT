@@ -17,8 +17,10 @@
 namespace rulejit {
 
 // 1. type inference
-// 2. name unnamed complex type
+// 2. name unnamed complex type(in vardef, typedef, literal and funcdef)
 // 3. scope process
+// 4. capture analysis
+// 5. redefined symbol name(var, type and func name cannot be same)
 struct Semantic : public ASTVisitor {
     Semantic() = default;
     std::vector<AST*> callStack;
@@ -82,6 +84,9 @@ struct Semantic : public ASTVisitor {
         }
     }
     VISIT_FUNCTION(BlockExprAST){
+        // 1. process defs
+        //    when meet func def, analysis captures
+        //    and the define a unamed class to handle captured vars
         processType(v.type);
         if(!v.type){
         }
@@ -127,7 +132,7 @@ struct Semantic : public ASTVisitor {
         if(type->isSingleToken()){
             auto tmp = c->seekTypeAlias(type->idents[0]);
             while(std::get<0>(tmp)){
-                type = std::make_unique<TypeInfo>(std::get<2>(tmp));
+                type = std::make_unique<TypeInfo>(std::vector<std::string>{std::get<2>(tmp)});
                 tmp = c->seekTypeAlias(type->idents[0]);
             }
         }
@@ -136,6 +141,7 @@ struct Semantic : public ASTVisitor {
     // void popStack(){callStack.pop_back();}
     std::unique_ptr<TypeInfo> type;
     ContextStack* c;
+    std::set<std::string> captured;
 };
 
 } // namespace rulejit

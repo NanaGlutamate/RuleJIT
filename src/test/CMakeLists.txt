@@ -5,4 +5,5 @@ add_executable(parse_test ${FRONTEND_SRC} parsemain.cpp)
 
 add_executable(gc_test ${TOOLS_SRC} gcmain.cpp)
 
-add_executable(cq_test ${BACKEND_SRC} cqmain.cpp)
+add_executable(cq_test ${FRONTEND_SRC} ${BACKEND_SRC} cqmain.cpp)
+add_executable(repl_test ${FRONTEND_SRC} ${BACKEND_SRC} replmain.cpp)

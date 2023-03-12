@@ -3,7 +3,7 @@
 
 // DONE: check if poped token is as expected
 // DONE: check assign to assignment
-// TODO: lambda
+// TODO: lambda // meet fun() -> gen {func unnamedFa581(); unnamedFa581}
 // TODO: directly-called lambda
 
 namespace {
@@ -25,10 +25,18 @@ std::unique_ptr<ExprAST> ExpressionParser::parseExpr(bool ignoreBreak, bool allo
         } else if (commandKeyWords.contains(lexer->top())) {
             ret = parseCommand();
         } else {
-            ret = parseBinOpRHS(0, parseUnary(), ignoreBreak);
+            auto tmp = parseUnary();
+            if (ignoreBreak) {
+                eatBreak();
+            }
+            ret = parseBinOpRHS(0, std::move(tmp), ignoreBreak);
         }
     } else {
-        ret = parseBinOpRHS(0, parseUnary(), ignoreBreak);
+        auto tmp = parseUnary();
+        if (ignoreBreak) {
+            eatBreak();
+        }
+        ret = parseBinOpRHS(0, std::move(tmp), ignoreBreak);
     }
     AST2place[ret.get()] = start;
     return ret;
@@ -161,16 +169,12 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         }
     } else if (lexer->tokenType() == TokenType::INT || lexer->tokenType() == TokenType::REAL) {
         // Literal
-        lhs = std::make_unique<LiteralExprAST>(
-            std::make_unique<TypeInfo>(std::vector<std::string>{std::string(typeident::RealTypeIdent)}),
-            lexer->popCopy());
+        lhs = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(RealType), lexer->popCopy());
     } else if (lexer->tokenType() == TokenType::STRING) {
         // Literal
         std::string tmp;
         (*lexer) >> tmp;
-        lhs = std::make_unique<LiteralExprAST>(
-            std::make_unique<TypeInfo>(std::vector<std::string>{std::string(typeident::StringTypeIdent)}),
-            std::move(tmp));
+        lhs = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(StringType), std::move(tmp));
     } else if (lexer->top() == "(") {
         // Parent | tokenized symbol
         auto state = lexer->getState();
@@ -202,11 +206,14 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
             return setError("expected \")\" after \"if\", found: " + lexer->topCopy());
         }
         auto trueExpr = parseExpr();
+        auto state = lexer->getState();
+        eatBreak();
         std::unique_ptr<rulejit::ExprAST> falseExpr;
         if (lexer->top() == "else") {
             lexer->pop(IGNORE_BREAK);
             falseExpr = parseExpr();
         } else {
+            lexer->loadState(state);
             falseExpr = nop();
         }
         lhs = std::make_unique<BranchExprAST>(std::move(cond), std::move(trueExpr), std::move(falseExpr));
@@ -245,8 +252,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
             }
             std::string ident = lexer->popCopy();
             lhs = std::make_unique<MemberAccessExprAST>(
-                std::move(lhs), std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(StringType),
-                                                                 ident));
+                std::move(lhs), std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(StringType), ident));
         } else if (lexer->top() == "(") {
             // function call
             lexer->pop(IGNORE_BREAK);
@@ -311,7 +317,6 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             return setError("expected ident as var name, found: " + lexer->topCopy());
         }
         auto indent = lexer->popCopy(IGNORE_BREAK);
-        // TODO: ":=" def
         std::unique_ptr<TypeInfo> type;
         if (lexer->top() == ":=") {
             lexer->pop(IGNORE_BREAK);
@@ -333,7 +338,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             return setError("expected symbol or ident as function name, found: " + lexer->topCopy());
         }
         FunctionDefAST::FuncDefType funcType = FunctionDefAST::FuncDefType::NORMAL;
-        if(nameType==TokenType::SYM){
+        if (nameType == TokenType::SYM) {
             funcType = FunctionDefAST::FuncDefType::INFIX;
         }
         std::string name = lexer->popCopy(IGNORE_BREAK);

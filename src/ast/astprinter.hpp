@@ -16,7 +16,7 @@ struct ASTPrinter : public ASTVisitor {
     bool indent;
     size_t cnt;
 
-    friend std::string operator|(std::unique_ptr<AST> &v, ASTPrinter &p) { return p.printAST(v.get(), true); }
+    friend std::string operator|(std::unique_ptr<ExprAST> &v, ASTPrinter &p) { return p.printAST(v.get(), true); }
 
     // std::map<std::string, std::unique_ptr<DefAST>> context;
     ASTPrinter() = default;

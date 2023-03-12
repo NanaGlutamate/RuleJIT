@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 
 #include "ast/astprinter.hpp"
@@ -10,11 +11,11 @@
 void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
     using namespace std;
     cout << "{";
-    bool start=false;
+    bool start = false;
     for (auto &[k, v] : v) {
-        if(!start){
-            start=true;
-        }else{
+        if (!start) {
+            start = true;
+        } else {
             cout << ", ";
         }
         cout << k << ": ";
@@ -44,10 +45,10 @@ void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
             auto tmp = std::any_cast<std::vector<std::any>>(v);
             cout << "{";
             bool start_ = false;
-            for(auto&& item : tmp){
-                if(!start_){
+            for (auto &&item : tmp) {
+                if (!start_) {
                     start_ = true;
-                }else{
+                } else {
                     cout << ", ";
                 }
                 printCSValueMap(std::any_cast<std::unordered_map<std::string, std::any>>(item));
@@ -61,49 +62,62 @@ void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
 }
 
 int main() {
+    using namespace std;
     using namespace rulejit;
     using namespace rulejit::cq;
 
-    // static DataStore data;
-
-    // static ExpressionLexer lexer;
-    // static ExpressionParser parser;
-    // static ASTPrinter printer;
-    // static CQInterpreter interpreter;
-    // static ResourceHandler handler(data);
-
     using CSValueMap = std::unordered_map<std::string, std::any>;
 
-    // data.varType = {{"vi", "Vector3"}, {"vo", "Vector3"}};
-    // data.inputVar = {"vi"};
-    // data.outputVar = {"vo"};
-    // data.typeDefines = {{"Vector3", {{"x", "float64"}, {"y", "float64"}, {"z", "float64"}}}};
+    static DataStore data;
 
-    // data.Init();
-    // interpreter.setResourceHandler(&handler);
-    // data.SetInput({{"vi", CSValueMap{{"x", 1.0}, {"y", 2.0}, {"z", 3.0}}}});
+    static ExpressionLexer lexer;
+    static ExpressionParser parser;
+    static ASTPrinter printer;
+    static CQInterpreter interpreter;
+    static ResourceHandler handler(data);
 
-    // auto expr = "{func norm1(v Vector3):f64->v.x+v.y+v.z;vo.x = norm1(vi); vo.y = 2 * vi.y; vo.z = 2 * vi.z;}" | lexer | parser;
+    data.Init();
+    interpreter.setResourceHandler(&handler);
 
-    // // std::cout << (expr | printer);
-
-    // expr | interpreter;
-
-    // handler.writeBack();
-
-    // printCSValueMap(*(data.GetOutput()));
-
-    RuleSetEngine engine;
-    engine.buildFromFile("D:/Desktop/FinalProj/Code/RuleJIT/doc/xml_design/example1.0.xml");
-
-    engine.init();
-    for(int i=0; i<1000; i++){
-        engine.setInput(CSValueMap{{"Input1", double(1)}});
-        engine.tick();
-        printCSValueMap(*(engine.getOutput()));
-        printCSValueMap(engine.data.cache);
-        std::cout << std::endl;
+    while (true) {
+        std::string in;
+        cout << ">>> ";
+        int cnt = 0;
+        while (true) {
+            std::string tmp;
+            getline(cin, tmp);
+            in += tmp + "\n";
+            for (auto &&c : tmp) {
+                if (c == '{' || c == '(') {
+                    cnt++;
+                } else if (c == '}' || c == ')') {
+                    cnt--;
+                }
+            }
+            if (cnt == 0) {
+                break;
+            }
+            cout << "... ";
+        }
+        if (in == "\n")
+            continue;
+        if (in.size() > 5 && in[0] == 'f' && in[1] == 'u' && in[2] == 'n' && in[3] == 'c' && in[4] == ' ') {
+            in = "{" + in + "}";
+        }
+        try {
+            auto expr = in | lexer | parser;
+            expr | interpreter;
+            if (interpreter.returned.type == CQInterpreter::Value::VALUE) {
+                cout << interpreter.returned.value << endl;
+                interpreter.returned.type = CQInterpreter::Value::EMPTY;
+            }
+        } catch (std::exception &e) {
+            cout << e.what() << endl;
+            while(interpreter.symbolStack.size() > 1)interpreter.symbolStack.pop_back();
+        }
     }
+
+    printCSValueMap(*(data.GetOutput()));
 
     return 0;
 }

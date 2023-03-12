@@ -33,16 +33,14 @@ namespace rulejit {
 
 // all unnamed complex type is NOT equal to each other
 struct TypeInfo {
+    // TODO: remove direct access to idents
     std::vector<std::string> idents;
+    // std::vector<TypeInfo> mentionedTypes;
     TypeInfo() = default;
-    TypeInfo(std::vector<std::string>&& s):idents(std::move(s)){};
-    TypeInfo(const std::vector<std::string>& s):idents(s){};
     TypeInfo(TypeInfo&& t) = default;
     TypeInfo(const TypeInfo& t) = default;
-    // bool isFunction(){
-    //     return idents.size() > 1 && idents[0] == "func";
-    //     // TODO: named function
-    // }
+    TypeInfo(std::vector<std::string>&& s):idents(std::move(s)){};
+    TypeInfo(const std::vector<std::string>& s):idents(s){};
     operator bool() const { return isValid(); }
     // TODO: unnamed complex type or array/slice of unnamed complex type not equal
     bool operator==(const TypeInfo &other) const {
@@ -94,7 +92,7 @@ struct TypeInfo {
         return isValid() && idents[0] == "func";
     }
     bool isSingleToken() const { return isValid() && idents.size() == 1; }
-    bool isDefinedType() const { return isSingleToken() && !buildInType.contains(idents[0]); }
+    // bool isDefinedType() const { return isSingleToken() && !buildInType.contains(idents[0]); }
     bool isComplexType() const {
         return isValid() && idents.size() > 1 && (idents[0] == "struct" || idents[0] == "class" || idents[0] == "dynamic");
     }

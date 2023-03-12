@@ -72,14 +72,14 @@
 
     <xs:complexType name="Rule">
         <xs:sequence>
-            <xs:element name="Antecedent">
+            <xs:element name="Condition">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element name="Expression" type="Expression"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="AfterMath">
+            <xs:element name="Consequence">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element name="Assignment" maxOccurs="unbounded">

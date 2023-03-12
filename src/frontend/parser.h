@@ -77,7 +77,7 @@ struct ExpressionParser {
     std::unique_ptr<ExprAST> parseTopLevel();
 
     void eatBreak() {
-        if (lexer->top() == "\n") {
+        if (lexer->top().back() == '\n') {
             lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
         }
     }

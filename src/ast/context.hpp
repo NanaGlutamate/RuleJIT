@@ -52,7 +52,7 @@ struct ContextFrame {
     std::map<std::string, TypeInfo> varDef;
     // // var name / used function name -> type
     // std::map<std::string, TypeInfo> literalVarDef;
-    // TODO: std::set<std::string> escapedVar;
+    std::set<std::string> capturedSymbol;
     size_t scopeID;
     size_t subScopeCounter;
 };
@@ -63,32 +63,13 @@ struct ContextStack {
     std::vector<ContextFrame> stackFrame;
     std::vector<size_t> preFrame;
     std::vector<size_t> stackTop;
-    // ContextStack(){
-    //     std::map<std::string, int> tmp;
-    //     for(auto&& i : reloadableBuildInUnary){
-    //         tmp.emplace(i, 0);
-    //     }
-    //     stack.push_back(ContextFrame{
-    //         {},
-    //         {},
-    //         {},
-    //         buildInFunc,
-    //         reloadableBuildInInfix,
-    //         tmp,
-    //     });
-    // }
     ContextStack() : stackFrame({}), preFrame({size_t(-1)}), stackTop({0}) {
         stackFrame.back().scopeID = 0;
         stackFrame.back().subScopeCounter = 0;
     }
     std::string genUniqueName() {
-        std::string name = "unnamed_";
-        size_t frameNow = stackTop.back();
-        while (frameNow != size_t(-1)) {
-            // ensure unique in other scope
-            name += std::to_string(stackFrame[frameNow].scopeID) + "_";
-            frameNow = preFrame[frameNow];
-        }
+        // ensure unique in other scope
+        std::string name = "<<unnamed>>_" + std::to_string(stackFrame.size());
         static size_t specifier = 0;
         while (true) {
             // ensure unique in this scope
@@ -103,13 +84,8 @@ struct ContextStack {
     }
     std::string genRealFunctionName(const TypeInfo &type) {
         my_assert(type.isFunctionType());
-        std::string ret = "func@";
-        size_t frameNow = stackTop.back();
-        while (frameNow != size_t(-1)) {
-            ret += std::to_string(stackFrame[frameNow].scopeID) + "@";
-            frameNow = preFrame[frameNow];
-        }
-        for (int i = 0; i < type.idents.size(); ++i) {
+        std::string ret = "func@" + std::to_string(stackFrame.size()) + "@";
+        for (int i = 1; i < type.idents.size(); ++i) {
             ret += type.idents[i];
         }
         return ret;
@@ -133,6 +109,8 @@ struct ContextStack {
         if (top == size_t(-1)) {
             top = stackTop.back();
             escaped = false;
+        }else{
+            stackFrame[top].capturedSymbol.emplace(ind);
         }
         auto it = (stackFrame[top].*p).find(ind);
         if (it != (stackFrame[top].*p).end()) {
@@ -152,90 +130,9 @@ struct ContextStack {
     //! @return (find, escaped, value)
     decltype(auto) seekTypeAlias(const std::string &s) { return seek(&ContextFrame::typeAlias, s); }
     //! @return (find, escaped, value)
-    decltype(auto) seekTypeDef(const std::string s) {
-        // auto tmp = seekTypeAlias(s);
-        // while (std::get<0>(tmp)) {
-        //     s = std::get<2>(tmp);
-        //     tmp = seekTypeAlias(s);
-        // }
-        return seek(&ContextFrame::typeDef, s);
-    }
+    decltype(auto) seekTypeDef(const std::string s) { return seek(&ContextFrame::typeDef, s); }
     //! @return (find, escaped, value)
     decltype(auto) seekVarDef(const std::string &s) { return seek(&ContextFrame::varDef, s); }
-
-    // std::tuple<bool, TypeInfo> seekTypeAlias(const std::string& s, size_t layer = size_t(-1)){
-    //     if(layer == size_t(-1)){
-    //         layer = stack.size()-1;
-    //     }
-    //     if(auto it = stack[layer].typeAlias.find(s); it != stack[layer].typeAlias.end()){
-    //         return {true, it->second};
-    //     }
-    //     if(layer == 0){
-    //         return {false, NoInstanceType};
-    //     }
-    //     return seekTypeAlias(s, layer-1);
-    // }
-    // bool seekUnaryOp(const std::string& s, size_t layer = size_t(-1)){
-    //     if(layer == size_t(-1)){
-    //         layer = stack.size()-1;
-    //     }
-    //     if(auto it = stack[layer].unaryOp.find(s); it != stack[layer].unaryOp.end()){
-    //         return true;
-    //     }
-    //     if(layer == 0){
-    //         return false;
-    //     }
-    //     return seekUnaryOp(s, layer-1);
-    // }
-    // std::tuple<bool, Priority> seekInfixOp(const std::string& s, size_t layer = size_t(-1)){
-    //     if(layer == size_t(-1)){
-    //         layer = stack.size()-1;
-    //     }
-    //     if(auto it = stack[layer].infixOp.find(s); it != stack[layer].infixOp.end()){
-    //         return {true, it->second};
-    //     }
-    //     if(layer == 0){
-    //         return {false, 0};
-    //     }
-    //     return seekInfixOp(s, layer-1);
-    // }
-    // std::tuple<bool, const TypeInfo&> seekFuncDef(const std::tuple<std::string, std::vector<TypeInfo>>& param, size_t
-    // layer = size_t(-1)){
-    //     if(layer == size_t(-1)){
-    //         layer = stack.size()-1;
-    //     }
-    //     if(auto it = stack[layer].funcDef.find(param); it != stack[layer].funcDef.end()){
-    //         return {true, it->second};
-    //     }
-    //     if(layer == 0){
-    //         return {false, NoInstanceType};
-    //     }
-    //     return seekFuncDef(param, layer-1);
-    // }
-    // std::tuple<bool, const TypeInfo&> seekVarDef(const std::string& s, size_t layer = size_t(-1)){
-    //     if(layer == size_t(-1)){
-    //         layer = stack.size()-1;
-    //     }
-    //     if(auto it = stack[layer].varDef.find(s); it != stack[layer].varDef.end()){
-    //         return {true, it->second};
-    //     }
-    //     if(layer == 0){
-    //         return {false, NoInstanceType};
-    //     }
-    //     return seekVarDef(s, layer-1);
-    // }
-    // std::tuple<bool, const TypeInfo&> seekTypeDef(const std::string& s, size_t layer = size_t(-1)){
-    //     if(layer == size_t(-1)){
-    //         layer = stack.size()-1;
-    //     }
-    //     if(auto it = stack[layer].typeDef.find(s); it != stack[layer].typeDef.end()){
-    //         return {true, it->second};
-    //     }
-    //     if(layer == 0){
-    //         return {false, NoInstanceType};
-    //     }
-    //     return seekTypeDef(s, layer-1);
-    // }
 };
 
 } // namespace rulejit

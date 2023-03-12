@@ -104,15 +104,15 @@ struct FunctionCallExprAST : public ExprAST {
         : FunctionCallExprAST(nullptr, std::move(functionIdent), std::forward<V>(params)) {}
 };
 
-
 struct BinOpExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::string op;
     std::unique_ptr<ExprAST> lhs, rhs;
-    BinOpExprAST(std::unique_ptr<TypeInfo> type, std::string op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
+    BinOpExprAST(std::unique_ptr<TypeInfo> type, std::string op, std::unique_ptr<ExprAST> lhs,
+                 std::unique_ptr<ExprAST> rhs)
         : ExprAST(std::move(type)), op(std::move(op)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
-    BinOpExprAST(std::string op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs):
-        BinOpExprAST(nullptr, std::move(op), std::move(lhs), std::move(rhs)) {}
+    BinOpExprAST(std::string op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
+        : BinOpExprAST(nullptr, std::move(op), std::move(lhs), std::move(rhs)) {}
 };
 
 // BRANCH := 'if' '(' EXPR ')' EXPR 'else' EXPR
@@ -158,8 +158,8 @@ struct LoopAST : public ExprAST {
     template <typename S>
     LoopAST(std::unique_ptr<TypeInfo> type, S &&label, std::unique_ptr<ExprAST> init,
             std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> body)
-        : ExprAST(std::move(type)), label(std::forward<S>(label)), init(std::move(init)), condition(std::move(condition)),
-          body(std::move(body)) {}
+        : ExprAST(std::move(type)), label(std::forward<S>(label)), init(std::move(init)),
+          condition(std::move(condition)), body(std::move(body)) {}
     template <typename S>
     LoopAST(S &&label, std::unique_ptr<ExprAST> init, std::unique_ptr<ExprAST> condition, std::unique_ptr<ExprAST> body)
         : LoopAST(nullptr, std::forward<S>(label), std::move(init), std::move(condition), std::move(body)) {}
@@ -256,23 +256,27 @@ struct FunctionDefAST : public DefAST {
     std::unique_ptr<TypeInfo> funcType;
     std::vector<std::unique_ptr<IdentifierExprAST>> params;
     std::unique_ptr<ExprAST> returnValue;
+    std::unique_ptr<TypeInfo> captures;
     enum class FuncDefType {
         NORMAL,
         MEMBER,
         INFIX,
         LAMBDA,
     } funcDefType;
-    template <typename S, typename V>
-    FunctionDefAST(S &&name, std::unique_ptr<TypeInfo> funcType, V &&params, std::unique_ptr<ExprAST> returnValue,
+    template <typename S, typename V1>
+    FunctionDefAST(S &&name, std::unique_ptr<TypeInfo> funcType, V1 &&params, std::unique_ptr<ExprAST> returnValue,
                    FuncDefType funcDefType = FuncDefType::NORMAL)
-        : DefAST(std::forward<S>(name)), funcType(std::move(funcType)), params(std::forward<V>(params)),
-          returnValue(std::move(returnValue)), funcDefType(funcDefType) {}
+        : DefAST(std::forward<S>(name)), funcType(std::move(funcType)), params(std::forward<V1>(params)),
+          returnValue(std::move(returnValue)), funcDefType(funcDefType) {
+        captures = nullptr;
+    }
 };
 
 inline decltype(auto) nop() { return std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(NoInstanceType), ""); }
 
 // // symbol table operations
-// // EXTERN := 'extern' real_extern_token/*for extern type, is underlying type in script*/ ('as' used_token token_type_for_type_check)?
+// // EXTERN := 'extern' real_extern_token/*for extern type, is underlying type in script*/ ('as' used_token
+// token_type_for_type_check)?
 // // extern type u64 as Vector3 struct {x f64; y f64; z f64;}
 // // extern func vadd(u64, u64):u64 as +(Vector3, Vector3):Vector3
 // // extern func memberAccess(u64, u64):f64 as .(Vector3, const string):f64

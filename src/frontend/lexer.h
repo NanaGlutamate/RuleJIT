@@ -65,6 +65,10 @@ class ExpressionLexer {
         next = e.next - e.begin + begin;
         end = buffer.length() + begin;
     }
+    // unique indent thorough different file?
+    std::string genUniqueIdent(){
+        return std::format("<<{}-{}-{}>>");
+    }
     template <typename SrcTy> ExpressionLexer &load(SrcTy &&expression) {
         buffer = std::forward<SrcTy>(expression);
         restart();

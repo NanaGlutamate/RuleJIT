@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cmath>
 #include <functional>
+#include <iostream>
 
 #include "ast/ast.hpp"
 #include "ast/astvisitor.hpp"
@@ -9,15 +11,17 @@
 
 namespace rulejit::cq {
 
+// will change original AST
 struct CQInterpreter : public ASTVisitor {
+    std::map<std::string, std::unique_ptr<FunctionDefAST>> func;
+    CQInterpreter() : symbolStack({{{}}}) {}
 
     void setResourceHandler(ResourceHandler *h) { handler = h; };
     void friend operator|(std::unique_ptr<ExprAST> &expr, CQInterpreter &interpreter) { expr->accept(&interpreter); }
 
     VISIT_FUNCTION(IdentifierExprAST) {
-        try {
-            returned = seekValue(v.name);
-        } catch (...) {
+        auto find = seekValue(v.name);
+        if (!find) {
             returned.token = handler->readIn(v.name);
             returned.type = Value::TOKEN;
         }
@@ -45,33 +49,66 @@ struct CQInterpreter : public ASTVisitor {
             returned.token = handler->take(v.value);
             returned.type = Value::TOKEN;
         }
+        // nop?
     }
     VISIT_FUNCTION(FunctionCallExprAST) {
         if (!isType<IdentifierExprAST>(v.functionIdent.get())) {
             setError("only allow direct function(no member, no returned funciton) for now");
         }
+        static std::map<std::string, std::function<double(double)>> oneParamFunc{
+            {"-", [](double x) {return -x; }},         {"not", [](double x) {return !x; }},
+            {"sin", [](double x) {return sin(x); }},   {"cos", [](double x) {return cos(x); }},
+            {"tan", [](double x) {return tan(x); }},   {"cot", [](double x) {return 1.0/tan(x); }},
+            {"atan", [](double x) {return atan(x); }}, {"asin", [](double x) {return asin(x); }},
+            {"acos", [](double x) {return acos(x); }}, {"fabs", [](double x) {return fabs(x); }},
+            {"exp", [](double x) {return exp(x); }},
+        };
+        static std::map<std::string, std::function<double(double, double)>> twoParamFunc{
+            {"pow", [](double x, double y) { return pow(x, y); }},
+            {"atan2", [](double x, double y) { return atan2(x, y); }},
+        };
         auto p = dynamic_cast<IdentifierExprAST *>(v.functionIdent.get());
         if (p->name == "len") {
             my_assert(v.params.size() == 1, "\"len\" only accept 1 param");
             v.params[0]->accept(this);
             if (returned.type == Value::TOKEN) {
-                returned.value = handler->arrayLength(returned.token);
+                returned.value = (double)handler->arrayLength(returned.token);
                 returned.type = Value::VALUE;
             } else {
                 setError("\"len\" only accept array");
             }
-        } else if (p->name == "not") {
-            my_assert(v.params.size() == 1, "\"not\" only accept 1 param");
+        } else if (p->name == "print") {
+            my_assert(v.params.size() == 1, "\"print\" only accept 1 param");
+            v.params[0]->accept(this);
+            if (returned.type == Value::TOKEN) {
+                if (handler->isString(returned.token)) {
+                    std::cout << handler->readString(returned.token) << std::endl;
+                } else {
+                    std::cout << handler->readValue(returned.token) << std::endl;
+                }
+            } else {
+                std::cout << returned.value << std::endl;
+            }
+        } else if (auto it = oneParamFunc.find(p->name); it != oneParamFunc.end()) {
+            my_assert(v.params.size() == 1, std::format("\"{}\" only accept 1 param", p->name));
             v.params[0]->accept(this);
             getReturnedValue();
-            if (returned.value == 0) {
-                returned.value = 1;
-            } else {
-                returned.value = 0;
-            }
+            returned.value = it->second(returned.value);
+        } else if (auto it = twoParamFunc.find(p->name); it != twoParamFunc.end()) {
+            my_assert(v.params.size() == 2, std::format("\"{}\" only accept 2 param", p->name));
+            v.params[0]->accept(this);
+            getReturnedValue();
+            double tmp = returned.value;
+            v.params[1]->accept(this);
+            getReturnedValue();
+            returned.value = it->second(tmp, returned.value);
         } else {
-            auto &callee = func[p->name];
-            symbolStack.push_back({{}});
+            auto f = func.find(p->name);
+            if (f == func.end()) {
+                setError(std::format("function \"{}\" not found", p->name));
+            }
+            auto &callee = f->second;
+            std::vector<std::map<std::string, rulejit::cq::CQInterpreter::Value>> frame{{}};
             my_assert(callee->params.size() == v.params.size(),
                       std::format("\"{}\" only accept {} params, but {} was given", p->name, callee->params.size(),
                                   v.params.size()));
@@ -79,8 +116,12 @@ struct CQInterpreter : public ASTVisitor {
                 auto &param = callee->params[i];
                 auto &arg = v.params[i];
                 arg->accept(this);
-                symbolStack.back().back()[param->name] = returned;
+                if (!isSupportType(*(param->type))) {
+                    getReturnedValue();
+                }
+                frame.back()[param->name] = returned;
             }
+            symbolStack.push_back(std::move(frame));
             callee->returnValue->accept(this);
             symbolStack.pop_back();
         }
@@ -102,8 +143,24 @@ struct CQInterpreter : public ASTVisitor {
         if (v.op == "=") {
             if (isType<IdentifierExprAST>(v.lhs.get())) {
                 auto p = dynamic_cast<IdentifierExprAST *>(v.lhs.get());
+                p->accept(this);
+                auto lhs = returned;
                 v.rhs->accept(this);
-                symbolStack.back().back()[p->name] = returned;
+                if (lhs.type == Value::TOKEN) {
+                    if (returned.type == Value::TOKEN) {
+                        handler->assign(lhs.token, returned.token);
+                    } else {
+                        handler->writeValue(lhs.token, returned.value);
+                    }
+                } else {
+                    getReturnedValue();
+                    for (auto it = symbolStack.back().rbegin(); it != symbolStack.back().rend(); it++) {
+                        if (it->find(p->name) != it->end()) {
+                            (*it)[p->name] = returned;
+                            return;
+                        }
+                    }
+                }
             } else if (isType<MemberAccessExprAST>(v.lhs.get())) {
                 v.lhs->accept(this);
                 auto tmp = returned;
@@ -183,23 +240,21 @@ struct CQInterpreter : public ASTVisitor {
         }
         symbolStack.back().pop_back();
     }
-    VISIT_FUNCTION(ControlFlowAST) {
-        switch (v.controlFlowType) { setError("execution ControlFlowAST not support for now"); }
-    }
+    VISIT_FUNCTION(ControlFlowAST) { setError("ControlFlowAST should never be visit directly"); }
     VISIT_FUNCTION(TypeDefAST) { setError("execution TypeDefAST not support for now"); }
     VISIT_FUNCTION(VarDefAST) {
         if (auto it = symbolStack.back().back().find(v.name); it != symbolStack.back().back().end()) {
             setError("redefine variable: " + v.name);
         }
-        if (!isSupportType(*(v.type))) {
-            setError("unsupported type: " + v.type->toString());
+        if (!isSupportType(*(v.valueType))) {
+            setError("unsupported type: " + v.valueType->toString());
         }
         v.definedValue->accept(this);
         symbolStack.back().back()[v.name] = returned;
     }
     VISIT_FUNCTION(FunctionDefAST) { setError("function def should never be visit directly"); }
 
-  private:
+    // private:
     struct Value {
         union {
             size_t token;
@@ -208,21 +263,22 @@ struct CQInterpreter : public ASTVisitor {
         enum valueType {
             TOKEN,
             VALUE,
+            EMPTY,
         } type;
     };
 
     ResourceHandler *handler;
-    Value seekValue(const std::string &s) {
+    bool seekValue(const std::string &s) {
         for (auto it = symbolStack.back().rbegin(); it != symbolStack.back().rend(); ++it) {
             if (auto it2 = it->find(s); it2 != it->end()) {
-                return (it2->second);
+                returned = it2->second;
+                return true;
             }
         }
-        setError("unknown variable: " + s);
+        return false;
     }
     // caller pop stack
     std::vector<std::vector<std::map<std::string, Value>>> symbolStack;
-    std::map<std::string, std::unique_ptr<FunctionDefAST>> func;
     Value returned;
     bool isSupportType(const TypeInfo &type) {
         return type.isValid() && type.isSingleToken() && (type.idents[0] == "f64" || type == AutoType);

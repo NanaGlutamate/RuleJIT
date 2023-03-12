@@ -3,19 +3,20 @@
 <RuleSet version="1.0">
     <TypeDefines>
         <TypeDefine type="Location">
-            <Variable name="altitude" type="double"/>
-            <Variable name="longitude" type="double"/>
-            <Variable name="latitude" type="double"/>
+            <Variable name="altitude" type="float64"/>
+            <Variable name="longitude" type="float64"/>
+            <Variable name="latitude" type="float64"/>
         </TypeDefine>
         <TypeDefine type="Vector3">
-            <Variable name="x" type="double"/>
-            <Variable name="y" type="double"/>
-            <Variable name="z" type="double"/>
+            <Variable name="x" type="float64"/>
+            <Variable name="y" type="float64"/>
+            <Variable name="z" type="float64"/>
         </TypeDefine>
     </TypeDefines>
     <MetaInfo>
         <Inputs>
             <Param name="Input1" type="uint32">
+                <!-- init value not supported -->
                 <InitValue>12</InitValue>
             </Param>
         </Inputs>
@@ -41,30 +42,30 @@
             </MetaInfo>
             <Rules>
                 <Rule>
-                    <Antecedent>
+                    <Condition>
                         <Expression>Cache1&lt;=10</Expression>
-                    </Antecedent>
-                    <AfterMath>
+                    </Condition>
+                    <Consequence>
                         <Assignment>
                             <Target>Output1</Target>
                             <Value>
                                 <Expression>0</Expression>
                             </Value>
                         </Assignment>
-                    </AfterMath>
+                    </Consequence>
                 </Rule>
                 <Rule>
-                    <Antecedent>
+                    <Condition>
                         <Expression>Cache1&gt;10</Expression>
-                    </Antecedent>
-                    <AfterMath>
+                    </Condition>
+                    <Consequence>
                         <Assignment>
                             <Target>Output1</Target>
                             <Value>
                                 <Expression>1</Expression>
                             </Value>
                         </Assignment>
-                    </AfterMath>
+                    </Consequence>
                 </Rule>
             </Rules>
         </SubRuleSet>
@@ -80,30 +81,30 @@
             </MetaInfo>
             <Rules>
                 <Rule>
-                    <Antecedent>
+                    <Condition>
                         <Expression>Input1!=0</Expression>
-                    </Antecedent>
-                    <AfterMath>
+                    </Condition>
+                    <Consequence>
                         <Assignment>
                             <Target>Cache1</Target>
                             <Value>
                                 <Expression>Cache1+1</Expression>
                             </Value>
                         </Assignment>
-                    </AfterMath>
+                    </Consequence>
                 </Rule>
                 <Rule>
-                    <Antecedent>
+                    <Condition>
                         <Expression>Input1==0</Expression>
-                    </Antecedent>
-                    <AfterMath>
+                    </Condition>
+                    <Consequence>
                         <Assignment>
                             <Target>Cache1</Target>
                             <Value>
                                 <Expression>Cache1-1</Expression>
                             </Value>
                         </Assignment>
-                    </AfterMath>
+                    </Consequence>
                 </Rule>
             </Rules>
         </SubRuleSet>
