@@ -146,13 +146,27 @@ struct ResourceHandler {
         managedString.clear();
     }
     size_t makeInstance(const std::string& s){
+        // TODO: make array, array push back
         buffer.emplace_back(data.makeTypeEmptyInstance(s), s);
         return buffer.size() - 1;
+    }
+    size_t makeInstanceAs(size_t token){
+        // TODO: make array, array push back
+        return makeInstance(std::get<1>(buffer[token]));
+    }
+    void defineType(const std::string& s, const std::unordered_map<std::string, std::string>& t){
+        if(data.typeDefines.contains(s))
+            throw std::logic_error(std::string("type \"") + s + "\" already defined");
+        data.typeDefines[s] = t;
     }
     void assign(size_t tar, size_t dst) {
         my_assert(std::get<1>(buffer[tar]) == std::get<1>(buffer[dst]),
                   "assignment of different types are not allowed");
-        std::get<0>(buffer[tar]) = std::get<0>(buffer[dst]);
+        auto tmp = assemble(dst);
+        std::get<0>(buffer[dst]) = tmp;
+        std::get<0>(buffer[tar]) = tmp;
+        relation[dst].clear();
+        relation[tar].clear();
     }
     size_t arrayAccess(size_t base, size_t index) {
         if (auto it = relation[base].find(std::to_string(index)); it != relation[base].end()) {
@@ -251,7 +265,7 @@ struct ResourceHandler {
         }
     }
 
-  private:
+  //private:
     std::any assemble(size_t index) {
         auto [v, type] = buffer[index];
         if (baseData.contains(type)) {

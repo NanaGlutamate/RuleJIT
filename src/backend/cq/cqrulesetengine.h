@@ -11,9 +11,10 @@
 namespace rulejit::cq {
 
 struct SubRuleSet {
-    SubRuleSet(DataStore& data):handler(data), interpreter(), subruleset(nullptr){
+    SubRuleSet(DataStore &data) : handler(data), interpreter(), subruleset(nullptr) {
         interpreter.setResourceHandler(&handler);
     }
+    SubRuleSet() = delete;
     ResourceHandler handler;
     CQInterpreter interpreter;
     std::unique_ptr<ExprAST> subruleset;
@@ -23,45 +24,40 @@ struct RuleSet {
     std::list<SubRuleSet> subRuleSets;
 };
 
-struct RuleSetEngine {    
+struct RuleSetEngine {
     //! build from XML file
     //! @param srcXML string of content of XML file
     //! @return none.
-    void buildFromSource(const std::string& srcXML);
+    void buildFromSource(const std::string &srcXML);
 
     //! build from XML file
     //! @param XMLFilePath string of path of XML file
     //! @return none.
-    void buildFromFile(const std::string& XMLFilePath){
+    void buildFromFile(const std::string &XMLFilePath) {
         using namespace std;
         std::ifstream file(XMLFilePath);
-        std::string buffer;    
-        while(!(file.eof())){
+        std::string buffer;
+        while (!(file.eof())) {
             string tmp;
             getline(file, tmp);
             buffer.append(tmp);
         }
         buildFromSource(buffer);
     }
-    void init(){
-        data.Init();
-    }
-    void tick(){
-        for(auto&& s : ruleset.subRuleSets){
+    void init() { data.Init(); }
+    void tick() {
+        for (auto &&s : ruleset.subRuleSets) {
             s.subruleset | s.interpreter;
         }
-        for(auto&& s: ruleset.subRuleSets){
+        for (auto &&s : ruleset.subRuleSets) {
             s.handler.writeBack();
+            s.interpreter.symbolStack = {{{}}};
         }
     }
-    void setInput(const std::unordered_map<std::string, std::any>& input){
-        data.SetInput(input);
-    }
-    std::unordered_map<std::string, std::any>* getOutput(){
-        return data.GetOutput();
-    }
+    void setInput(const std::unordered_map<std::string, std::any> &input) { data.SetInput(input); }
+    std::unordered_map<std::string, std::any> *getOutput() { return data.GetOutput(); }
 
-  //private:
+    // private:
     DataStore data;
     RuleSet ruleset;
     ExpressionLexer lexer;

@@ -78,6 +78,8 @@ int main() {
 
     data.Init();
     interpreter.setResourceHandler(&handler);
+    data.typeDefines.emplace(
+        "Vector3", std::unordered_map<std::string, std::string>{{"x", "float64"}, {"y", "float64"}, {"z", "float64"}});
 
     while (true) {
         std::string in;
@@ -108,12 +110,28 @@ int main() {
             auto expr = in | lexer | parser;
             expr | interpreter;
             if (interpreter.returned.type == CQInterpreter::Value::VALUE) {
-                cout << interpreter.returned.value << endl;
-                interpreter.returned.type = CQInterpreter::Value::EMPTY;
+                cout << interpreter.returned.value;
+                cout << endl;
+            } else if (interpreter.returned.type == CQInterpreter::Value::TOKEN) {
+                if (handler.isBaseType(interpreter.returned.token)) {
+                    interpreter.getReturnedValue();
+                    cout << interpreter.returned.value;
+                } else {
+                    auto ret = handler.assemble(interpreter.returned.token);
+                    auto type = std::get<1>(handler.buffer[interpreter.returned.token]);
+                    if (!data.isArray(type)) {
+                        printCSValueMap(any_cast<CSValueMap>(ret));
+                    } else {
+                        printCSValueMap(CSValueMap{{"list", ret}});
+                    }
+                }
+                cout << endl;
             }
+            interpreter.returned.type = CQInterpreter::Value::EMPTY;
         } catch (std::exception &e) {
             cout << e.what() << endl;
-            while(interpreter.symbolStack.size() > 1)interpreter.symbolStack.pop_back();
+            while (interpreter.symbolStack.size() > 1)
+                interpreter.symbolStack.pop_back();
         }
     }
 

@@ -15,52 +15,34 @@
 
 namespace rulejit {
 
-// struct TypeInfo{
-//     virtual ~TypeInfo()=default;
-// };
-
-// struct TypeTokenList : public TypeToken{
-//     std::vector<std::unique_ptr<TypeInfo>> tokens;
-//     template <typename V>
-//     TypeTokenList(V&& v) : idents(std::forward<V>(v)) {}
-// };
-
-// struct TypeToken : public TypeInfo/*, public std::string*/{
-//     std::string token;
-//     template<typename S>
-//     TypeToken(S&& s) : token(std::forward<S>(s)) {}
-// };
-
-// all unnamed complex type is NOT equal to each other
 struct TypeInfo {
     // TODO: remove direct access to idents
-    std::vector<std::string> idents;
-    // std::vector<TypeInfo> mentionedTypes;
+    std::vector<std::string> idents; // ("[]" | "*")* (ident | "func" ":"? | struct (ident)* | class (ident)*)
+    std::vector<TypeInfo> subTypes;  // func param type / complex member type
     TypeInfo() = default;
-    TypeInfo(TypeInfo&& t) = default;
-    TypeInfo(const TypeInfo& t) = default;
-    TypeInfo(std::vector<std::string>&& s):idents(std::move(s)){};
-    TypeInfo(const std::vector<std::string>& s):idents(s){};
+    TypeInfo(TypeInfo &&t) : idents(std::move(t.idents)), subTypes(std::move(t.subTypes)) {}
+    TypeInfo(const TypeInfo &t) : idents(t.idents), subTypes(t.subTypes) {}
+    TypeInfo &operator=(const TypeInfo &t) {
+        idents = t.idents;
+        subTypes = t.subTypes;
+        return *this;
+    }
+    TypeInfo &operator=(TypeInfo &&t) {
+        idents = std::move(t.idents);
+        subTypes = std::move(t.subTypes);
+        return *this;
+    }
+
+    TypeInfo(std::vector<std::string> &&s) : idents(std::move(s)), subTypes() {}
+    TypeInfo(const std::vector<std::string> &s) : idents(s), subTypes() {}
     operator bool() const { return isValid(); }
-    // TODO: unnamed complex type or array/slice of unnamed complex type not equal
     bool operator==(const TypeInfo &other) const {
         // if (isComplexType() || other.isComplexType()) {
         //     return false;
         // }
-        if (idents.size() != other.idents.size()) {
-            return false;
-        }
-        auto it1 = idents.begin();
-        auto it2 = other.idents.begin();
-        while (it1 != idents.end() && it2 != other.idents.end()) {
-            if (*it1 != *it2) {
-                return false;
-            }
-            ++it1;
-            ++it2;
-        }
-        return true;
+        return idents == other.idents && subTypes == other.subTypes;
     }
+    bool operator!=(const TypeInfo &other) const { return !(*this == other); }
     bool isValid() const { return idents.size() >= 1 && idents[0] != ""; }
     std::string baseType() const {
         if (!isValid()) {
@@ -78,23 +60,54 @@ struct TypeInfo {
         return res;
     }
     std::string toString() const {
-        // TODO:
-        if (!isValid()) {
-            return "";
-        }
         std::string res;
-        for (auto &ident : idents) {
-            res += ident + " ";
+        size_t real = 0;
+        while (idents.size() > real && idents[real][0] == '[' || idents[real][0] == '*' || idents[real] == "const") {
+            res += idents[real];
+            if (idents[real] == "const")
+                res += " ";
+            ++real;
+        }
+        if (idents[real] == "func") {
+            res = "func(";
+            my_assert(idents.size() == real + 1 || (idents.size() == real + 2 && idents[real + 1] == ":"));
+            bool start = true;
+            if (subTypes.size() > idents.size() + real - 1) {
+                for (auto it = subTypes.begin(); it != subTypes.end() - idents.size() + real + 1; ++it) {
+                    if (start) {
+                        start = false;
+                    } else {
+                        res += ",";
+                    }
+                    res += it->toString();
+                }
+            }
+            res += ")";
+            if (idents.size() == 2 + real) {
+                res += ":" + subTypes.back().toString();
+            }
+        } else if (idents[real] == "struct" || idents[real] == "class" || idents[real] == "dynamic") {
+            res += idents[real];
+            res += "{";
+            my_assert(idents.size() == subTypes.size() + 1 + real);
+            auto it1 = idents.begin() + 1 + real;
+            auto it2 = subTypes.begin();
+            for (; it1 != idents.end(); ++it1, ++it2) {
+                res += *it1 + " " + it2->toString() + ";";
+            }
+            res += "}";
+        } else {
+            my_assert(subTypes.size() == 0 && idents.size() - real == 1, "only 1 ident in type name allowed");
+            return res + idents.back();
         }
         return res;
     }
-    bool isFunctionType() const {
-        return isValid() && idents[0] == "func";
-    }
+    bool isFunctionType() const { return isValid() && idents[0] == "func"; }
     bool isSingleToken() const { return isValid() && idents.size() == 1; }
     // bool isDefinedType() const { return isSingleToken() && !buildInType.contains(idents[0]); }
     bool isComplexType() const {
-        return isValid() && idents.size() > 1 && (idents[0] == "struct" || idents[0] == "class" || idents[0] == "dynamic");
+        return isValid() && idents.size() > 1 &&
+               (idents[0] == "struct" || idents[0] == "class" || idents[0] == "dynamic");
     }
     // {"struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"}
     TypeInfo memberType(std::string token);
@@ -136,22 +149,19 @@ struct TypeParser {
             if (e.pop(ignore_break) != "(") {
                 return error("expect \"(\", found: " + e.topCopy());
             }
-            info.idents.push_back("(");
             while (e.top() != ")") {
                 auto paramType = e | TypeParser();
-                if(e.top()=="\n"){
+                if (e.top() == "\n") {
                     e.pop(ignore_break);
                 }
-                info.idents.push_back(paramType.toString());
+                info.subTypes.push_back(paramType);
                 if (e.top() == ",") {
-                    info.idents.push_back(",");
                     e.pop(ignore_break);
                 } else if (e.top() != ")") {
                     return error("mismatch \"(\" in func type");
                 }
             }
             e.pop();
-            info.idents.push_back(")");
             if (e.top() != ":") {
                 return info;
             } else {
@@ -162,43 +172,39 @@ struct TypeParser {
                 e.pop(ignore_break);
             }
             auto returnType = e | TypeParser();
-            info.idents.push_back(returnType.toString());
+            info.subTypes.push_back(returnType);
             return info;
         } else if (e.top() == "struct" || e.top() == "dynamic" || e.top() == "class") {
             // "struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"
             // complex def: {"struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"}
-            if(!info.idents.empty()) {
+            if (!info.idents.empty()) {
                 return error("list of or pointer to unnamed complex structure is not allowed");
             }
             info.idents.push_back(e.popCopy(ignore_break));
             if (e.pop(ignore_break) != "{") {
                 return error("expect \"{\", found: " + e.topCopy());
             }
-            info.idents.push_back("{");
             while (e.top() != "}") {
                 if (e.tokenType() != TokenType::IDENT) {
                     return error("expect ident, found: " + e.topCopy());
                 }
-                // TODO: unnamed member?
                 info.idents.push_back(e.popCopy(ignore_break));
                 auto memberType = e | TypeParser();
-                info.idents.push_back(memberType.toString());
+                info.subTypes.push_back(memberType);
                 if (e.tokenType() != TokenType::ENDLINE && e.top() != "}") {
                     return error("expect ENDLINE or \"}\", found: " + e.topCopy());
                 }
                 if (e.tokenType() == TokenType::ENDLINE) {
                     e.pop(ignore_break);
                 }
-                info.idents.push_back(";");
             }
-            info.idents.push_back(e.popCopy());
+            e.pop();
             return info;
         } else if (e.tokenType() == TokenType::IDENT) {
             info.idents.push_back(e.popCopy());
             return info;
         } else {
             return error("expect type identifier, found: " + e.topCopy());
-            ;
         }
     };
 };
@@ -213,9 +219,9 @@ inline TypeInfo TypeInfo::memberType(std::string token) {
     if (!isComplexType()) {
         return {};
     }
-    for (size_t start = 2; start < idents.size(); start += 3) {
+    for (size_t start = 1; start < idents.size(); start++) {
         if (idents[start] == token) {
-            return idents[start + 1] | lexer | TypeParser();
+            return subTypes[start - 1];
         }
     }
 }

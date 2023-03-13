@@ -350,7 +350,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             lexer->pop(IGNORE_BREAK);
         }
         // TODO: marco, param expr expressed as a func():Any; &&, || can and only can be defined through marco
-        TypeInfo type{std::vector<std::string>{"func", "("}};
+        TypeInfo type{std::vector<std::string>{"func"}};
         auto params = parseParamList();
         eatBreak();
         if (lexer->top() == "(") {
@@ -369,13 +369,8 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             }
         }
         for (auto &param : (*params)) {
-            type.idents.push_back(param->type->toString());
-            type.idents.push_back(",");
+            type.subTypes.push_back(*(param->type));
         }
-        if (type.idents.back() == ",") {
-            type.idents.pop_back();
-        }
-        type.idents.push_back(")");
 
         if (lexer->top() == ":") {
             // return type
@@ -386,7 +381,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             if (!returnType) {
                 return setError("expected return type in function definition after \":\", found: " + lexer->topCopy());
             }
-            type.idents.push_back(returnType.toString());
+            type.subTypes.push_back(returnType);
         }
         // no return type
         eatBreak();
@@ -400,6 +395,9 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
     } else if (lexer->top() == "type") {
         // type def
         lexer->pop(IGNORE_BREAK);
+        if(lexer->tokenType() != TokenType::IDENT) {
+            return setError("expected ident as type name, found: " + lexer->topCopy());
+        }
         if (lexer->tokenType() != TokenType::IDENT) {
             return setError("expected ident as type name, found: " + lexer->topCopy());
         }

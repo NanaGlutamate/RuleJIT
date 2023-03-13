@@ -118,7 +118,6 @@ class ExpressionLexer {
     }
     BufferView top() { return BufferView(begin, next - begin); }
     char topChar() {
-        my_assert(begin + 1 == next, "topChar() only can call on a single char");
         return *begin;
     }
     BufferView pop(Guidence guidence = Guidence::NONE) {

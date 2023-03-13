@@ -38,6 +38,8 @@ struct CQInterpreter : public ASTVisitor {
         } else if (*(v.memberToken->type) == RealType) {
             returned.token =
                 handler->arrayAccess(base.token, std::stoi(dynamic_cast<LiteralExprAST *>(v.memberToken.get())->value));
+        } else {
+            setError("member access only accept string or int");
         }
     }
     VISIT_FUNCTION(LiteralExprAST) {
@@ -48,6 +50,8 @@ struct CQInterpreter : public ASTVisitor {
             // TODO: check
             returned.token = handler->take(v.value);
             returned.type = Value::TOKEN;
+        } else {
+            returned.type = Value::EMPTY;
         }
         // nop?
     }
@@ -89,6 +93,7 @@ struct CQInterpreter : public ASTVisitor {
             } else {
                 std::cout << returned.value << std::endl;
             }
+            returned.type = Value::EMPTY;
         } else if (auto it = oneParamFunc.find(p->name); it != oneParamFunc.end()) {
             my_assert(v.params.size() == 1, std::format("\"{}\" only accept 1 param", p->name));
             v.params[0]->accept(this);
@@ -116,12 +121,13 @@ struct CQInterpreter : public ASTVisitor {
                 auto &param = callee->params[i];
                 auto &arg = v.params[i];
                 arg->accept(this);
-                if (!isSupportType(*(param->type))) {
+                if (isSupportType(*(param->type))) {
                     getReturnedValue();
                 }
                 frame.back()[param->name] = returned;
             }
             symbolStack.push_back(std::move(frame));
+            returned.type = Value::EMPTY;
             callee->returnValue->accept(this);
             symbolStack.pop_back();
         }
@@ -173,6 +179,7 @@ struct CQInterpreter : public ASTVisitor {
             } else {
                 setError("only allow direct or member variable assignment for now");
             }
+            returned.type = Value::EMPTY;
         } else if (auto it = normalBinOp.find(v.op); it != normalBinOp.end()) {
             v.lhs->accept(this);
             if (v.op == "==" && returned.type == Value::TOKEN && handler->isString(returned.token)) {
@@ -206,6 +213,7 @@ struct CQInterpreter : public ASTVisitor {
         }
     }
     VISIT_FUNCTION(BranchExprAST) {
+        returned.type = Value::EMPTY;
         v.condition->accept(this);
         getReturnedValue();
         if (returned.value != 0) {
@@ -214,8 +222,27 @@ struct CQInterpreter : public ASTVisitor {
             v.falseExpr->accept(this);
         }
     }
-    VISIT_FUNCTION(ComplexLiteralExprAST) { setError("execution ComplexLiteralExprAST not support for now"); }
+    VISIT_FUNCTION(ComplexLiteralExprAST) {
+        auto typeName = v.type->toString();
+        auto tmp = handler->makeInstance(typeName);
+        for (auto &&[name, value] : v.members) {
+            auto p = dynamic_cast<LiteralExprAST *>(name.get());
+            if (p == nullptr || !(*(p->type) == StringType)) {
+                setError("only allow string literal as key for now");
+            }
+            value->accept(this);
+            auto memberToken = handler->memberAccess(tmp, p->value);
+            if (returned.type == Value::VALUE) {
+                handler->writeValue(memberToken, returned.value);
+            } else {
+                handler->assign(memberToken, returned.token);
+            }
+        }
+        returned.token = tmp;
+        returned.type = Value::TOKEN;
+    }
     VISIT_FUNCTION(LoopAST) {
+        returned.type = Value::EMPTY;
         symbolStack.back().emplace_back();
         v.init->accept(this);
         while (v.condition->accept(this), getReturnedValue(), returned.value != 0) {
@@ -224,6 +251,7 @@ struct CQInterpreter : public ASTVisitor {
         symbolStack.back().pop_back();
     }
     VISIT_FUNCTION(BlockExprAST) {
+        returned.type = Value::EMPTY;
         symbolStack.back().emplace_back();
         for (auto it = v.exprs.begin(); it != v.exprs.end();) {
             if (isType<FunctionDefAST>(it->get())) {
@@ -241,16 +269,51 @@ struct CQInterpreter : public ASTVisitor {
         symbolStack.back().pop_back();
     }
     VISIT_FUNCTION(ControlFlowAST) { setError("ControlFlowAST should never be visit directly"); }
-    VISIT_FUNCTION(TypeDefAST) { setError("execution TypeDefAST not support for now"); }
+    VISIT_FUNCTION(TypeDefAST) {
+        if (!v.definedType->isComplexType()) {
+            setError("only allow complex type define for now");
+        }
+        auto name = v.name;
+        if (!v.definedType->isComplexType() || v.definedType->idents[0] != "struct") {
+            setError("only allow struct type (no reference type support) define for now");
+        }
+        std::unordered_map<std::string, std::string> t;
+        for (int i = 0; i < v.definedType->subTypes.size(); ++i) {
+            static std::unordered_map<std::string, std::string> typeAlias{
+                {"i8", "int8"},    {"u8", "uint8"},  {"i16", "int16"},  {"u16", "uint16"},  {"i32", "int32"},
+                {"u32", "uint32"}, {"i64", "int64"}, {"u64", "uint64"}, {"f32", "float32"}, {"f64", "float64"},
+            };
+            auto tmp = v.definedType->subTypes[i].toString();
+            if (typeAlias.contains(tmp)) {
+                tmp = typeAlias[tmp];
+            }
+            t[v.definedType->idents[i + 1]] = tmp;
+        }
+        handler->defineType(name, t);
+        returned.type = Value::EMPTY;
+    }
     VISIT_FUNCTION(VarDefAST) {
+        returned.type = Value::EMPTY;
         if (auto it = symbolStack.back().back().find(v.name); it != symbolStack.back().back().end()) {
             setError("redefine variable: " + v.name);
         }
-        if (!isSupportType(*(v.valueType))) {
-            setError("unsupported type: " + v.valueType->toString());
-        }
+        // if (!isSupportType(*(v.valueType))) {
+        //     setError("unsupported type: " + v.valueType->toString());
+        // }
         v.definedValue->accept(this);
-        symbolStack.back().back()[v.name] = returned;
+        if (returned.type == Value::TOKEN) {
+            auto tmp = handler->makeInstanceAs(returned.token);
+            handler->assign(tmp, returned.token);
+            returned.token = tmp;
+            symbolStack.back().back()[v.name] = returned;
+        } else if (returned.type == Value::VALUE) {
+            symbolStack.back().back()[v.name] = returned;
+        } else if (returned.type == Value::EMPTY) {
+            setError("def var to empty value");
+        }else {
+            setError("unsupported type");
+        }
+        returned.type = Value::EMPTY;
     }
     VISIT_FUNCTION(FunctionDefAST) { setError("function def should never be visit directly"); }
 
@@ -284,6 +347,9 @@ struct CQInterpreter : public ASTVisitor {
         return type.isValid() && type.isSingleToken() && (type.idents[0] == "f64" || type == AutoType);
     }
     void getReturnedValue() {
+        if (returned.type == Value::EMPTY) {
+            setError("no value returned");
+        }
         if (returned.type == Value::TOKEN) {
             returned.value = handler->readValue(returned.token);
             returned.type = Value::VALUE;

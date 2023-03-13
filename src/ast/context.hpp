@@ -7,6 +7,7 @@
 #include <tuple>
 #include <vector>
 
+#include "ast/ast.hpp"
 #include "ast/type.hpp"
 #include "defines/language.hpp"
 
@@ -19,9 +20,7 @@ struct SymbolTable {
 struct ContextGlobal {
     // real function name -> (capture type name, function definition)
     std::map<std::string, std::tuple<std::string, std::unique_ptr<FunctionDefAST>>> realFuncDefinition;
-    std::map<std::string, TypeInfo> externTypeDef;
     std::map<std::string, TypeInfo> externFuncDef;
-    std::map<std::string, size_t> overLoadNumberRegister;
 };
 
 // when meet var def: add {name, type} to varDef
@@ -82,14 +81,14 @@ struct ContextStack {
             }
         }
     }
-    std::string genRealFunctionName(const TypeInfo &type) {
-        my_assert(type.isFunctionType());
-        std::string ret = "func@" + std::to_string(stackFrame.size()) + "@";
-        for (int i = 1; i < type.idents.size(); ++i) {
-            ret += type.idents[i];
-        }
-        return ret;
-    }
+    // std::string genRealFunctionName(const TypeInfo &type) {
+    //     my_assert(type.isFunctionType());
+    //     std::string ret = "func@" + std::to_string(stackFrame.size()) + "@";
+    //     for (int i = 1; i < type.idents.size(); ++i) {
+    //         ret += type.idents[i];
+    //     }
+    //     return ret;
+    // }
     ContextFrame &top() { return stackFrame[stackTop.back()]; }
     ContextFrame &push() {
         stackFrame.push_back({});

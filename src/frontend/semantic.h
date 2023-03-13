@@ -99,19 +99,15 @@ struct Semantic : public ASTVisitor {
     }
 
     VISIT_FUNCTION(TypeDefAST){
-        processType(v.type);
-        if(!v.type){
+        if(v.typeDefType == TypeDefAST::TypeDefType::ALIAS){
+            if(v.definedType->isComplexType()){
+                return setError(std::format("type alias to unnamed type({}) is not allowed", v.definedType->toString()));
+            }
         }
     }
     VISIT_FUNCTION(VarDefAST){
-        processType(v.type);
-        if(!v.type){
-        }
     }
     VISIT_FUNCTION(FunctionDefAST){
-        processType(v.type);
-        if(!v.type){
-        }
     }
 
   private:
@@ -124,17 +120,15 @@ struct Semantic : public ASTVisitor {
     }
     void processType(std::unique_ptr<TypeInfo>& type){
         if(!type){return;}
-        if(type->isComplexType()){
-            auto name = c->genUniqueName();
-            c->top().typeDef.emplace(name, std::move(*(type.release())));
-            type = std::make_unique<TypeInfo>(std::vector<std::string>{name});
-        }
         if(type->isSingleToken()){
             auto tmp = c->seekTypeAlias(type->idents[0]);
             while(std::get<0>(tmp)){
                 type = std::make_unique<TypeInfo>(std::vector<std::string>{std::get<2>(tmp)});
                 tmp = c->seekTypeAlias(type->idents[0]);
             }
+        }
+        if(type->isComplexType()){
+            return setError(std::format("unnamed type {} is not allowed", type->toString()));
         }
     }
     // void pushStack(AST* v){callStack.push_back(v);}
