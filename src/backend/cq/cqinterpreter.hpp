@@ -122,7 +122,11 @@ struct CQInterpreter : public ASTVisitor {
                 auto &arg = v.params[i];
                 arg->accept(this);
                 if (isSupportType(*(param->type))) {
-                    getReturnedValue();
+                    try {
+                        getReturnedValue();
+                    } catch (...) {
+                        setError("try express complex type as numerical type");
+                    }
                 }
                 frame.back()[param->name] = returned;
             }
@@ -310,7 +314,7 @@ struct CQInterpreter : public ASTVisitor {
             symbolStack.back().back()[v.name] = returned;
         } else if (returned.type == Value::EMPTY) {
             setError("def var to empty value");
-        }else {
+        } else {
             setError("unsupported type");
         }
         returned.type = Value::EMPTY;

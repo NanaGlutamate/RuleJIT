@@ -4,7 +4,7 @@
 
     <xs:complexType name="RuleSet">
         <xs:sequence>
-            <xs:element name="TypeDefines" minOccurs="0">
+            <xs:element name="TypeDefines">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element name="TypeDefine" type="TypeDefine" maxOccurs="unbounded"/>

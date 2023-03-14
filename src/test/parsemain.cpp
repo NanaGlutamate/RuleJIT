@@ -14,18 +14,18 @@ int printAST(const std::string &s, bool expectError = false) {
 #ifdef CATCH_EXCEPTION
     try {
 #endif
-        std::unique_ptr<AST> ast = s | lexer | parser;
+        std::unique_ptr<ExprAST> ast = s | lexer | parser;
         std::string ast_str = ast | printer;
 #ifdef CATCH_EXCEPTION
         if (!expectError) {
-            cout << "PASSED ";
+            // cout << "PASSED ";
         }
 #endif
         cout << ast_str << endl;
 #ifdef CATCH_EXCEPTION
     } catch (std::logic_error &e) {
         if (expectError) {
-            cout << "PASSED ";
+            // cout << "PASSED ";
         }
         cout << "ERROR: " << e.what() << endl;
 #endif
@@ -86,30 +86,31 @@ int main() {
     //         }
     //     }
     // })");
-    printAST(R"({
-        func isPrime(n i32): i32 -> {
-            var i i32 = 2
-            var isP i32 = 1
-            while (isP && n % i != 0 && i*i <= n)@main {
-                i = i + 1
-            }
-            isP
-        }
-        func getIter(a []f64):func(){
-            var i i32 = 0
-            func iter():f64->{
-                var ret f64 = a[i]
-                i = i + 1
-                ret
-            }
-            iter
-        }
-        var a []f64 = []f64{1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0}
-        var iter func() = getIter(a)
-        while (iter()) {
-            print(iter())
-        }
-    })");
+    // printAST(R"({
+    //     func isPrime(n i32): i32 -> {
+    //         var i i32 = 2
+    //         var isP i32 = 1
+    //         while (isP && n % i != 0 && i*i <= n)@main {
+    //             i = i + 1
+    //         }
+    //         isP
+    //     }
+    //     func getIter(a []f64):func(){
+    //         var i i32 = 0
+    //         func iter():f64->{
+    //             var ret f64 = a[i]
+    //             i = i + 1
+    //             ret
+    //         }
+    //         iter
+    //     }
+    //     var a []f64 = []f64{1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0}
+    //     var iter func() = getIter(a)
+    //     while (iter()) {
+    //         print(iter())
+    //     }
+    // })");
+    printAST("a = if(a > 0) 1 else 0");
 
     return 0;
 }
