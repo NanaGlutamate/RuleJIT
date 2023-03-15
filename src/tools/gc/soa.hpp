@@ -9,11 +9,13 @@
 
 namespace rulejit {
 
+#ifdef __RULEJIT_SOA_VIRTUAL
 struct ISmallObjectAllocator {
     virtual void *alloc() = 0;
     virtual void release(void *p) = 0;
     virtual ~ISmallObjectAllocator() = default;
 };
+#endif
 
 template <size_t Size, size_t Len>
 struct SmallObjectAllocator

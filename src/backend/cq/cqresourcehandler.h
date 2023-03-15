@@ -22,6 +22,8 @@ inline static std::set<std::string> baseData{
 
 struct DataStore {
     using CSValueMap = std::unordered_map<std::string, std::any>;
+    DataStore() = default;
+    DataStore(const DataStore &) = delete;
     CSValueMap input;
     CSValueMap output;
     CSValueMap cache;
@@ -100,6 +102,10 @@ struct ResourceHandler {
     using CSValueMap = std::unordered_map<std::string, std::any>;
     DataStore &data;
     ResourceHandler(DataStore &data) : data(data), managedString(), buffer(), bufferMap(), relation(){};
+    ResourceHandler(const ResourceHandler &) = delete;
+    ResourceHandler(ResourceHandler &&) = delete;
+    ResourceHandler &operator=(const ResourceHandler &) = delete;
+    ResourceHandler &operator=(ResourceHandler &&) = delete;
 
     size_t take(const std::string &s) {
         if (managedString.contains(s)) {
