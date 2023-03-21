@@ -63,6 +63,9 @@ struct ContextStack {
     std::vector<ContextFrame> stackFrame;
     ContextStack() : stackFrame({{}}), counter(0) {}
     ContextStack(const ContextStack &) = delete;
+    ContextStack(ContextStack &&) = delete;
+    ContextStack &operator=(const ContextStack &) = delete;
+    ContextStack &operator=(ContextStack &&) = delete;
     const TypeInfo &getTypeByRealFunctionName(const std::string &name) {
         if (auto it = global.realFuncDefinition.find(name); it != global.realFuncDefinition.end()) {
             return *(it->second->funcType);

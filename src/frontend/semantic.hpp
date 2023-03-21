@@ -24,11 +24,9 @@ namespace rulejit {
 // 5. redefined symbol name(var, type and func name cannot be same)
 struct Semantic : public ASTVisitor {
     Semantic() = default;
-    std::string prefix;
     std::vector<ExprAST *> callStack;
     // ContextStack cannot be destructed before last process call of this
     void loadContext(ContextStack &context) { c = &context; }
-    void setPrefix(std::string prefix) { prefix = std::move(prefix); }
     std::vector<std::unique_ptr<ExprAST>> friend operator|(std::vector<std::unique_ptr<ExprAST>> ast, Semantic &t) {
         for (auto &i : ast) {
             if (i && isType<TypeDefAST>(i.get())) {
@@ -265,6 +263,9 @@ struct Semantic : public ASTVisitor {
     VISIT_FUNCTION(TypeDefAST) {
         // disable type alias
         if (c->stackFrame.size() == 1 && v.typeDefType == TypeDefAST::TypeDefType::NORMAL) {
+            if(!v.definedType->isComplexType() || v.definedType->idents[0] != "struct"){
+                return setError("only allow struct type define");
+            }
             c->global.typeDef[v.name] = *(v.definedType);
             return;
         }
@@ -312,7 +313,7 @@ struct Semantic : public ASTVisitor {
 
   private:
     std::string toLegalName(const std::string &token) {
-        std::string tmp = "_";
+        std::string tmp;
         for (auto c : token) {
             if (isalpha(c) || isdigit(c) || c == '_') {
                 tmp += c;
@@ -355,7 +356,6 @@ struct Semantic : public ASTVisitor {
     // void popStack(){callStack.pop_back();}
     std::unique_ptr<TypeInfo> type;
     ContextStack *c;
-    std::set<std::string> captured;
 };
 
 } // namespace rulejit
