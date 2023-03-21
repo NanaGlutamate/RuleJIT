@@ -30,7 +30,7 @@ struct DataStore {
     std::vector<std::string> inputVar, outputVar, cacheVar;
     // name -> type
     std::unordered_map<std::string, std::string> varType;
-    // type -> {member name, member type}
+    // type -> member name -> member type
     std::unordered_map<std::string, std::unordered_map<std::string, std::string>> typeDefines;
     void Init() {
         // fill input, output and cache
@@ -181,7 +181,11 @@ struct ResourceHandler {
         if (!data.isArray(std::get<1>(buffer[base]))) {
             throw std::logic_error(std::format("type \"{}\" is not an array", std::get<1>(buffer[base])));
         }
-        auto tmp = std::any_cast<std::vector<std::any>>(std::get<0>(buffer[base]))[index];
+        auto array = std::any_cast<std::vector<std::any>>(std::get<0>(buffer[base]));
+        if(index >= array.size()){
+            throw std::logic_error(std::format("array out of range, index: {}, size: {}", index, array.size()));
+        }
+        auto tmp = array[index];
         auto baseType = std::get<1>(buffer[base]);
         buffer.emplace_back(tmp, data.arrayElementType(baseType));
         relation[base].emplace(std::to_string(index), buffer.size() - 1);
@@ -208,6 +212,14 @@ struct ResourceHandler {
     size_t arrayLength(size_t index) {
         auto tmp = std::any_cast<std::vector<std::any>>(std::get<0>(buffer[index]));
         return tmp.size();
+    }
+    void arrayClear(size_t index) {
+        std::get<0>(buffer[index]) = std::vector<std::any>{};
+    }
+    void arrayExtend(size_t index){
+        auto tmp = std::any_cast<std::vector<std::any>>(std::move(std::get<0>(buffer[index])));
+        tmp.emplace_back(data.makeTypeEmptyInstance(data.arrayElementType(std::get<1>(buffer[index]))));
+        std::get<0>(buffer[index]) = tmp;
     }
     bool isBaseType(size_t index) {
         try {

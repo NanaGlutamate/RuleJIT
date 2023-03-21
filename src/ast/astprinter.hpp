@@ -28,7 +28,6 @@ struct ASTPrinter : public ASTVisitor {
         } else {
             indent = false;
         }
-        unexpectType = false;
         ast->accept(this);
         std::string out;
         std::string tmp;

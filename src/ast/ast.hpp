@@ -26,7 +26,7 @@ struct AST {
 
 template <typename T> bool isType(AST *ast) { return dynamic_cast<T *>(ast) != nullptr; };
 
-template <typename T> std::unique_ptr<T> asType(std::unique_ptr<AST> ast) { return std::unique_ptr<T>(ast.release()); };
+template <typename T, typename Src> std::unique_ptr<T> asType(Src ast) { return std::unique_ptr<T>(ast.release()); };
 
 // EXPR := BINOP | LEXPR | LITERAL | FUNCCALL | COMPLEX | BRANCH | LOOP | BLOCK | '(' EXPR ')'
 struct ExprAST : public AST {
@@ -135,7 +135,7 @@ struct BranchExprAST : public ExprAST {
 // COMPLEX := (SLICETYPE | ARRAYTYPE | IDENT) '{' (EXPR (',' EXPR)*)? '}' | IDENT '{' (IDENT ':' EXPR (',' IDENT ':'
 // EXPR)*)?
 // '}'
-// []i64{1, 2, 3} | Info{base: Base{name: "abc", value: 3}, time: 13} | Vector3{x: 1, y: 2, z: 3}
+// []i64{1, 2, 3} | Info{base: Base{.name: "abc", .value: 3}, .time: 13} | Vector3{.x: 1, .y: 2, .z: 3}
 struct ComplexLiteralExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::vector<std::tuple<std::unique_ptr<ExprAST>, std::unique_ptr<ExprAST>>> members;
@@ -274,21 +274,24 @@ struct FunctionDefAST : public DefAST {
 
 inline decltype(auto) nop() { return std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(NoInstanceType), ""); }
 
-// // symbol table operations
-// // EXTERN := 'extern' real_extern_token/*for extern type, is underlying type in script*/ ('as' used_token
+// symbol table operations
+// EXTERN := 'extern' real_extern_token/*for extern type, is underlying type in script*/ ('as' used_token
 // token_type_for_type_check)?
-// // extern type u64 as Vector3 struct {x f64; y f64; z f64;}
-// // extern func vadd(u64, u64):u64 as +(Vector3, Vector3):Vector3
-// // extern func memberAccess(u64, u64):f64 as .(Vector3, const string):f64
-// struct SymbolCommandAST : public NoReturnExprAST {
-//     ACCEPT_FUNCTION;
-//     enum class SymbolCommandTypeAST {
-//         IMPORT,
-//         EXPORT,
-//         EXTERN,
-//     } symbolCommandType;
-//     ASTTokenType params;
-// };
+// extern type u64 as Vector3 struct {x f64; y f64; z f64;}
+// extern func vadd(u64, u64):u64 as +(Vector3, Vector3):Vector3
+// extern func memberAccess(u64, u64):f64 as .(Vector3, const string):f64
+struct SymbolCommandAST : public DefAST {
+    ACCEPT_FUNCTION;
+    enum class SymbolCommandType {
+        IMPORT,
+        EXPORT,
+        EXTERN,
+    } symbolCommandType;
+    std::unique_ptr<TypeInfo> definedType;
+    template <typename S>
+    SymbolCommandAST(S &&name, SymbolCommandType symbolCommandType, std::unique_ptr<TypeInfo> definedType)
+        : DefAST(std::forward<S>(name)), symbolCommandType(symbolCommandType), definedType(std::move(definedType)) {}
+};
 
 // // TODO:
 // // var x i32 = 1

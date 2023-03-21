@@ -18,9 +18,21 @@ struct SymbolTable {
 };
 
 struct ContextGlobal {
-    // real function name -> (capture type name, function definition)
-    std::map<std::string, std::tuple<std::string, std::unique_ptr<FunctionDefAST>>> realFuncDefinition;
+    // real function name -> function definition
+    std::map<std::string, std::unique_ptr<FunctionDefAST>> realFuncDefinition;
     std::map<std::string, TypeInfo> externFuncDef;
+    // used function name("add") -> real function name("func@0@2@add(f64,f64):f64")
+    std::map<std::string, std::string> funcDef;
+    // used function name("+") -> param type({"Vector3", "Vector3"}) -> real function
+    //     name("func@0@2@+(Vector3,Vector3):Vector3")
+    std::map<std::string, std::map<std::tuple<TypeInfo, TypeInfo>, std::string>> infixFuncDef;
+    // used function name("add") -> param type({"Vector3", "Vector3"}) -> real function
+    //     name("func@0@2@add(Vector3,Vector3):Vector3")
+    std::map<std::string, std::map<std::vector<TypeInfo>, std::string>> memberFuncDef;
+    // type alias name -> type name(may recursion)
+    std::map<std::string, std::string> typeAlias;
+    // type name -> defined type
+    std::map<std::string, TypeInfo> typeDef;
 };
 
 // when meet var def: add {name, type} to varDef
@@ -35,34 +47,41 @@ struct ContextGlobal {
 //                                     infixFuncDef/memberFuncDef
 // only when all def in a scope processed can sub scope to be processed.
 struct ContextFrame {
-    // used function name("add") -> real function name("func@0@2@add(f64,f64):f64")
-    std::map<std::string, std::string> funcDef;
-    // used function name("+") -> param type({"Vector3", "Vector3"}) -> real function
-    //     name("func@0@2@+(Vector3,Vector3):Vector3")
-    std::map<std::string, std::map<std::vector<TypeInfo>, std::string>> infixFuncDef;
-    // used function name("add") -> param type({"Vector3", "Vector3"}) -> real function
-    //     name("func@0@2@add(Vector3,Vector3):Vector3")
-    std::map<std::string, std::map<std::vector<TypeInfo>, std::string>> memberFuncDef;
-    // type alias name -> type name(may recursion)
-    std::map<std::string, std::string> typeAlias;
-    // type name -> defined type
-    std::map<std::string, TypeInfo> typeDef;
     // var name / used function name -> type
     std::map<std::string, TypeInfo> varDef;
     // // var name / used function name -> type
     // std::map<std::string, TypeInfo> literalVarDef;
     // std::set<std::string> capturedSymbol;
-    size_t scopeID;
-    size_t subScopeCounter;
+    size_t scopeID = 0;
+    size_t subScopeCounter = 0;
 };
 
 // stack
 struct ContextStack {
+    size_t counter;
     ContextGlobal global;
     std::vector<ContextFrame> stackFrame;
-    ContextStack() : stackFrame({}){}
+    ContextStack() : stackFrame({{}}), counter(0) {}
     ContextStack(const ContextStack &) = delete;
+    const TypeInfo &getTypeByRealFunctionName(const std::string &name) {
+        if (auto it = global.realFuncDefinition.find(name); it != global.realFuncDefinition.end()) {
+            return *(it->second->funcType);
+        } else if(auto it2 = global.externFuncDef.find(name); it2 != global.externFuncDef.end()){
+            return it2->second;
+        } else {
+            throw std::logic_error("cannot find function definition: " + name);
+        }
+    }
+    void clear() {
+        counter = 0;
+        global = {};
+        stackFrame = {{}};
+    }
     ContextFrame &top() { return stackFrame.back(); }
+    std::string generateUniqueName(const std::string &prefix = "", const std::string &suffix = "") {
+        std::string tmp = prefix + "_" + std::to_string(counter++) + "_" + suffix;
+        return tmp;
+    }
     ContextFrame &push() {
         auto tmp = stackFrame.back().subScopeCounter++;
         stackFrame.push_back({});
@@ -89,16 +108,16 @@ struct ContextStack {
         }
         return seek(p, ind, top - 1);
     }
-    //! @return (find, escaped, value)
-    decltype(auto) seekFuncDef(const std::string &s) { return seek(&ContextFrame::funcDef, s); }
-    //! @return (find, escaped, value)
-    decltype(auto) seekInfixFuncDef(const std::string &s) { return seek(&ContextFrame::infixFuncDef, s); }
-    //! @return (find, escaped, value)
-    decltype(auto) seekMemberFuncDef(const std::string &s) { return seek(&ContextFrame::memberFuncDef, s); }
-    //! @return (find, escaped, value)
-    decltype(auto) seekTypeAlias(const std::string &s) { return seek(&ContextFrame::typeAlias, s); }
-    //! @return (find, escaped, value)
-    decltype(auto) seekTypeDef(const std::string s) { return seek(&ContextFrame::typeDef, s); }
+    // //! @return (find, escaped, value)
+    // decltype(auto) seekFuncDef(const std::string &s) { return seek(&ContextFrame::funcDef, s); }
+    // //! @return (find, escaped, value)
+    // decltype(auto) seekInfixFuncDef(const std::string &s) { return seek(&ContextFrame::infixFuncDef, s); }
+    // //! @return (find, escaped, value)
+    // decltype(auto) seekMemberFuncDef(const std::string &s) { return seek(&ContextFrame::memberFuncDef, s); }
+    // //! @return (find, escaped, value)
+    // decltype(auto) seekTypeAlias(const std::string &s) { return seek(&ContextFrame::typeAlias, s); }
+    // //! @return (find, escaped, value)
+    // decltype(auto) seekTypeDef(const std::string s) { return seek(&ContextFrame::typeDef, s); }
     //! @return (find, escaped, value)
     decltype(auto) seekVarDef(const std::string &s) { return seek(&ContextFrame::varDef, s); }
 };

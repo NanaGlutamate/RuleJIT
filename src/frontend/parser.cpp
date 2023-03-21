@@ -111,7 +111,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         auto typeInfo = (*lexer) | TypeParser();
         if (lexer->top() != "{") {
             // Ident
-            if (!typeInfo.isSingleToken()) {
+            if (!typeInfo.isBaseType()) {
                 return setError("type can not act as Expression along: " + typeInfo.toString());
             }
             lhs = std::make_unique<IdentifierExprAST>(typeInfo.idents[0]);
@@ -237,7 +237,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
             }
             label = lexer->pop(IGNORE_BREAK);
         }
-        auto expr = parseExpr(true);
+        auto expr = parseExpr();
         lhs = std::make_unique<LoopAST>(std::move(label), nop(), std::move(cond), std::move(expr));
     } else {
         return setError("unexcepted token: \"" + lexer->topCopy() + "\" in expression");
@@ -395,7 +395,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
     } else if (lexer->top() == "type") {
         // type def
         lexer->pop(IGNORE_BREAK);
-        if(lexer->tokenType() != TokenType::IDENT) {
+        if (lexer->tokenType() != TokenType::IDENT) {
             return setError("expected ident as type name, found: " + lexer->topCopy());
         }
         if (lexer->tokenType() != TokenType::IDENT) {
@@ -441,7 +441,39 @@ std::unique_ptr<std::vector<std::unique_ptr<IdentifierExprAST>>> ExpressionParse
     return ret;
 }
 
-std::unique_ptr<ExprAST> ExpressionParser::parseCommand() { return setError("parse command not supported now"); }
+std::unique_ptr<ExprAST> ExpressionParser::parseCommand() {
+    if (lexer->pop(IGNORE_BREAK) == "extern") {
+        if (lexer->top() == "func") {
+            lexer->pop(IGNORE_BREAK);
+            auto nameType = lexer->tokenType();
+            if (nameType != TokenType::IDENT) {
+                return setError("expected ident as extern function name, found: " + lexer->topCopy());
+            }
+            std::string name = lexer->popCopy(IGNORE_BREAK);
+            TypeInfo type{std::vector<std::string>{"func"}};
+            auto params = parseParamList();
+            for (auto &param : (*params)) {
+                type.subTypes.push_back(*(param->type));
+            }
+            if (lexer->top() == ":") {
+                // return type
+                // TODO: return value func(i i32):(i i32){}
+                type.idents.push_back(":");
+                lexer->pop(IGNORE_BREAK);
+                auto returnType = (*lexer) | TypeParser();
+                if (!returnType) {
+                    return setError("expected return type in function definition after \":\", found: " +
+                                    lexer->topCopy());
+                }
+                type.subTypes.push_back(returnType);
+            }
+            return std::make_unique<SymbolCommandAST>(name, SymbolCommandAST::SymbolCommandType::EXTERN,
+                                                      std::make_unique<TypeInfo>(type));
+        } else {
+            return setError("only support extern func command");
+        }
+    }
+}
 
 std::unique_ptr<ExprAST> ExpressionParser::parseTopLevel() { return setError("top level not supported now"); }
 

@@ -50,7 +50,7 @@ struct TypeInfo {
         }
         std::string res;
         auto it = idents.begin();
-        while (it != idents.end() && (*it == "[]" || *it == "*")) {
+        while (it != idents.end() && ((*it)[0] == '[' || *it == "*")) {
             ++it;
         }
         while (it != idents.end()) {
@@ -62,7 +62,8 @@ struct TypeInfo {
     std::string toString() const {
         std::string res;
         size_t real = 0;
-        while (idents.size() > real && idents[real][0] == '[' || idents[real][0] == '*' || idents[real] == "const") {
+        while (idents.size() > real && idents[real].size() >= 1 && idents[real][0] == '[' || idents[real][0] == '*' ||
+               idents[real] == "const") {
             res += idents[real];
             if (idents[real] == "const")
                 res += " ";
@@ -98,15 +99,43 @@ struct TypeInfo {
             res += "}";
         } else {
             my_assert(subTypes.size() == 0 && idents.size() - real == 1, "only 1 ident in type name allowed");
-            return res + idents.back();
+            res = res + idents.back();
+        }
+        if(res.empty()) {
+            return "[[void]]";
         }
         return res;
     }
     bool isFunctionType() const { return isValid() && idents[0] == "func"; }
-    bool isSingleToken() const { return isValid() && idents.size() == 1; }
-    // bool isDefinedType() const { return isSingleToken() && !buildInType.contains(idents[0]); }
+    bool isNoReturnFunctionType() const { return isFunctionType() && idents.size() == 1; }
+    bool isReturnedFunctionType() const { return isFunctionType() && idents.size() == 2 && idents[1] == ":"; }
+    const TypeInfo &getMemberType(std::string token) const {
+        my_assert(isComplexType(), "only complex type has member");
+        auto it = std::find(idents.begin() + 1, idents.end(), token);
+        my_assert(it != idents.end(), "member not found");
+        return subTypes[it - idents.begin() - 1];
+    }
+    const TypeInfo &getReturnedType() const;
+    // not complex nor function nor pointer nor array type
+    bool isArrayType() const { return isValid() && idents.size() >= 1 && idents[0][0] == '['; }
+
+    const TypeInfo &getArgType(size_t index) const {
+        my_assert(isFunctionType(), "only function type has arg");
+        my_assert(index < subTypes.size(), "index out of range");
+        return subTypes[index];
+    }
+    TypeInfo getElementType() const {
+        my_assert(isArrayType(), "only array type has element");
+        TypeInfo res = *this;
+        res.idents.erase(res.idents.begin());
+        return res;
+    }
+    bool isBaseType() const {
+        return isValid() && idents.size() == 1 && idents[0] != "func" && idents[0] != "struct" &&
+               idents[0] != "class" && idents[0] != "dynamic";
+    }
     bool isComplexType() const {
-        return isValid() && idents.size() > 1 &&
+        return isValid() && idents.size() >= 1 &&
                (idents[0] == "struct" || idents[0] == "class" || idents[0] == "dynamic");
     }
     // {"struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"}

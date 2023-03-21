@@ -33,6 +33,15 @@ struct CQInterpreter : public ASTVisitor {
             setError("f64 have no members");
         }
         if (*(v.memberToken->type) == StringType) {
+            if (v.memberToken->type->isArrayType()) {
+                if (returned.type == Value::TOKEN) {
+                    returned.value = (double)handler->arrayLength(returned.token);
+                    returned.type = Value::VALUE;
+                } else {
+                    setError("only array have \"length\" member");
+                }
+                return;
+            }
             returned.token =
                 handler->memberAccess(base.token, dynamic_cast<LiteralExprAST *>(v.memberToken.get())->value);
         } else if (*(v.memberToken->type) == RealType) {
@@ -72,16 +81,7 @@ struct CQInterpreter : public ASTVisitor {
             {"atan2", [](double x, double y) { return atan2(x, y); }},
         };
         auto p = dynamic_cast<IdentifierExprAST *>(v.functionIdent.get());
-        if (p->name == "len") {
-            my_assert(v.params.size() == 1, "\"len\" only accept 1 param");
-            v.params[0]->accept(this);
-            if (returned.type == Value::TOKEN) {
-                returned.value = (double)handler->arrayLength(returned.token);
-                returned.type = Value::VALUE;
-            } else {
-                setError("\"len\" only accept array");
-            }
-        } else if (p->name == "print") {
+        if (p->name == "print") {
             my_assert(v.params.size() == 1, "\"print\" only accept 1 param");
             v.params[0]->accept(this);
             if (returned.type == Value::TOKEN) {
@@ -138,11 +138,16 @@ struct CQInterpreter : public ASTVisitor {
     }
     VISIT_FUNCTION(BinOpExprAST) {
         static std::map<std::string, std::function<double(double, double)>> normalBinOp{
-            {"+", [](auto x, auto y) { return x + y; }},   {"-", [](auto x, auto y) { return x - y; }},
-            {"*", [](auto x, auto y) { return x * y; }},   {"/", [](auto x, auto y) { return x / y; }},
-            {">", [](auto x, auto y) { return x > y; }},   {"<", [](auto x, auto y) { return x < y; }},
-            {"==", [](auto x, auto y) { return x == y; }}, {"!=", [](auto x, auto y) { return x != y; }},
-            {">=", [](auto x, auto y) { return x >= y; }}, {"<=", [](auto x, auto y) { return x <= y; }},
+            {"+", [](auto x, auto y) { return x + y; }},   
+            {"-", [](auto x, auto y) { return x - y; }},
+            {"*", [](auto x, auto y) { return x * y; }},   
+            {"/", [](auto x, auto y) { return x / y; }},
+            {">", [](auto x, auto y) { return x > y; }},   
+            {"<", [](auto x, auto y) { return x < y; }},
+            {"==", [](auto x, auto y) { return x == y; }}, 
+            {"!=", [](auto x, auto y) { return x != y; }},
+            {">=", [](auto x, auto y) { return x >= y; }}, 
+            {"<=", [](auto x, auto y) { return x <= y; }},
         };
         static std::map<std::string, std::function<double(double, double)>> shortCutBinOp{
             {"&&", [](auto x, auto y) { return x && y; }},
@@ -348,7 +353,7 @@ struct CQInterpreter : public ASTVisitor {
     std::vector<std::vector<std::map<std::string, Value>>> symbolStack;
     Value returned;
     bool isSupportType(const TypeInfo &type) {
-        return type.isValid() && type.isSingleToken() && (type.idents[0] == "f64" || type == AutoType);
+        return type.isValid() && type.isBaseType() && (type.idents[0] == "f64" || type == AutoType);
     }
     void getReturnedValue() {
         if (returned.type == Value::EMPTY) {

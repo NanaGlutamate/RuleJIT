@@ -34,7 +34,7 @@ COMMENT "//"[^\n]*
 
 %%
 
-<<EOF>>|{END}     {printf("EOF ");}
+<<EOF>>           {printf("EOF ");}
 {SPACE}           {}
 {REAL}            {printf("real ");}
 {INT}             {printf("int ");}

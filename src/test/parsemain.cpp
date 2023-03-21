@@ -63,29 +63,29 @@ int main() {
     // printAST("a+b;+c");
     // printAST("(a+b;+c)", true);
     // printAST("a-12=a+b+c*123-12=c+d", true);
-    // printAST(R"({
-    //     var a []i32 = []i32{1,2,3,4,5,6,7,8,9,10}
-    //     func isPrime(n i32): i32 -> {
-    //         var i i32 = 2
-    //         var isP i32 = 1
-    //         while (isP && n % i != 0 && i*i <= n) {
-    //             i = i + 1
-    //         }
-    //         isP
-    //     }
-    //     func len(a []i32)(): i32->{
-    //         len(a)
-    //     }
-    //     {
-    //         var i i32 = 0
-    //         while (i < a.len()) {
-    //             if (isPrime(a[i])) {
-    //                 print(a[i])
-    //             }
-    //             i = i + 1
-    //         }
-    //     }
-    // })");
+    printAST(R"({
+        var a []i32 = []i32{1,2,3,4,5,6,7,8,9,10}
+        func isPrime(n i32): i32 -> {
+            var i i32 = 2
+            var isP i32 = 1
+            while (isP && n % i != 0 && i*i <= n) {
+                i = i + 1
+            }
+            isP
+        }
+        func len(a []i32)(): i32->{
+            len(a)
+        }
+        {
+            var i i32 = 0
+            while (i < a.len()) {
+                if (isPrime(a[i])) {
+                    print(a[i])
+                }
+                i = i + 1
+            }
+        }
+    })");
     // printAST(R"({
     //     func isPrime(n i32): i32 -> {
     //         var i i32 = 2

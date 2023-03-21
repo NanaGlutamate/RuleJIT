@@ -13,8 +13,7 @@ inline void my_assert(bool check,
 {
     using namespace std;
     if(!check){
-        cout << format("error: {}\nin file {}, line {}", message, location.file_name(), location.line()) << endl;
-        throw std::runtime_error{""};
+        throw std::logic_error{format("error: {}\nin file {}, line {}", message, location.file_name(), location.line())};
     }
 }
 

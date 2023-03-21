@@ -2,7 +2,7 @@
 
 #define VISIT_FUNCTION_DEF(c, type) void c::visit (type & v) override
 #define VISIT_FUNCTION(type) void visit (type & v) override
-#define VIRTUAL_VISIT_FUNCTION(type) virtual void visit (type & v){unexpectType=true;}
+#define VIRTUAL_VISIT_FUNCTION(type) virtual void visit (type & v){throw std::logic_error("not implemented");}
 #define PURE_VIRTUAL_VISIT_FUNCTION(type) virtual void visit (type & v) = 0
 
 namespace rulejit {
@@ -26,7 +26,7 @@ struct TypeDefAST;
 struct VarDefAST;
 struct FunctionDefAST;
 
-// struct SymbolCommandAST;
+struct SymbolCommandAST;
 
 // struct TopLevelAST;
 
@@ -47,7 +47,6 @@ struct FunctionDefAST;
 // };
 
 struct ASTVisitor{
-    bool unexpectType;
     ASTVisitor() = default;
     PURE_VIRTUAL_VISIT_FUNCTION(IdentifierExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(MemberAccessExprAST);
@@ -68,7 +67,7 @@ struct ASTVisitor{
     VIRTUAL_VISIT_FUNCTION(VarDefAST);
     VIRTUAL_VISIT_FUNCTION(FunctionDefAST);
 
-    // VIRTUAL_VISIT_FUNCTION(SymbolCommandAST);
+    VIRTUAL_VISIT_FUNCTION(SymbolCommandAST);
 
     // VIRTUAL_VISIT_FUNCTION(TopLevelAST);
     virtual ~ASTVisitor() = default;
