@@ -51,75 +51,43 @@ struct ContextFrame {
     std::map<std::string, TypeInfo> varDef;
     // // var name / used function name -> type
     // std::map<std::string, TypeInfo> literalVarDef;
-    std::set<std::string> capturedSymbol;
+    // std::set<std::string> capturedSymbol;
     size_t scopeID;
     size_t subScopeCounter;
 };
 
-// persistence stack
+// stack
 struct ContextStack {
     ContextGlobal global;
     std::vector<ContextFrame> stackFrame;
-    std::vector<size_t> preFrame;
-    std::vector<size_t> stackTop;
-    ContextStack() : stackFrame({}), preFrame({size_t(-1)}), stackTop({0}) {
-        stackFrame.back().scopeID = 0;
-        stackFrame.back().subScopeCounter = 0;
-    }
+    ContextStack() : stackFrame({}){}
     ContextStack(const ContextStack &) = delete;
-    std::string genUniqueName() {
-        // ensure unique in other scope
-        std::string name = "<<unnamed>>_" + std::to_string(stackFrame.size());
-        static size_t specifier = 0;
-        while (true) {
-            // ensure unique in this scope
-            std::string tmp = name + std::to_string(specifier);
-            if (top().funcDef.contains(tmp) || top().infixFuncDef.contains(tmp) || top().memberFuncDef.contains(tmp) ||
-                top().typeAlias.contains(tmp) || top().typeDef.contains(tmp) || top().varDef.contains(tmp)) {
-                ++specifier;
-            } else {
-                return tmp;
-            }
-        }
-    }
-    // std::string genRealFunctionName(const TypeInfo &type) {
-    //     my_assert(type.isFunctionType());
-    //     std::string ret = "func@" + std::to_string(stackFrame.size()) + "@";
-    //     for (int i = 1; i < type.idents.size(); ++i) {
-    //         ret += type.idents[i];
-    //     }
-    //     return ret;
-    // }
-    ContextFrame &top() { return stackFrame[stackTop.back()]; }
+    ContextFrame &top() { return stackFrame.back(); }
     ContextFrame &push() {
+        auto tmp = stackFrame.back().subScopeCounter++;
         stackFrame.push_back({});
-        preFrame.push_back(stackTop.back());
-        stackTop.push_back(stackFrame.size() - 1);
         stackFrame.back().subScopeCounter = 0;
-        stackFrame.back().scopeID = stackFrame[preFrame[stackTop.back()]].subScopeCounter++;
+        stackFrame.back().scopeID = tmp;
         return top();
     }
     ContextFrame &pop() {
-        stackTop.push_back(preFrame[stackTop.back()]);
+        stackFrame.pop_back();
         return top();
     }
     template <typename Item, typename Index>
     //! @return (find, escaped, value)
-    decltype(auto) seek(Item p, const Index &ind, size_t top = size_t(-1), bool escaped = true) {
+    decltype(auto) seek(Item p, const Index &ind, size_t top = size_t(-1)) {
         if (top == size_t(-1)) {
-            top = stackTop.back();
-            escaped = false;
-        }else{
-            stackFrame[top].capturedSymbol.emplace(ind);
+            top = stackFrame.size() - 1;
         }
         auto it = (stackFrame[top].*p).find(ind);
         if (it != (stackFrame[top].*p).end()) {
-            return std::tuple<bool, bool, decltype(it->second) &>(true, escaped, it->second);
+            return std::tuple<bool, decltype(it->second) &>(true, it->second);
         } else if (top == 0) {
             static decltype(it->second) empty{};
-            return std::tuple<bool, bool, decltype(it->second) &>(false, escaped, empty);
+            return std::tuple<bool, decltype(it->second) &>(false, empty);
         }
-        return seek(p, ind, preFrame[top]);
+        return seek(p, ind, top - 1);
     }
     //! @return (find, escaped, value)
     decltype(auto) seekFuncDef(const std::string &s) { return seek(&ContextFrame::funcDef, s); }
