@@ -66,6 +66,7 @@ struct ContextStack {
         stackFrame.back().scopeID = 0;
         stackFrame.back().subScopeCounter = 0;
     }
+    ContextStack(const ContextStack &) = delete;
     std::string genUniqueName() {
         // ensure unique in other scope
         std::string name = "<<unnamed>>_" + std::to_string(stackFrame.size());
