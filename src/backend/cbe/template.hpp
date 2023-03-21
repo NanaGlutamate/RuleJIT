@@ -2,7 +2,7 @@
 
 // TODO: vector<bool> -> vector<char>
 
-namespace rulejit::templates {
+namespace rulejit::cppgen::templates {
 
 // template <typename T>
 // struct CStyleVector{{
@@ -32,15 +32,23 @@ constexpr inline bool is_base_v =
     std::is_same_v<T, bool> || std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t> || std::is_same_v<T, int16_t> ||
     std::is_same_v<T, uint16_t> || std::is_same_v<T, int32_t> || std::is_same_v<T, uint32_t> ||
     std::is_same_v<T, int64_t> || std::is_same_v<T, uint64_t> || std::is_same_v<T, float> ||
-    std::is_same_v<T, double> || std::is_same_v<T, std::string>;
+    std::is_same_v<T, double>;// || std::is_same_v<T, std::string>;
+
+template <typename T>
+struct value{{
+    double v;
+    using type = T;
+    operator double() const{{ return v; }}
+    value(double v) : v(v){{}}
+}};
 
 using CSValueMap = std::unordered_map<std::string, std::any>;
 
 template <typename T>
 void emplaceFromAny(T& t, const std::any& v){{
-    if constexpr(is_base_v<T>){{
-        t = std::any_cast<T>(it->second);
-    }}else if constexpr(is_vector_v<T>){{
+    if constexpr(is_base_v<T::type>){{
+        t = std::any_cast<T::type>(it->second);
+    }}else if constexpr(is_vector_v<T::type>){{
         auto tmp = std::any_cast<std::vector<std::any>*>(&(it->second));
         t.resize(tmp->size());
         for(size_t i = 0; i < tmp->size(); ++i){{
@@ -57,6 +65,7 @@ std::any toAny(const T& t){{
         return t;
     }}else if constexpr(is_vector_v<T>){{
         std::vector<std::any>> tmp;
+        tmp.reserve(t.size());
         for(auto&& i : t){{
             tmp.emplace_back(toAny(i));
         }}
@@ -96,13 +105,17 @@ inline constexpr auto typeDeserialize = R"(
 )";
 inline constexpr auto typeSerialize = "tmp.emplace(\"{1}\", toAny({1}));\n";
 
-// namespace, prefix, defs
+// namespace, prefix, defs, externs
 inline constexpr auto funcDefHpp = R"(
 #pragma once
 
 #include <cmath>
 
 #include "{1}typedef.hpp"
+
+extern "C" {{
+{3}
+}}
 
 namespace {0}{{
 {2}
@@ -113,9 +126,8 @@ namespace {0}{{
 
 // returntype, funcname, params
 inline constexpr auto externFuncDef = R"(
-extern "C" {0} {1}({2});
+{0} {1}({2});
 )";
-
 // returntype, funcname, params, body
 inline constexpr auto funcDef = R"(
 inline {0} {1}({2}) {{
@@ -123,11 +135,7 @@ inline {0} {1}({2}) {{
 }}
 )";
 
-inline constexpr auto loaderHpp = R"(
-
-)";
-
-// namespace, prefix, subrulesetcall, subrulesdef
+// namespace, prefix, subrulesetcall, subrulesetdef
 inline constexpr auto rulesetHpp = R"(
 #pragma once
 
@@ -135,7 +143,6 @@ inline constexpr auto rulesetHpp = R"(
 
 #include "{1}typedef.hpp"
 #include "{1}funcdef.hpp"
-#include "{1}loader.hpp"
 
 namespace {0}{{
 
@@ -159,7 +166,13 @@ struct RuleSet{{
 }};
 
 }}
+)";
 
+// id, 
+inline constexpr auto subRulesetDef = R"(
+    struct SubRuleSet{0}{{
+
+    }}subRuleSet{0};
 )";
 
 } // namespace rulejit::templates
