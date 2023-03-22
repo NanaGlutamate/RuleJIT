@@ -107,16 +107,17 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
 
         std::string expr = "{";
         auto rules = subruleset->first_node("Rules");
-        for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule")) {
+        size_t act = 0;
+        for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule"), act++) {
             expr += std::string("if({") + rule->first_node("Condition")->first_node("Expression")->value() + "}){";
             for (auto assign = rule->first_node("Consequence")->first_node("Assignment"); assign;
                  assign = assign->next_sibling("Assignment")) {
                 expr += std::string(assign->first_node("Target")->value()) + "={" +
                         assign->first_node("Value")->first_node("Expression")->value() + "};";
             }
-            expr += "}else ";
+            expr += std::to_string(act) + "}else ";
         }
-        expr += "{}}";
+        expr += "{-1}}";
         // std::cout<<expr;
         auto ast = expr | lexer | parser | semantic;
         subs += std::format(subRulesetDef, id, ast | codegen);

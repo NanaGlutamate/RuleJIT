@@ -15,6 +15,7 @@ inline const TypeInfo StringType{std::vector<std::string>{std::string(typeident:
 inline const TypeInfo IntType{std::vector<std::string>{std::string(typeident::IntTypeIdent)}};
 inline const TypeInfo RealType{std::vector<std::string>{std::string(typeident::RealTypeIdent)}};
 inline const TypeInfo AutoType{std::vector<std::string>{std::string(typeident::AutoTypeIdent)}};
+inline const TypeInfo BuildInUnaryType{"func(f64):f64"};
 
 inline std::unique_ptr<TypeInfo> getAuto(){
     return std::make_unique<TypeInfo>(AutoType);

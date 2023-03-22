@@ -89,7 +89,8 @@ std::unique_ptr<ExprAST> ExpressionParser::parseUnary() {
     auto op = lexer->popCopy(IGNORE_BREAK);
     std::vector<std::unique_ptr<ExprAST>> args;
     args.push_back(parseUnary());
-    return std::make_unique<FunctionCallExprAST>(std::make_unique<IdentifierExprAST>(op), std::move(args));
+    return std::make_unique<FunctionCallExprAST>(
+        std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(BuildInUnaryType), op), std::move(args));
 }
 
 // PRIMARYEXPR :=
@@ -136,7 +137,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
                     auto ident = lexer->popCopy(IGNORE_BREAK);
                     key = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(StringType), std::move(ident));
                 } else {
-                    if(designated){
+                    if (designated) {
                         return setError("designated initializer must have key");
                     }
                     key = parseExpr(true);
@@ -145,7 +146,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
                     lexer->pop(IGNORE_BREAK);
                     auto value = parseExpr(true);
                     // eatBreak();
-                    if(!designated){
+                    if (!designated) {
                         return setError("non-designated initializer must not have key");
                     }
                     members.push_back(std::make_tuple(std::move(key), std::move(value)));
@@ -477,6 +478,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseCommand() {
             return setError("only support extern func command");
         }
     }
+    return setError("only support extern func command");
 }
 
 std::unique_ptr<ExprAST> ExpressionParser::parseTopLevel() { return setError("top level not supported now"); }

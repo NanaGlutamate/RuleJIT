@@ -3,6 +3,11 @@
 
 namespace rulejit {
 
+TypeInfo::TypeInfo(const std::string &s) {
+    static ExpressionLexer lexer;
+    *this = s | lexer | TypeParser();
+}
+
 const TypeInfo &TypeInfo::getReturnedType() const {
     if (isNoReturnFunctionType()) {
         return NoInstanceType;

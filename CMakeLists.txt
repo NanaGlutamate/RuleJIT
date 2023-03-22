@@ -23,7 +23,7 @@ set(CMAKE_DEBUG_POSTFIX _debug)
 set(CMAKE_RELWITHDEBINFO_POSTFIX _relwithdebinfo)
 set(CMAKE_MINSIZEREL_POSTFIX _minsizerel)
 
-add_compile_definitions(__PROJECT_ROOT_PATH="${PROJECT_SOURCE_DIR}")
+add_definitions(-D__PROJECT_ROOT_PATH="${PROJECT_SOURCE_DIR}")
 
 if(MSVC)
   string(APPEND CMAKE_CXX_FLAGS " /permissive- /Zc:__cplusplus")

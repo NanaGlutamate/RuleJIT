@@ -2,7 +2,6 @@ add_subdirectory(cbe)
 add_subdirectory(cppbe)
 add_subdirectory(jit)
 add_subdirectory(cq)
-add_subdirectory(interpreter)
 
 file(GLOB_RECURSE SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/*.cc ${CMAKE_CURRENT_SOURCE_DIR}/*.C ${CMAKE_CURRENT_SOURCE_DIR}/*.h ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp)
 

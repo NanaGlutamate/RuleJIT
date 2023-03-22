@@ -51,8 +51,8 @@ struct RuleSet{
                 });
             }
         }
-        void Tick(RuleSet& base){
-            {if((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) <= double((10)))){{(base.out.Output1) = double(((0)));};}else{if((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) > double((10)))){{(base.out.Output1) = double(((1)));};}else{(NoInstanceType{});};};}
+        int Tick(RuleSet& base){
+            return ((((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) <= double((10)))) ? ([&](){(base.out.Output1) = double(((0)));return (0);}()) : (((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) > double((10)))) ? ([&](){(base.out.Output1) = double(((1)));return (1);}()) : ((-((1)))))));
         }
         void writeBack(RuleSet& base){
             for(auto&& [_, f] : modified){
@@ -81,8 +81,8 @@ struct RuleSet{
                 });
             }
         }
-        void Tick(RuleSet& base){
-            {if((double((base.in.Input1)) != double((0)))){{(loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1) = double(((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) + double((1)))));};}else{if((double((base.in.Input1)) == double((0)))){{(loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1) = double(((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) - double((1)))));};}else{(NoInstanceType{});};};}
+        int Tick(RuleSet& base){
+            return ((((double((base.in.Input1)) != double((0)))) ? ([&](){(loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1) = double(((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) + double((1)))));return (0);}()) : (((double((base.in.Input1)) == double((0)))) ? ([&](){(loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1) = double(((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) - double((1)))));return (1);}()) : ((-((1)))))));
         }
         void writeBack(RuleSet& base){
             for(auto&& [_, f] : modified){

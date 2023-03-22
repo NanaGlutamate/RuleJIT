@@ -88,11 +88,13 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         }
     }
     VISIT_FUNCTION(LiteralExprAST) {
+        if (v.type->isFunctionType()) {
+            returned += v.value;
+            return;
+        }
         returned += "(";
         if (*(v.type) == RealType) {
             returned += v.value.data();
-        } else if (v.type->isFunctionType()) {
-            returned += v.value;
         } else if (*(v.type) == NoInstanceType) {
             returned += "NoInstanceType{}";
         } else if (*(v.type) == StringType) {

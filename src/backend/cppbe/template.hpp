@@ -217,8 +217,8 @@ inline constexpr auto subRulesetDef = R"(
                 }});
             }}
         }}
-        void Tick(RuleSet& base){{
-            {1}
+        int Tick(RuleSet& base){{
+            return {1};
         }}
         void writeBack(RuleSet& base){{
             for(auto&& [_, f] : modified){{

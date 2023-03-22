@@ -11,6 +11,7 @@
 #include "ast/astvisitor.hpp"
 #include "ast/context.hpp"
 #include "tools/myassert.hpp"
+#include "defines/language.hpp"
 
 #define __RULEJIT_SEMANTIC_PUSH pushStack(v.get());
 #define __RULEJIT_SEMANTIC_POP popStack();
@@ -86,7 +87,7 @@ struct ExpressionSemantic : public ASTVisitor {
             func->returnValue->accept(&t);
             t.afterAccept(func->returnValue);
             if (*(func->returnValue->type) != func->funcType->getReturnedType()) {
-                throw std::logic_error(std::format("function {} declared return {}, but return {} actually", func->name,
+                throw std::logic_error(std::format("function \"{}\" declared return \"{}\", but return \"{}\" actually", func->name,
                                                    func->funcType->getReturnedType().toString(),
                                                    func->returnValue->type->toString()));
             }
@@ -105,13 +106,13 @@ struct ExpressionSemantic : public ASTVisitor {
     VISIT_FUNCTION(IdentifierExprAST) {
         auto [find, type] = c->seekVarDef(v.name);
         if (!find) {
-            return setError(std::format("Variable {} not defined", v.name));
+            return setError(std::format("Variable \"{}\" not defined", v.name));
         }
         if (!v.type) {
             v.type = std::make_unique<TypeInfo>(type);
         } else {
             if (*(v.type) != type) {
-                return setError(std::format("Variable {} type mismatch", v.name));
+                return setError(std::format("Variable \"{}\" type mismatch", v.name));
             }
         }
     }
@@ -126,7 +127,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 // struct member access; TODO: member function, map
                 auto definedType = c->global.typeDef.find(v.baseVar->type->idents[0]);
                 if (definedType == c->global.typeDef.end()) {
-                    return setError(std::format("Type {} not defined", v.baseVar->type->idents[0]));
+                    return setError(std::format("Type \"{}\" not defined", v.baseVar->type->idents[0]));
                 }
                 auto memberType = definedType->second.getMemberType(p->value);
                 *(v.type) = memberType;
@@ -137,7 +138,7 @@ struct ExpressionSemantic : public ASTVisitor {
             // array access
             *(v.type) = v.baseVar->type->getElementType();
         } else {
-            return setError(std::format("unknown member access {}[{}]", v.baseVar->type->toString(),
+            return setError(std::format("unknown member access {}[\"{}\"]", v.baseVar->type->toString(),
                                         v.memberToken->type->toString()));
         }
         processType(v.type);
@@ -147,6 +148,18 @@ struct ExpressionSemantic : public ASTVisitor {
         for (auto &arg : v.params) {
             arg->accept(this);
             afterAccept(arg);
+        }
+        auto p = dynamic_cast<LiteralExprAST *>(v.functionIdent.get());
+        if(p && reloadableBuildInUnary.contains(p->value)){
+            if(v.params.size() != 1){
+                return setError(std::format("Unary function \"{}\" need 1 param, {} given", p->value, v.params.size()));
+            }
+            if(*(v.params[0]->type) == RealType || *(v.params[0]->type) == IntType){
+                // v.functionIdent->type = std::make_unique<TypeInfo>(BuildInUnaryType);
+                v.type = std::make_unique<TypeInfo>(RealType);
+                return;
+            }
+            // TODO: reload
         }
         // only member access, unary and binop can overload
         v.functionIdent->accept(this);
@@ -177,13 +190,13 @@ struct ExpressionSemantic : public ASTVisitor {
         } else if (v.op == "=") {
             v.type = std::make_unique<TypeInfo>(NoInstanceType);
             if (*(v.lhs->type) != *(v.rhs->type) || *(v.lhs->type) == NoInstanceType) {
-                return setError(std::format("Assign between {} and {} not allowed", v.lhs->type->toString(),
+                return setError(std::format("Assign between \"{}\" and \"{}\" not allowed", v.lhs->type->toString(),
                                             v.rhs->type->toString()));
             }
         } else {
             auto overLoad = c->global.infixFuncDef.find(v.op);
             if (overLoad == c->global.infixFuncDef.end()) {
-                return setError(std::format("Operator {} between {} and {} not defined", v.op, v.lhs->type->toString(),
+                return setError(std::format("Operator \"{}\" between \"{}\" and \"{}\" not defined", v.op, v.lhs->type->toString(),
                                             v.rhs->type->toString()));
             }
             if (auto it = overLoad->second.find({*(v.lhs->type), *(v.rhs->type)}); it != overLoad->second.end()) {
@@ -196,7 +209,7 @@ struct ExpressionSemantic : public ASTVisitor {
                     std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(funcType), it->second), std::move(tmp));
                 return;
             } else {
-                return setError(std::format("Operator {} between {} and {} not defined", v.op, v.lhs->type->toString(),
+                return setError(std::format("Operator \"{}\" between \"{}\" and \"{}\" not defined", v.op, v.lhs->type->toString(),
                                             v.rhs->type->toString()));
             }
         }
@@ -222,7 +235,7 @@ struct ExpressionSemantic : public ASTVisitor {
         if (v.type->isBaseType()) {
             auto it = c->global.typeDef.find(v.type->idents[0]);
             if (it == c->global.typeDef.end()) {
-                return setError(std::format("Type {} not defined", v.type->toString()));
+                return setError(std::format("Type \"{}\" not defined", v.type->toString()));
             }
             auto def = it->second;
             if (v.members.size() == 0) {
@@ -243,7 +256,7 @@ struct ExpressionSemantic : public ASTVisitor {
                     return setError("Non literal designate do not supported");
                 }
                 if(def.getMemberType(p->value) != *(member->type)) {
-                    return setError(std::format("Designate type mismatch, {} expected, {} given", def.getMemberType(p->value).toString(), member->type->toString()));
+                    return setError(std::format("Designate type mismatch, \"{}\" expected, \"{}\" given", def.getMemberType(p->value).toString(), member->type->toString()));
                 }
             }
         } else if (v.type->isArrayType()) {
@@ -259,7 +272,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 member->accept(this);
                 afterAccept(member);
                 if(*(member->type) != def){
-                    return setError(std::format("Array element type mismatch, {} expected, {} given", def.toString(), member->type->toString()));
+                    return setError(std::format("Array element type mismatch, \"{}\" expected, \"{}\" given", def.toString(), member->type->toString()));
                 }
             }
         } else {
@@ -312,10 +325,10 @@ struct ExpressionSemantic : public ASTVisitor {
             }
             for (auto &&t : v.definedType->subTypes) {
                 if (t.isComplexType()) {
-                    return setError(std::format("unnamed type {} is not allowed", t.toString()));
+                    return setError(std::format("unnamed type \"{}\" is not allowed", t.toString()));
                 }
                 if (t != RealType && t != IntType && t.isBaseType() && !c->global.typeDef.contains(t.toString())) {
-                    return setError(std::format("type {} is not defined", t.toString()));
+                    return setError(std::format("type \"{}\" is not defined", t.toString()));
                 }
             }
             c->global.typeDef[v.name] = *(v.definedType);
@@ -401,7 +414,7 @@ struct ExpressionSemantic : public ASTVisitor {
         //     }
         // }
         if (type->isComplexType()) {
-            return setError(std::format("unnamed type {} is not allowed", type->toString()));
+            return setError(std::format("unnamed type \"{}\" is not allowed", type->toString()));
         }
     }
     // void pushStack(AST* v){callStack.push_back(v);}

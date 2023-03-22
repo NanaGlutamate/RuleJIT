@@ -22,6 +22,9 @@ struct TypeInfo {
     TypeInfo() = default;
     TypeInfo(TypeInfo &&t) : idents(std::move(t.idents)), subTypes(std::move(t.subTypes)) {}
     TypeInfo(const TypeInfo &t) : idents(t.idents), subTypes(t.subTypes) {}
+    TypeInfo(std::vector<std::string> &&s) : idents(std::move(s)), subTypes() {}
+    TypeInfo(const std::vector<std::string> &s) : idents(s), subTypes() {}
+    TypeInfo(const std::string& s);
     TypeInfo &operator=(const TypeInfo &t) {
         idents = t.idents;
         subTypes = t.subTypes;
@@ -33,8 +36,6 @@ struct TypeInfo {
         return *this;
     }
 
-    TypeInfo(std::vector<std::string> &&s) : idents(std::move(s)), subTypes() {}
-    TypeInfo(const std::vector<std::string> &s) : idents(s), subTypes() {}
     operator bool() const { return isValid(); }
     bool operator==(const TypeInfo &other) const {
         // if (isComplexType() || other.isComplexType()) {
