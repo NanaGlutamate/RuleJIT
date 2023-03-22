@@ -112,7 +112,7 @@ struct TypeInfo {
     const TypeInfo &getMemberType(std::string token) const {
         my_assert(isComplexType(), "only complex type has member");
         auto it = std::find(idents.begin() + 1, idents.end(), token);
-        my_assert(it != idents.end(), "member not found");
+        my_assert(it != idents.end(), "member not found: "+token);
         return subTypes[it - idents.begin() - 1];
     }
     const TypeInfo &getReturnedType() const;

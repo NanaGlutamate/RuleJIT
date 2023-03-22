@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.12)
 set(PROJ_NAME RuleJIT)
 project(${PROJ_NAME})
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(LLVM_DIR "D:/Desktop/FinalProj/Code/llvm-install-x86-release-1507-nozlibstd/lib/cmake/llvm")
+set(LLVM_DIR ${PROJECT_SOURCE_DIR}/../llvm-install-x86-release-1507-nozlibstd/lib/cmake/llvm)
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -22,6 +22,8 @@ set(CMAKE_RELEASE_POSTFIX _release)
 set(CMAKE_DEBUG_POSTFIX _debug)
 set(CMAKE_RELWITHDEBINFO_POSTFIX _relwithdebinfo)
 set(CMAKE_MINSIZEREL_POSTFIX _minsizerel)
+
+add_compile_definitions(__PROJECT_ROOT_PATH="${PROJECT_SOURCE_DIR}")
 
 if(MSVC)
   string(APPEND CMAKE_CXX_FLAGS " /permissive- /Zc:__cplusplus")

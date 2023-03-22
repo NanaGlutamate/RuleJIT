@@ -10,7 +10,7 @@ int testCase(const std::string &s, bool expectError = false) {
 
     static ExpressionLexer lexer;
     static ExpressionParser parser;
-    static Semantic semantic;
+    static ExpressionSemantic semantic;
     static ContextStack stack;
     static ASTPrinter printer;
 

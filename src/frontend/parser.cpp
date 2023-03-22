@@ -119,12 +119,10 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
             // ComplexLiteral
             lexer->pop(IGNORE_BREAK);
             std::vector<std::tuple<std::unique_ptr<ExprAST>, std::unique_ptr<ExprAST>>> members;
-            // bool requireDesignated = false;
+            bool designated = lexer->top() == ".";
             while (lexer->top() != "}") {
-                bool requireDesignated = false;
                 std::unique_ptr<rulejit::ExprAST> key;
                 if (lexer->top() == ".") {
-                    requireDesignated = true;
                     lexer->pop(IGNORE_BREAK);
                     if (lexer->tokenType() != TokenType::IDENT) {
                         if (lexer->tokenType() == TokenType::INT || lexer->tokenType() == TokenType::REAL ||
@@ -138,29 +136,35 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
                     auto ident = lexer->popCopy(IGNORE_BREAK);
                     key = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(StringType), std::move(ident));
                 } else {
+                    if(designated){
+                        return setError("designated initializer must have key");
+                    }
                     key = parseExpr(true);
                 }
                 if (lexer->top() == ":") {
                     lexer->pop(IGNORE_BREAK);
                     auto value = parseExpr(true);
                     // eatBreak();
+                    if(!designated){
+                        return setError("non-designated initializer must not have key");
+                    }
                     members.push_back(std::make_tuple(std::move(key), std::move(value)));
                     if (lexer->top() == ",") {
                         lexer->pop(IGNORE_BREAK);
                     }
                 } else if (lexer->top() == ",") {
-                    if (requireDesignated) {
+                    if (designated) {
                         return setError("designated initializer must have value");
                     }
                     lexer->pop(IGNORE_BREAK);
-                    members.push_back(std::make_tuple(nop(), std::move(key)));
+                    members.push_back(std::make_tuple(nullptr, std::move(key)));
                 } else if (lexer->top() != "}") {
                     return setError("invalid symbol found in complex literal: " + lexer->topCopy());
                 } else {
-                    if (requireDesignated) {
+                    if (designated) {
                         return setError("designated initializer must have value");
                     }
-                    members.push_back(std::make_tuple(nop(), std::move(key)));
+                    members.push_back(std::make_tuple(nullptr, std::move(key)));
                 }
             }
             lexer->pop();

@@ -22,12 +22,13 @@ namespace rulejit {
 // 3. scope process
 // 4. capture analysis
 // 5. redefined symbol name(var, type and func name cannot be same)
-struct Semantic : public ASTVisitor {
-    Semantic() = default;
+struct ExpressionSemantic : public ASTVisitor {
+    ExpressionSemantic() = default;
     std::vector<ExprAST *> callStack;
     // ContextStack cannot be destructed before last process call of this
     void loadContext(ContextStack &context) { c = &context; }
-    std::vector<std::unique_ptr<ExprAST>> friend operator|(std::vector<std::unique_ptr<ExprAST>> ast, Semantic &t) {
+    // collect defs and check top-level expressions
+    std::vector<std::unique_ptr<ExprAST>> friend operator|(std::vector<std::unique_ptr<ExprAST>> ast, ExpressionSemantic &t) {
         for (auto &i : ast) {
             if (i && isType<TypeDefAST>(i.get())) {
                 i->accept(&t);
@@ -65,8 +66,7 @@ struct Semantic : public ASTVisitor {
                     t.c->global.externFuncDef[v->name] = *(v->definedType);
                     i = std::make_unique<VarDefAST>(
                         v->name, std::make_unique<TypeInfo>(*(v->definedType)),
-                        std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(*(v->definedType)),
-                                                         v->name));
+                        std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(*(v->definedType)), v->name));
                 } else {
                     throw std::logic_error("only support extern func command");
                 }
@@ -95,12 +95,11 @@ struct Semantic : public ASTVisitor {
         std::erase_if(ast, [](auto &i) { return i == nullptr; });
         return std::move(ast);
     }
-    std::unique_ptr<ExprAST> process(std::unique_ptr<ExprAST> ast) {
-        callStack.clear();
-        type = nullptr;
-        needChange = nullptr;
-        ast->accept(this);
-        afterAccept(ast);
+    std::unique_ptr<ExprAST> friend operator|(std::unique_ptr<ExprAST> ast, ExpressionSemantic &t) {
+        t.callStack.clear();
+        t.needChange = nullptr;
+        ast->accept(&t);
+        t.afterAccept(ast);
         return std::move(ast);
     }
     VISIT_FUNCTION(IdentifierExprAST) {
@@ -194,10 +193,7 @@ struct Semantic : public ASTVisitor {
                 auto funcType = c->getTypeByRealFunctionName(it->second);
                 needChange = std::make_unique<FunctionCallExprAST>(
                     std::make_unique<TypeInfo>(funcType.getReturnedType()),
-                    std::make_unique<LiteralExprAST>(
-                        std::make_unique<TypeInfo>(funcType),
-                        it->second),
-                    std::move(tmp));
+                    std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(funcType), it->second), std::move(tmp));
                 return;
             } else {
                 return setError(std::format("Operator {} between {} and {} not defined", v.op, v.lhs->type->toString(),
@@ -221,7 +217,55 @@ struct Semantic : public ASTVisitor {
             v.type = std::make_unique<TypeInfo>(*(v.trueExpr->type));
         }
     }
-    VISIT_FUNCTION(ComplexLiteralExprAST) { processType(v.type); }
+    VISIT_FUNCTION(ComplexLiteralExprAST) {
+        processType(v.type);
+        if (v.type->isBaseType()) {
+            auto it = c->global.typeDef.find(v.type->idents[0]);
+            if (it == c->global.typeDef.end()) {
+                return setError(std::format("Type {} not defined", v.type->toString()));
+            }
+            auto def = it->second;
+            if (v.members.size() == 0) {
+                return;
+            }
+            bool designate = std::get<0>(v.members[0]) != nullptr;
+            if(!designate) {
+                return setError("Complex type must be designate");
+            }
+            size_t cnt = 0;
+            for (auto &&[ident, member] : v.members) {
+                member->accept(this);
+                afterAccept(member);
+                ident->accept(this);
+                afterAccept(ident);
+                auto p = dynamic_cast<LiteralExprAST *>(ident.get());
+                if(!p || *(p->type) != StringType) {
+                    return setError("Non literal designate do not supported");
+                }
+                if(def.getMemberType(p->value) != *(member->type)) {
+                    return setError(std::format("Designate type mismatch, {} expected, {} given", def.getMemberType(p->value).toString(), member->type->toString()));
+                }
+            }
+        } else if (v.type->isArrayType()) {
+            auto def = v.type->getElementType();
+            if (v.members.size() == 0) {
+                return;
+            }
+            bool designate = std::get<0>(v.members[0]) != nullptr;
+            if (designate) {
+                return setError("Array can't be designated");
+            }
+            for (auto &&[ident, member] : v.members) {
+                member->accept(this);
+                afterAccept(member);
+                if(*(member->type) != def){
+                    return setError(std::format("Array element type mismatch, {} expected, {} given", def.toString(), member->type->toString()));
+                }
+            }
+        } else {
+            return setError(std::format("literal type of \"{}\" not supported", v.type->toString()));
+        }
+    }
     VISIT_FUNCTION(LoopAST) {
         c->push();
         v.init->accept(this);
@@ -243,7 +287,7 @@ struct Semantic : public ASTVisitor {
     VISIT_FUNCTION(BlockExprAST) {
         c->push();
         TypeInfo *last = nullptr;
-        if(v.exprs.size() == 0){
+        if (v.exprs.size() == 0) {
             return setError("BlockExprAST must have at least one expr");
         }
         for (auto &stmt : v.exprs) {
@@ -263,8 +307,16 @@ struct Semantic : public ASTVisitor {
     VISIT_FUNCTION(TypeDefAST) {
         // disable type alias
         if (c->stackFrame.size() == 1 && v.typeDefType == TypeDefAST::TypeDefType::NORMAL) {
-            if(!v.definedType->isComplexType() || v.definedType->idents[0] != "struct"){
+            if (!v.definedType->isComplexType() || v.definedType->idents[0] != "struct") {
                 return setError("only allow struct type define");
+            }
+            for (auto &&t : v.definedType->subTypes) {
+                if (t.isComplexType()) {
+                    return setError(std::format("unnamed type {} is not allowed", t.toString()));
+                }
+                if (t != RealType && t != IntType && t.isBaseType() && !c->global.typeDef.contains(t.toString())) {
+                    return setError(std::format("type {} is not defined", t.toString()));
+                }
             }
             c->global.typeDef[v.name] = *(v.definedType);
             return;
@@ -354,7 +406,6 @@ struct Semantic : public ASTVisitor {
     }
     // void pushStack(AST* v){callStack.push_back(v);}
     // void popStack(){callStack.pop_back();}
-    std::unique_ptr<TypeInfo> type;
     ContextStack *c;
 };
 
