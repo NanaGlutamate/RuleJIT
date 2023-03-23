@@ -18,7 +18,6 @@ struct RuleSet{
         
     }
     CSValueMap* GetOutput(){
-        out_map = out.ToValueMap();
         return &out_map;
     }
     void SetInput(const CSValueMap& map){
@@ -30,13 +29,13 @@ struct RuleSet{
 
         subRuleSet0.writeBack(*this);
         subRuleSet1.writeBack(*this);
+        out_map = out.ToValueMap();
     }
-    
     struct {
         Cache cache;
-        std::unordered_map<std::string, std::function<void(Cache*, Cache*)>> modified;
+        std::unordered_map<size_t, std::function<void(Cache*, Cache*)>> modified;
         template <typename T>
-        void loadCache(RuleSet& base, T p, const std::string& name){
+        void loadCache(RuleSet& base, T p, size_t name){
             if(auto it = modified.find(name); it == modified.end()){
                 auto origin = base.cache.*p;
                 cache.*p = base.cache.*p;
@@ -52,7 +51,7 @@ struct RuleSet{
             }
         }
         int Tick(RuleSet& base){
-            return ((((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) <= double((10)))) ? ([&](){(base.out.Output1) = double(((0)));return (0);}()) : (((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) > double((10)))) ? ([&](){(base.out.Output1) = double(((1)));return (1);}()) : ((-((1)))))));
+            return ((double((loadCache(base, &Cache::Cache1, 0), cache.Cache1)) <= double((10))) ? ([&](){(base.out.Output1) = double((0));return (0);}()) : ((double((loadCache(base, &Cache::Cache1, 0), cache.Cache1)) > double((10))) ? ([&](){(base.out.Output1) = double((1));return (1);}()) : (-((1)))));
         }
         void writeBack(RuleSet& base){
             for(auto&& [_, f] : modified){
@@ -61,12 +60,11 @@ struct RuleSet{
             modified.clear();
         }
     }subRuleSet0;
-
     struct {
         Cache cache;
-        std::unordered_map<std::string, std::function<void(Cache*, Cache*)>> modified;
+        std::unordered_map<size_t, std::function<void(Cache*, Cache*)>> modified;
         template <typename T>
-        void loadCache(RuleSet& base, T p, const std::string& name){
+        void loadCache(RuleSet& base, T p, size_t name){
             if(auto it = modified.find(name); it == modified.end()){
                 auto origin = base.cache.*p;
                 cache.*p = base.cache.*p;
@@ -82,7 +80,7 @@ struct RuleSet{
             }
         }
         int Tick(RuleSet& base){
-            return ((((double((base.in.Input1)) != double((0)))) ? ([&](){(loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1) = double(((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) + double((1)))));return (0);}()) : (((double((base.in.Input1)) == double((0)))) ? ([&](){(loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1) = double(((double((loadCache(base, &Cache::Cache1, "Cache1"), cache.Cache1)) - double((1)))));return (1);}()) : ((-((1)))))));
+            return ((double((base.in.Input1)) != double((0))) ? ([&](){(loadCache(base, &Cache::Cache1, 0), cache.Cache1) = double((double((loadCache(base, &Cache::Cache1, 0), cache.Cache1)) + double((1))));return (0);}()) : ((double((base.in.Input1)) == double((0))) ? ([&](){(loadCache(base, &Cache::Cache1, 0), cache.Cache1) = double((double((loadCache(base, &Cache::Cache1, 0), cache.Cache1)) - double((1))));return (1);}()) : (-((1)))));
         }
         void writeBack(RuleSet& base){
             for(auto&& [_, f] : modified){

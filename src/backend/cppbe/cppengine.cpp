@@ -6,7 +6,19 @@
 
 namespace {
 
+using namespace rulejit;
 using namespace rulejit::cppgen;
+
+std::string CppStyleType(const TypeInfo &type) {
+    // only support vector and base type
+    if (type.isBaseType()) {
+        return type.idents[0];
+    }
+    if (type.idents.size() == 2 && type.idents[0] == "[]") {
+        return "std::vector<" + type.idents[1] + ">";
+    }
+    throw std::logic_error(std::format("unsupported type: {}", type.toString()));
+}
 
 std::string innerType(std::string type) {
     std::string tmp;
@@ -157,7 +169,37 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
+    for (auto &&[name, type] : stack.global.typeDef) {
+        // TODO: buffer << std::format(typeDef, );
+        std::string member, serialize, deserialize;
+        if (type.subTypes.size() + 1 != type.idents.size() || type.idents[0] != "struct") {
+            throw std::logic_error(std::format("unsupported type: {}", type.toString()));
+        }
+        for (size_t i = 0; i < type.subTypes.size(); ++i) {
+            member += std::format(typeMember, CppStyleType(type.subTypes[i]), type.idents[i + 1]);
+            serialize += std::format(typeSerialize, CppStyleType(type.subTypes[i]), type.idents[i + 1]);
+            deserialize += std::format(typeDeserialize, CppStyleType(type.subTypes[i]), type.idents[i + 1]);
+        }
+        typedefs += std::format(typeDef, name, member, deserialize, serialize);
+    }
     typeDefFile << std::format(typeDefHpp, namespaceName, prefix, typedefs);
+    
+    std::ofstream funcDefFile(outputPath + prefix + "funcdef.hpp");
+    funcDefFile << "#pragma once\n\n// empty for now\n";
+
+    std::ofstream rulesetCppFile(outputPath + prefix + "ruleset.cpp");
+    rulesetCppFile << std::format(rulesetCpp, namespaceName, prefix);
+
+    std::ofstream cmakeTxtFile(outputPath + "CMakeLists.txt");
+    cmakeTxtFile << std::format(CMakeListsTxt, namespaceName, prefix);
+
+    std::ofstream testmainCppFile(outputPath + "testmain.cpp");
+    testmainCppFile << testmainCpp;
+
+    std::ofstream cqinterfaceHppFile(outputPath + "cqinterface.hpp");
+    cqinterfaceHppFile << cqinterfaceHpp;
+
+    cqinterfaceHppFile.close();
 }
 
 } // namespace rulejit::cppgen

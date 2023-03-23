@@ -4,6 +4,11 @@
 *.so
 *.dll
 *.pdb
+*.rar
+*.zip
+*.tar
+*.gz
+*.7z
 **/build/
 /out/
 /.vs/

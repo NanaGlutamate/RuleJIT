@@ -2,6 +2,7 @@
     "files.associations": {
         "*.wls": "wolfram",
         "unordered_map": "cpp",
-        "type_traits": "cpp"
+        "type_traits": "cpp",
+        "xhash": "cpp"
     }
 }

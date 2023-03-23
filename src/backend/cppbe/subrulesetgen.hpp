@@ -65,7 +65,8 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             // TODO: name string & member pointer -> index & boost::pfr
 
             // if (!loadedVar.contains(v.name)) {
-            returned += std::format("(loadCache(base, &Cache::{0}, \"{0}\"), cache.{0})", v.name);
+            auto cnt = std::find(m->cacheVar.begin(), m->cacheVar.end(), v.name) - m->cacheVar.begin();
+            returned += std::format("(loadCache(base, &Cache::{0}, {1}), cache.{0})", v.name, cnt);
             //     loadedVar.emplace(v.name);
             // }else{
             //     returned += std::format("(cache.{})", v.name);
@@ -203,9 +204,9 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             }
             returned += "}";
         } else if (v.exprs.size() == 1) {
-            returned += "(";
+            // returned += "(";
             v.exprs[0]->accept(this);
-            returned += ")";
+            // returned += ")";
         } else {
             returned += "([&](){";
             if (v.exprs.size() != 0) {

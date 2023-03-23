@@ -8,4 +8,6 @@ add_subdirectory(ir)
 
 add_subdirectory(backend)
 
+add_subdirectory(release)
+
 add_subdirectory(test)

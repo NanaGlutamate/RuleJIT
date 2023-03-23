@@ -18,6 +18,7 @@ struct CppEngine {
         codegen.loadContext(stack);
         codegen.loadMetaInfo(data);
         namespaceName = "ruleset";
+        outputPath = "./src/";
     };
     CppEngine(const CppEngine &) = delete;
     CppEngine(CppEngine &&) = delete;
@@ -25,7 +26,12 @@ struct CppEngine {
     CppEngine &operator=(CppEngine &&) = delete;
     void setPrefix(const std::string &p) { prefix = p; }
     void setNamespaceName(const std::string &n) { namespaceName = n; }
-    void setOutputPath(const std::string &p) { outputPath = p; }
+    void setOutputPath(const std::string &p) {
+        outputPath = p;
+        if (outputPath.back() != '/' && outputPath.back() != '\\') {
+            outputPath.push_back('/');
+        }
+    }
     //! build from XML file
     //! @param srcXML string of content of XML file
     //! @return none.
