@@ -49,6 +49,9 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
         WriteLog(std::string("Init RuleEngine error: ") + e.what(), 1);
         return false;
     }
+    if(!log_){
+        SetLogFun([](const std::string &msg, int level) {});
+    }
     engine.init();
     return true;
 }

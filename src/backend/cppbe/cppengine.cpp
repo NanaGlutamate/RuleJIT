@@ -185,7 +185,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     typeDefFile << std::format(typeDefHpp, namespaceName, prefix, typedefs);
     
     std::ofstream funcDefFile(outputPath + prefix + "funcdef.hpp");
-    funcDefFile << "#pragma once\n\n// empty for now\n";
+    funcDefFile << std::format(funcDefHpp, namespaceName, prefix, "", "");
 
     std::ofstream rulesetCppFile(outputPath + prefix + "ruleset.cpp");
     rulesetCppFile << std::format(rulesetCpp, namespaceName, prefix);

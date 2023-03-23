@@ -56,7 +56,13 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     VISIT_FUNCTION(IdentifierExprAST) {
         // only thing differs from common cppcodegen
-        if (std::find(m->inputVar.begin(), m->inputVar.end(), v.name) != m->inputVar.end()) {
+        const static std::unordered_map<std::string, std::string> buildInFunc{
+            {"not", "!"},     {"sin", "sin"},   {"cos", "cos"},   {"tan", "tan"}, {"cot", "cot"},  {"atan", "atan"},
+            {"asin", "asin"}, {"acos", "acos"}, {"fabs", "fabs"}, {"exp", "exp"}, {"abs", "fabs"},
+        };
+        if () {
+            // TODO: add buildin function
+        } else if (std::find(m->inputVar.begin(), m->inputVar.end(), v.name) != m->inputVar.end()) {
             returned += std::format("(std::add_const(base.in.{}))", v.name);
         } else if (std::find(m->outputVar.begin(), m->outputVar.end(), v.name) != m->outputVar.end()) {
             returned += std::format("(base.out.{})", v.name);
