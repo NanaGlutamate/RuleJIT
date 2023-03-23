@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "D:/Desktop/FinalProj/Code/RuleJIT/bin/Debug/cq_codegen.exe",
             "args": [
-                "-outpath", "./bin/src", 
+                "-outpath", "./doc/testgen", 
                 "-namespace", "test",
                 "-prefix", "test", 
                 "D:/Desktop/FinalProj/Code/RuleJIT/doc/xml_design/example1.0.xml"

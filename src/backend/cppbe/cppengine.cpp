@@ -198,8 +198,6 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
 
     std::ofstream cqinterfaceHppFile(outputPath + "cqinterface.hpp");
     cqinterfaceHppFile << cqinterfaceHpp;
-
-    cqinterfaceHppFile.close();
 }
 
 } // namespace rulejit::cppgen
