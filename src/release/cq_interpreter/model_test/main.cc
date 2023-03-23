@@ -71,40 +71,283 @@ int main() {
 
     std::vector<CSValueMap> inputs{
         CSValueMap{
-            {"d", double(45000)},       {"phiA", double(50)},       {"phiT", double(20)},
-            {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
-            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
-            {"DTMKmin", double(20000)}, {"phiTMmax", double(50)},   {"phiTMK", double(30)},
-            {"DARmax", double(50000)},  {"DAMmax", double(40000)},  {"DAMmin", double(10000)},
-            {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)}, {"phiAMmax", double(50)},
-            {"phiAMK", double(30)},
-        },
-        CSValueMap{
             {"d", double(55000)},       {"phiA", double(50)},       {"phiT", double(20)},
-            {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
             {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
-            {"DTMKmin", double(20000)}, {"phiTMmax", double(50)},   {"phiTMK", double(30)},
-            {"DARmax", double(50000)},  {"DAMmax", double(40000)},  {"DAMmin", double(10000)},
-            {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)}, {"phiAMmax", double(50)},
-            {"phiAMK", double(30)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
         },
+
         CSValueMap{
-            {"d", double(28000)},       {"phiA", double(50)},       {"phiT", double(20)},
-            {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"d", double(45000)},       {"phiA", double(80)},       {"phiT", double(20)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
             {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
-            {"DTMKmin", double(20000)}, {"phiTMmax", double(50)},   {"phiTMK", double(30)},
-            {"DARmax", double(50000)},  {"DAMmax", double(40000)},  {"DAMmin", double(10000)},
-            {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)}, {"phiAMmax", double(50)},
-            {"phiAMK", double(30)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
         },
+
         CSValueMap{
-            {"d", double(28000)},       {"phiA", double(70)},       {"phiT", double(90)},
+            {"d", double(35000)},       {"phiA", double(80)},       {"phiT", double(20)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(80)},       {"phiT", double(20)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(45000)},       {"phiA", double(20)},       {"phiT", double(80)},
             {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
             {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
-            {"DTMKmin", double(20000)}, {"phiTMmax", double(50)},   {"phiTMK", double(30)},
-            {"DARmax", double(50000)},  {"DAMmax", double(40000)},  {"DAMmin", double(10000)},
-            {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)}, {"phiAMmax", double(50)},
-            {"phiAMK", double(30)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(45000)},       {"phiA", double(20)},       {"phiT", double(80)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(45000)},       {"phiA", double(20)},       {"phiT", double(20)},
+            {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(45000)},       {"phiA", double(20)},       {"phiT", double(20)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(35000)},       {"phiA", double(60)},       {"phiT", double(20)},
+            {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(35000)},       {"phiA", double(60)},       {"phiT", double(20)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(60)},       {"phiT", double(20)},
+            {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(60)},       {"phiT", double(20)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(40)},       {"phiT", double(80)},
+            {"radar", double(0)},       {"missile", double(1)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(40)},       {"phiT", double(80)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(40)},       {"phiT", double(60)},
+            {"radar", double(0)},       {"missile", double(1)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(40)},       {"phiT", double(60)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(40)},       {"phiT", double(40)},
+            {"radar", double(0)},       {"missile", double(1)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(40)},       {"phiT", double(40)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(40)},       {"phiT", double(20)},
+            {"radar", double(0)},       {"missile", double(1)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(40)},       {"phiT", double(20)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(20)},       {"phiT", double(80)},
+            {"radar", double(0)},       {"missile", double(1)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(20)},       {"phiT", double(80)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(20)},       {"phiT", double(60)},
+            {"radar", double(0)},       {"missile", double(1)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(20)},       {"phiT", double(60)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(20)},       {"phiT", double(40)},
+            {"radar", double(0)},       {"missile", double(1)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(20)},       {"phiT", double(40)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(20)},       {"phiT", double(20)},
+            {"radar", double(0)},       {"missile", double(1)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
+        },
+
+        CSValueMap{
+            {"d", double(25000)},       {"phiA", double(20)},       {"phiT", double(20)},
+            {"radar", double(0)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTRmax", double(70)},   {"phiTMmax", double(50)},
+            {"phiTMK", double(30)},     {"DARmax", double(50000)},  {"DAMmax", double(40000)},
+            {"DAMmin", double(10000)},  {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)},
+            {"phiARmax", double(70)},   {"phiAMmax", double(50)},   {"phiAMK", double(30)},
         },
     };
 

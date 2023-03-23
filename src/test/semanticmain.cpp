@@ -14,7 +14,7 @@ int testCase(const std::string &s, bool expectError = false) {
     static ContextStack stack;
     static ASTPrinter printer;
 
-    semantic.loadContext(stack);
+    semantic.loadContext(&stack);
 
 #ifdef CATCH_EXCEPTION
     try {

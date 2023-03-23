@@ -3,22 +3,39 @@
 #include <fstream>
 #include <list>
 
+#include "backend/cppbe/metainfo.hpp"
+#include "backend/cppbe/subrulesetgen.hpp"
+#include "backend/cppbe/template.hpp"
 #include "frontend/lexer.h"
 #include "frontend/parser.h"
 #include "frontend/semantic.hpp"
-#include "backend/cppbe/metainfo.hpp"
-#include "backend/cppbe/template.hpp"
-#include "backend/cppbe/subrulesetgen.hpp"
 
 namespace rulejit::cppgen {
 
 struct CppEngine {
-    CppEngine():stack(){
-        semantic.loadContext(stack);
-        codegen.loadContext(stack);
-        codegen.loadMetaInfo(data);
+    CppEngine() : stack() {
+        semantic.loadContext(&stack);
+        codegen.loadContext(&stack);
+        codegen.loadMetaInfo(&data);
         namespaceName = "ruleset";
         outputPath = "./src/";
+        auto &tar = stack.stackFrame.back().varDef;
+        auto& oneParamFunc = BuildInUnaryType;
+        tar.emplace("not", oneParamFunc);
+        tar.emplace("sin", oneParamFunc);
+        tar.emplace("cos", oneParamFunc);
+        tar.emplace("tan", oneParamFunc);
+        tar.emplace("cot", oneParamFunc);
+        tar.emplace("atan", oneParamFunc);
+        tar.emplace("asin", oneParamFunc);
+        tar.emplace("acos", oneParamFunc);
+        tar.emplace("fabs", oneParamFunc);
+        tar.emplace("exp", oneParamFunc);
+        tar.emplace("abs", oneParamFunc);
+        tar.emplace("floor", oneParamFunc);
+        auto twoParamFunc = TypeInfo("func(f64,f64):f64");
+        tar.emplace("pow", twoParamFunc);
+        tar.emplace("atan2", twoParamFunc);
     };
     CppEngine(const CppEngine &) = delete;
     CppEngine(CppEngine &&) = delete;
@@ -47,7 +64,8 @@ struct CppEngine {
         buildFromSource(buffer);
     }
     std::string prefix, namespaceName, outputPath;
-private:
+
+  private:
     MetaInfo data;
     ContextStack stack;
     ExpressionLexer lexer;
@@ -56,4 +74,4 @@ private:
     SubRuleSetCodeGen codegen;
 };
 
-} // namespace rulejit::cq
+} // namespace rulejit::cppgen

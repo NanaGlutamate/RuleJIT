@@ -20,8 +20,8 @@ namespace rulejit::cppgen {
 
 struct SubRuleSetCodeGen : public ASTVisitor {
     SubRuleSetCodeGen() = default;
-    void loadContext(ContextStack &context) { c = &context; }
-    void loadMetaInfo(MetaInfo &metaInfo) { m = &metaInfo; }
+    void loadContext(ContextStack *context) { c = context; }
+    void loadMetaInfo(MetaInfo* metaInfo) { m = metaInfo; }
     std::string friend operator|(const std::pair<std::string, std::unique_ptr<FunctionDefAST>> &func,
                                  SubRuleSetCodeGen &t) {
         std::string returnedType, funcName, params, body;
@@ -56,13 +56,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     VISIT_FUNCTION(IdentifierExprAST) {
         // only thing differs from common cppcodegen
-        const static std::unordered_map<std::string, std::string> buildInFunc{
-            {"not", "!"},     {"sin", "sin"},   {"cos", "cos"},   {"tan", "tan"}, {"cot", "cot"},  {"atan", "atan"},
-            {"asin", "asin"}, {"acos", "acos"}, {"fabs", "fabs"}, {"exp", "exp"}, {"abs", "fabs"},
-        };
-        if () {
-            // TODO: add buildin function
-        } else if (std::find(m->inputVar.begin(), m->inputVar.end(), v.name) != m->inputVar.end()) {
+        if (std::find(m->inputVar.begin(), m->inputVar.end(), v.name) != m->inputVar.end()) {
             returned += std::format("(std::add_const(base.in.{}))", v.name);
         } else if (std::find(m->outputVar.begin(), m->outputVar.end(), v.name) != m->outputVar.end()) {
             returned += std::format("(base.out.{})", v.name);
@@ -96,7 +90,11 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     VISIT_FUNCTION(LiteralExprAST) {
         if (v.type->isFunctionType()) {
-            returned += v.value;
+            if (v.value == "not") {
+                returned += "__not";
+            } else {
+                returned += v.value;
+            }
             return;
         }
         returned += "(";
@@ -269,63 +267,6 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         }
         return name;
     }
-    // std::vector<std::tuple<std::string, std::string>> assembleType(const std::vector<std::string> &src) {
-    //     std::vector<std::tuple<std::string, std::string>> ret;
-    //     for (auto &&name : src) {
-    //         if (auto it = m->varType.find(name); it != m->varType.end()) {
-    //             ret.emplace_back(name, it->second);
-    //         }
-    //     }
-    //     return ret;
-    // }
-    // file genFuncDef(){
-    //     using namespace templates;
-    //     std::string buffer;
-    //     returned.clear();
-    // }
-    // file genTypeDef() {
-    //     using namespace templates;
-    //     std::string buffer;
-
-    //     m->typeDefines.emplace("Input", assembleType(m->inputVar));
-    //     m->typeDefines.emplace("Output", assembleType(m->outputVar));
-    //     m->typeDefines.emplace("Cache", assembleType(m->cacheVar));
-
-    //     for (auto &&[name, members] : m->typeDefines) {
-    //         std::string member, serialize, deserialize;
-    //         for (auto &&[token, type] : members) {
-    //             std::string pre, suf;
-    //             while (type.back() == ']') {
-    //                 type.pop_back();
-    //                 type.pop_back();
-    //                 pre += "std::vector<";
-    //                 suf += ">";
-    //             }
-    //             if(baseData.contains(type)){
-    //                 pre += "typedReal<";
-    //                 suf += ">";
-    //             }
-    //             member += std::format(typeMember, type, token);
-    //             serialize += std::format(typeSerialize, type, token);
-    //             deserialize += std::format(typeDeserialize, type, token);
-    //         }
-    //         buffer += std::format(typeDef, name, member, deserialize, serialize);
-    //     }
-    //     for (auto &&[name, type] : c->global.typeDef) {
-    //         // TODO: buffer << std::format(typeDef, );
-    //         std::string member, serialize, deserialize;
-    //         if (type.subTypes.size() + 1 != type.idents.size() || type.idents[0] != "struct") {
-    //             setError(std::format("unsupported type: {}", type.toString()));
-    //         }
-    //         for (size_t i = 0; i < type.subTypes.size(); ++i) {
-    //             member += std::format(typeMember, CppStyleType(type.subTypes[i]), type.idents[i + 1]);
-    //             serialize += std::format(typeSerialize, CppStyleType(type.subTypes[i]), type.idents[i + 1]);
-    //             deserialize += std::format(typeDeserialize, CppStyleType(type.subTypes[i]), type.idents[i + 1]);
-    //         }
-    //         buffer += std::format(typeDef, name, member, deserialize, serialize);
-    //     }
-    //     return {prefix + "typedef.hpp", std::format(typeDefHpp, namespaceName, prefix, buffer)};
-    // };
     std::string CppStyleType(const TypeInfo &type) {
         // only support vector and base type
         if (type.isBaseType()) {

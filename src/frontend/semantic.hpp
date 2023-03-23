@@ -27,7 +27,7 @@ struct ExpressionSemantic : public ASTVisitor {
     ExpressionSemantic() = default;
     std::vector<ExprAST *> callStack;
     // ContextStack cannot be destructed before last process call of this
-    void loadContext(ContextStack &context) { c = &context; }
+    void loadContext(ContextStack*context) { c = context; }
     // collect defs and check top-level expressions
     std::vector<std::unique_ptr<ExprAST>> friend operator|(std::vector<std::unique_ptr<ExprAST>> ast, ExpressionSemantic &t) {
         for (auto &i : ast) {
@@ -96,12 +96,13 @@ struct ExpressionSemantic : public ASTVisitor {
         std::erase_if(ast, [](auto &i) { return i == nullptr; });
         return std::move(ast);
     }
-    std::unique_ptr<ExprAST> friend operator|(std::unique_ptr<ExprAST> ast, ExpressionSemantic &t) {
+    std::unique_ptr<ExprAST> friend operator|(std::unique_ptr<ExprAST> i, ExpressionSemantic &t) {
+        // TODO: extend
         t.callStack.clear();
         t.needChange = nullptr;
-        ast->accept(&t);
-        t.afterAccept(ast);
-        return std::move(ast);
+        i->accept(&t);
+        t.afterAccept(i);
+        return std::move(i);
     }
     VISIT_FUNCTION(IdentifierExprAST) {
         auto [find, type] = c->seekVarDef(v.name);
@@ -406,13 +407,6 @@ struct ExpressionSemantic : public ASTVisitor {
         if (!type) {
             return;
         }
-        // if (type->isBaseType()) {
-        //     auto tmp = c->seekTypeAlias(type->idents[0]);
-        //     while (std::get<0>(tmp)) {
-        //         type = std::make_unique<TypeInfo>(std::vector<std::string>{std::get<1>(tmp)});
-        //         tmp = c->seekTypeAlias(type->idents[0]);
-        //     }
-        // }
         if (type->isComplexType()) {
             return setError(std::format("unnamed type \"{}\" is not allowed", type->toString()));
         }

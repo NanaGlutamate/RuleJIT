@@ -24,15 +24,17 @@ struct AST {
     virtual ~AST() = default;
 };
 
-template <typename T> bool isType(AST *ast) { return dynamic_cast<T *>(ast) != nullptr; };
+template <typename T> bool isType(AST *ast) { return dynamic_cast<T *>(ast) != nullptr; }
 
-template <typename T, typename Src> std::unique_ptr<T> asType(Src ast) { return std::unique_ptr<T>(ast.release()); };
+template <typename T, typename Src> std::unique_ptr<T> asType(Src ast) { return std::unique_ptr<T>(ast.release()); }
 
 // EXPR := BINOP | LEXPR | LITERAL | FUNCCALL | COMPLEX | BRANCH | LOOP | BLOCK | '(' EXPR ')'
 struct ExprAST : public AST {
     std::unique_ptr<TypeInfo> type;
     ExprAST(std::unique_ptr<TypeInfo> type) : type(std::move(type)) {}
 };
+
+template <typename T> T* isType(std::unique_ptr<ExprAST>& ast) { return dynamic_cast<T *>(ast.get()); }
 
 // // LEXPR := IDENT | MEMBER
 // struct AssignableExprAST : public ExprAST {
