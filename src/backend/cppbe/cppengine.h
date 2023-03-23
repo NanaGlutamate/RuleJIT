@@ -43,17 +43,11 @@ struct CppEngine {
     void buildFromFile(const std::string &XMLFilePath) {
         using namespace std;
         std::ifstream file(XMLFilePath);
-        std::string buffer;
-        while (!(file.eof())) {
-            string tmp;
-            getline(file, tmp);
-            buffer.append(tmp);
-        }
+        std::string buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
         buildFromSource(buffer);
     }
-private:
     std::string prefix, namespaceName, outputPath;
-
+private:
     MetaInfo data;
     ContextStack stack;
     ExpressionLexer lexer;

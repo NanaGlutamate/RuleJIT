@@ -36,13 +36,18 @@ string getLibDir() {
 } // namespace
 
 bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
+    std::string filePath;
     if (auto it = value.find("filePath"); it != value.end()) {
-        auto filePath = std::any_cast<std::string>(it->second);
-        engine.buildFromFile(filePath);
+        filePath = std::any_cast<std::string>(it->second);
     } else {
         auto library_dir_ = getLibDir();
-        auto filePath = library_dir_ + "rule.xml";
+        filePath = library_dir_ + "rule.xml";
+    }
+    try {
         engine.buildFromFile(filePath);
+    } catch (std::exception &e) {
+        WriteLog(std::string("Init RuleEngine error: ") + e.what(), 1);
+        return false;
     }
     engine.init();
     return true;
@@ -72,7 +77,7 @@ std::unordered_map<std::string, std::any> *RuleEngine::GetOutput() {
     return &params_;
 }
 
-CSModelObject* __stdcall CreateModelObject() {
+CSModelObject *__stdcall CreateModelObject() {
     CSModelObject *model = new RuleEngine();
     return model;
 }

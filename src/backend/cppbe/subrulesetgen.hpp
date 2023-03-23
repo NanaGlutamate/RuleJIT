@@ -57,7 +57,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     VISIT_FUNCTION(IdentifierExprAST) {
         // only thing differs from common cppcodegen
         if (std::find(m->inputVar.begin(), m->inputVar.end(), v.name) != m->inputVar.end()) {
-            returned += std::format("(base.in.{})", v.name);
+            returned += std::format("(std::add_const(base.in.{}))", v.name);
         } else if (std::find(m->outputVar.begin(), m->outputVar.end(), v.name) != m->outputVar.end()) {
             returned += std::format("(base.out.{})", v.name);
         } else if (std::find(m->cacheVar.begin(), m->cacheVar.end(), v.name) != m->cacheVar.end()) {
@@ -122,9 +122,18 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     VISIT_FUNCTION(BinOpExprAST) {
         if (v.op != "=") {
+            static const std::unordered_map<std::string, std::string> opTrans{
+                {"or", "||"},
+                {"and", "&&"},
+                {"xor", "^"},
+            };
             returned += "(double(";
             v.lhs->accept(this);
-            returned += ") " + v.op + " double(";
+            auto tmp = v.op;
+            if (auto it = opTrans.find(tmp); it != opTrans.end()) {
+                tmp = it->second;
+            }
+            returned += ") " + tmp + " double(";
             v.rhs->accept(this);
             returned += "))";
         } else {

@@ -74,7 +74,7 @@ struct CQInterpreter : public ASTVisitor {
             {"tan", [](double x) {return tan(x); }},   {"cot", [](double x) {return 1.0/tan(x); }},
             {"atan", [](double x) {return atan(x); }}, {"asin", [](double x) {return asin(x); }},
             {"acos", [](double x) {return acos(x); }}, {"fabs", [](double x) {return fabs(x); }},
-            {"exp", [](double x) {return exp(x); }},
+            {"exp", [](double x) {return exp(x); }},   {"abs", [](double x) {return fabs(x); }},
         };
         static std::map<std::string, std::function<double(double, double)>> twoParamFunc{
             {"pow", [](double x, double y) { return pow(x, y); }},
@@ -138,16 +138,11 @@ struct CQInterpreter : public ASTVisitor {
     }
     VISIT_FUNCTION(BinOpExprAST) {
         static std::map<std::string, std::function<double(double, double)>> normalBinOp{
-            {"+", [](auto x, auto y) { return x + y; }},   
-            {"-", [](auto x, auto y) { return x - y; }},
-            {"*", [](auto x, auto y) { return x * y; }},   
-            {"/", [](auto x, auto y) { return x / y; }},
-            {">", [](auto x, auto y) { return x > y; }},   
-            {"<", [](auto x, auto y) { return x < y; }},
-            {"==", [](auto x, auto y) { return x == y; }}, 
-            {"!=", [](auto x, auto y) { return x != y; }},
-            {">=", [](auto x, auto y) { return x >= y; }}, 
-            {"<=", [](auto x, auto y) { return x <= y; }},
+            {"+", [](auto x, auto y) { return x + y; }},   {"-", [](auto x, auto y) { return x - y; }},
+            {"*", [](auto x, auto y) { return x * y; }},   {"/", [](auto x, auto y) { return x / y; }},
+            {">", [](auto x, auto y) { return x > y; }},   {"<", [](auto x, auto y) { return x < y; }},
+            {"==", [](auto x, auto y) { return x == y; }}, {"!=", [](auto x, auto y) { return x != y; }},
+            {">=", [](auto x, auto y) { return x >= y; }}, {"<=", [](auto x, auto y) { return x <= y; }},
         };
         static std::map<std::string, std::function<double(double, double)>> shortCutBinOp{
             {"&&", [](auto x, auto y) { return x && y; }},

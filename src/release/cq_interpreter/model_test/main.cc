@@ -18,67 +18,13 @@
 #include <filesystem>
 
 #include "../csmodel_base/csmodel_base.h"
-
-void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
-    using namespace std;
-    cout << "{";
-    bool start = false;
-    for (auto &[k, v] : v) {
-        if (!start) {
-            start = true;
-        } else {
-            cout << ", ";
-        }
-        cout << k << ": ";
-        if (v.type() == typeid(int8_t)) {
-            cout << std::any_cast<int8_t>(v);
-        } else if (v.type() == typeid(uint8_t)) {
-            cout << std::any_cast<uint8_t>(v);
-        } else if (v.type() == typeid(int16_t)) {
-            cout << std::any_cast<int16_t>(v);
-        } else if (v.type() == typeid(uint16_t)) {
-            cout << std::any_cast<uint16_t>(v);
-        } else if (v.type() == typeid(int32_t)) {
-            cout << std::any_cast<int32_t>(v);
-        } else if (v.type() == typeid(uint32_t)) {
-            cout << std::any_cast<uint32_t>(v);
-        } else if (v.type() == typeid(int64_t)) {
-            cout << std::any_cast<int64_t>(v);
-        } else if (v.type() == typeid(uint64_t)) {
-            cout << std::any_cast<uint64_t>(v);
-        } else if (v.type() == typeid(float)) {
-            cout << std::any_cast<float>(v);
-        } else if (v.type() == typeid(double)) {
-            cout << std::any_cast<double>(v);
-        } else if (v.type() == typeid(std::string)) {
-            cout << std::any_cast<std::string>(v);
-        } else if (v.type() == typeid(std::unordered_map<std::string, std::any>)) {
-            printCSValueMap(std::any_cast<std::unordered_map<std::string, std::any>>(v));
-        } else if (v.type() == typeid(std::vector<std::any>)) {
-            auto tmp = std::any_cast<std::vector<std::any>>(v);
-            cout << "{";
-            bool start_ = false;
-            for (auto &&item : tmp) {
-                if (!start_) {
-                    start_ = true;
-                } else {
-                    cout << ", ";
-                }
-                printCSValueMap(std::any_cast<std::unordered_map<std::string, std::any>>(item));
-            }
-            cout << "}";
-        } else {
-            cout << "unknown";
-        }
-    }
-    cout << "}";
-}
+#include "tools/printcsvaluemap.hpp"
 
 typedef CSModelObject *(*CreateModelObjectFun)();
 typedef void (*DestroyMemoryFun)(void *mem, bool is_array);
 
 int main() {
-
+    using namespace rulejit;
     using CSValueMap = std::unordered_map<std::string, std::any>;
     std::string lib_path_ = "D:/Desktop/FinalProj/Code/RuleJIT/bin/Debug/"
                             "RuleJIT_interpreter.dll";
@@ -121,14 +67,54 @@ int main() {
     auto engine = model_obj_;
     // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
     engine->SetLogFun([](const std::string &msg, uint32_t type) {});
-    engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH"/doc/xml_design/example1.0.xml")}});
+    engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/BVR1.0.xml")}});
 
-    for (int i = 0; i < 20; i++) {
+    std::vector<CSValueMap> inputs{
+        CSValueMap{
+            {"d", double(45000)},       {"phiA", double(50)},       {"phiT", double(20)},
+            {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTMmax", double(50)},   {"phiTMK", double(30)},
+            {"DARmax", double(50000)},  {"DAMmax", double(40000)},  {"DAMmin", double(10000)},
+            {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)}, {"phiAMmax", double(50)},
+            {"phiAMK", double(30)},
+        },
+        CSValueMap{
+            {"d", double(55000)},       {"phiA", double(50)},       {"phiT", double(20)},
+            {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTMmax", double(50)},   {"phiTMK", double(30)},
+            {"DARmax", double(50000)},  {"DAMmax", double(40000)},  {"DAMmin", double(10000)},
+            {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)}, {"phiAMmax", double(50)},
+            {"phiAMK", double(30)},
+        },
+        CSValueMap{
+            {"d", double(28000)},       {"phiA", double(50)},       {"phiT", double(20)},
+            {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTMmax", double(50)},   {"phiTMK", double(30)},
+            {"DARmax", double(50000)},  {"DAMmax", double(40000)},  {"DAMmin", double(10000)},
+            {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)}, {"phiAMmax", double(50)},
+            {"phiAMK", double(30)},
+        },
+        CSValueMap{
+            {"d", double(28000)},       {"phiA", double(70)},       {"phiT", double(90)},
+            {"radar", double(1)},       {"missile", double(0)},     {"DTRmax", double(50000)},
+            {"DTMmax", double(40000)},  {"DTMmin", double(10000)},  {"DTMKmax", double(30000)},
+            {"DTMKmin", double(20000)}, {"phiTMmax", double(50)},   {"phiTMK", double(30)},
+            {"DARmax", double(50000)},  {"DAMmax", double(40000)},  {"DAMmin", double(10000)},
+            {"DAMKmax", double(30000)}, {"DAMKmin", double(20000)}, {"phiAMmax", double(50)},
+            {"phiAMK", double(30)},
+        },
+    };
+
+    for (auto &&input : inputs) {
         printCSValueMap(*(engine->GetOutput()));
         std::cout << std::endl;
-        engine->SetInput(CSValueMap{{"Input1", double(1)}});
+        engine->SetInput(input);
         engine->Tick(0.02);
     }
+    printCSValueMap(*(engine->GetOutput()));
 
     return 0;
 }

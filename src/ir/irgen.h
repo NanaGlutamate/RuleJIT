@@ -14,20 +14,6 @@
 namespace rulejit {
 
 struct IRGenerator : public ASTVisitor {
-    VISIT_FUNCTION(IdentifierExprAST);
-    VISIT_FUNCTION(MemberAccessExprAST);
-    VISIT_FUNCTION(LiteralExprAST);
-    VISIT_FUNCTION(FunctionCallExprAST);
-    // VIRTUAL_VISIT_FUNCTION(ComplexLiteralExprAST);
-    // VIRTUAL_VISIT_FUNCTION(BranchExprAST);
-    // VIRTUAL_VISIT_FUNCTION(LoopAST);
-    // VIRTUAL_VISIT_FUNCTION(BlockExprAST);
-
-    // VIRTUAL_VISIT_FUNCTION(TypeDefAST);
-    // VIRTUAL_VISIT_FUNCTION(VarDefAST);
-    // VIRTUAL_VISIT_FUNCTION(FunctionDefAST);
-
-    // VIRTUAL_VISIT_FUNCTION(TopLevelAST);
 };
 
 }

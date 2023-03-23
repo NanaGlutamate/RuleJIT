@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet version="1.0">
+    <TypeDefines>
+        <TypeDefine type="Location">
+            <Variable name="altitude" type="float64"/>
+            <Variable name="longitude" type="float64"/>
+            <Variable name="latitude" type="float64"/>
+        </TypeDefine>
+        <TypeDefine type="Vector3">
+            <Variable name="x" type="float64"/>
+            <Variable name="y" type="float64"/>
+            <Variable name="z" type="float64"/>
+        </TypeDefine>
+    </TypeDefines>
+    <MetaInfo>
+        <Inputs>
+            <Param name="d" type="float64" display_name="敌我距离"/>
+            <Param name="phiA" type="float64" display_name="我机相对于敌机的方位角"/>
+            <Param name="phiT" type="float64" display_name="敌机相对于我机的方位角"/>
+            <Param name="radar" type="float64" display_name="敌机雷达探测参数"/>
+			<Param name="missile" type="float64" display_name="敌机导弹发射参数"/>
+            <Param name="DTRmax" type="float64" display_name="敌机雷达最大探测距离"/>
+			<Param name="DTMmax" type="float64" display_name="敌机中距弹最大攻击距离"/>
+			<Param name="DTMmin" type="float64" display_name="敌机近距弹最小攻击距离"/>
+			<Param name="DTMKmax" type="float64" display_name="敌机不可逃逸区最大攻击距离"/>
+			<Param name="DTMKmin" type="float64" display_name="敌机不可逃逸区最小攻击距离"/>
+			<Param name="phiTMmax" type="float64" display_name="敌机最大离轴发射角"/>
+            <Param name="phiTMK" type="float64" display_name="敌机不可逃逸区圆锥角"/>
+			<Param name="DARmax" type="float64" display_name="我机雷达最大探测距离"/>
+			<Param name="DAMmax" type="float64" display_name="我机中距弹最大攻击距离"/>
+			<Param name="DAMmin" type="float64" display_name="我机中距弹最小攻击距离"/>
+			<Param name="DAMKmax" type="float64" display_name="敌机不可逃逸区最大攻击距离"/>
+			<Param name="DAMKmin" type="float64" display_name="敌机不可逃逸区最小攻击距离"/>
+			<Param name="phiAMmax" type="float64" display_name="我机最大离轴发射角"/>
+            <Param name="phiAMK" type="float64" display_name="我机不可逃逸区圆锥角"/>
+        </Inputs>
+        <Outputs>
+            <Param name="tacticID" type="uint8" display_name="单机战术号"/>
+        </Outputs>
+        <Caches>
+            <Param name="Cache1" type="uint32">
+                <InitValue>0</InitValue>
+            </Param>
+        </Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="tacticID" type="uint8" display_name="单机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>(d&gt;DTRmax) and (d&gt;DARmax) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(d&gt;DTRmax) and (((d&gt;DAMmax)and(d&lt;DARmax))or(abs(phiT)&gt;phiAMmax)) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(d&gt;DTRmax) and (((d&gt;DAMKmax)and(d&lt;DAMmax))or((d&gt;DAMmin)and(d&lt;DAMKmin))or(((d&gt;DAMKmin)and(d&lt;DAMKmax))and((abs(phiT)&gt;phiAMK)and(abs(phiT)&lt;phiAMmax)))) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(d&gt;DTRmax) and (((d&gt;DAMKmin)and(d&lt;DAMKmax))or(abs(phiT)&lt;phiAMK)) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMmax)and(d&lt;DTRmax))or(abs(phiA)&gt;phiTMmax)) and (d&gt;DARmax) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMmax)and(d&lt;DTRmax))or(abs(phiA)&gt;phiTMmax)) and (d&gt;DARmax) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMmax)and(d&lt;DTRmax))or(abs(phiA)&gt;phiTMmax)) and (((d&gt;DAMmax)and(d&lt;DARmax))or(abs(phiT)&gt;phiAMmax)) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMmax)and(d&lt;DTRmax))or(abs(phiA)&gt;phiTMmax)) and (((d&gt;DAMmax)and(d&lt;DARmax))or(abs(phiT)&gt;phiAMmax)) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMmax)and(d&lt;DTRmax))or(abs(phiA)&gt;phiTMmax)) and (((d&gt;DAMKmax)and(d&lt;DAMmax))or((d&gt;DAMmin)and(d&lt;DAMKmin))or(((d&gt;DAMKmin)and(d&lt;DAMKmax))and((abs(phiT)&gt;phiAMK)and(abs(phiT)&lt;phiAMmax)))) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMmax)and(d&lt;DTRmax))or(abs(phiA)&gt;phiTMmax)) and (((d&gt;DAMKmax)and(d&lt;DAMmax))or((d&gt;DAMmin)and(d&lt;DAMKmin))or(((d&gt;DAMKmin)and(d&lt;DAMKmax))and((abs(phiT)&gt;phiAMK)and(abs(phiT)&lt;phiAMmax)))) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMmax)and(d&lt;DTRmax))or(abs(phiA)&gt;phiTMmax)) and (((d&gt;DAMKmin)and(d&lt;DAMKmax))or(abs(phiT)&lt;phiAMK)) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMmax)and(d&lt;DTRmax))or(abs(phiA)&gt;phiTMmax)) and (((d&gt;DAMKmin)and(d&lt;DAMKmax))or(abs(phiT)&lt;phiAMK)) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmax)and(d&lt;DTMmax))or((d&gt;DTMmin)and(d&lt;DTMKmin))or(((d&gt;DTMKmin)and(d&lt;DTMKmax))and((abs(phiA)&gt;phiTMK)and(abs(phiA)&lt;phiTMmax)))) and (d&gt;DARmax) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmax)and(d&lt;DTMmax))or((d&gt;DTMmin)and(d&lt;DTMKmin))or(((d&gt;DTMKmin)and(d&lt;DTMKmax))and((abs(phiA)&gt;phiTMK)and(abs(phiA)&lt;phiTMmax)))) and (d&gt;DARmax) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmax)and(d&lt;DTMmax))or((d&gt;DTMmin)and(d&lt;DTMKmin))or(((d&gt;DTMKmin)and(d&lt;DTMKmax))and((abs(phiA)&gt;phiTMK)and(abs(phiA)&lt;phiTMmax)))) and (((d&gt;DAMmax)and(d&lt;DARmax))or(abs(phiT)&gt;phiAMmax)) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmax)and(d&lt;DTMmax))or((d&gt;DTMmin)and(d&lt;DTMKmin))or(((d&gt;DTMKmin)and(d&lt;DTMKmax))and((abs(phiA)&gt;phiTMK)and(abs(phiA)&lt;phiTMmax)))) and (((d&gt;DAMmax)and(d&lt;DARmax))or(abs(phiT)&gt;phiAMmax)) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmax)and(d&lt;DTMmax))or((d&gt;DTMmin)and(d&lt;DTMKmin))or(((d&gt;DTMKmin)and(d&lt;DTMKmax))and((abs(phiA)&gt;phiTMK)and(abs(phiA)&lt;phiTMmax)))) and (((d&gt;DAMKmax)and(d&lt;DAMmax))or((d&gt;DAMmin)and(d&lt;DAMKmin))or(((d&gt;DAMKmin)and(d&lt;DAMKmax))and((abs(phiT)&gt;phiAMK)and(abs(phiT)&lt;phiAMmax)))) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmax)and(d&lt;DTMmax))or((d&gt;DTMmin)and(d&lt;DTMKmin))or(((d&gt;DTMKmin)and(d&lt;DTMKmax))and((abs(phiA)&gt;phiTMK)and(abs(phiA)&lt;phiTMmax)))) and (((d&gt;DAMKmax)and(d&lt;DAMmax))or((d&gt;DAMmin)and(d&lt;DAMKmin))or(((d&gt;DAMKmin)and(d&lt;DAMKmax))and((abs(phiT)&gt;phiAMK)and(abs(phiT)&lt;phiAMmax)))) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmax)and(d&lt;DTMmax))or((d&gt;DTMmin)and(d&lt;DTMKmin))or(((d&gt;DTMKmin)and(d&lt;DTMKmax))and((abs(phiA)&gt;phiTMK)and(abs(phiA)&lt;phiTMmax)))) and (((d&gt;DAMKmin)and(d&lt;DAMKmax))or(abs(phiT)&lt;phiAMK)) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmax)and(d&lt;DTMmax))or((d&gt;DTMmin)and(d&lt;DTMKmin))or(((d&gt;DTMKmin)and(d&lt;DTMKmax))and((abs(phiA)&gt;phiTMK)and(abs(phiA)&lt;phiTMmax)))) and (((d&gt;DAMKmin)and(d&lt;DAMKmax))or(abs(phiT)&lt;phiAMK)) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmin)and(d&lt;DTMKmax))or(abs(phiA)&lt;phiTMK)) and (d&gt;DARmax) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmin)and(d&lt;DTMKmax))or(abs(phiA)&lt;phiTMK)) and (d&gt;DARmax) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmin)and(d&lt;DTMKmax))or(abs(phiA)&lt;phiTMK)) and (((d&gt;DAMmax)and(d&lt;DARmax))or(abs(phiT)&gt;phiAMmax)) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmin)and(d&lt;DTMKmax))or(abs(phiA)&lt;phiTMK)) and (((d&gt;DAMmax)and(d&lt;DARmax))or(abs(phiT)&gt;phiAMmax)) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmin)and(d&lt;DTMKmax))or(abs(phiA)&lt;phiTMK)) and (((d&gt;DAMKmax)and(d&lt;DAMmax))or((d&gt;DAMmin)and(d&lt;DAMKmin))or(((d&gt;DAMKmin)and(d&lt;DAMKmax))and((abs(phiT)&gt;phiAMK)and(abs(phiT)&lt;phiAMmax)))) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmin)and(d&lt;DTMKmax))or(abs(phiA)&lt;phiTMK)) and (((d&gt;DAMKmax)and(d&lt;DAMmax))or((d&gt;DAMmin)and(d&lt;DAMKmin))or(((d&gt;DAMKmin)and(d&lt;DAMKmax))and((abs(phiT)&gt;phiAMK)and(abs(phiT)&lt;phiAMmax)))) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmin)and(d&lt;DTMKmax))or(abs(phiA)&lt;phiTMK)) and (((d&gt;DAMKmin)and(d&lt;DAMKmax))or(abs(phiT)&lt;phiAMK)) and ((radar==1)or(missile==1))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((d&gt;DTMKmin)and(d&lt;DTMKmax))or(abs(phiA)&lt;phiTMK)) and (((d&gt;DAMKmin)and(d&lt;DAMKmax))or(abs(phiT)&lt;phiAMK)) and (radar==0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

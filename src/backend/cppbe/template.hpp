@@ -420,13 +420,13 @@ void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
         }
         cout << k << ": ";
         if (v.type() == typeid(int8_t)) {
-            cout << std::any_cast<int8_t>(v);
+            cout << (int64_t)std::any_cast<int8_t>(v);
         } else if (v.type() == typeid(uint8_t)) {
-            cout << std::any_cast<uint8_t>(v);
+            cout << (uint64_t)std::any_cast<uint8_t>(v);
         } else if (v.type() == typeid(int16_t)) {
-            cout << std::any_cast<int16_t>(v);
+            cout << (int64_t)std::any_cast<int16_t>(v);
         } else if (v.type() == typeid(uint16_t)) {
-            cout << std::any_cast<uint16_t>(v);
+            cout << (uint64_t)std::any_cast<uint16_t>(v);
         } else if (v.type() == typeid(int32_t)) {
             cout << std::any_cast<int32_t>(v);
         } else if (v.type() == typeid(uint32_t)) {
