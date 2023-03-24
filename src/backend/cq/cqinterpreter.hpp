@@ -69,7 +69,6 @@ struct CQInterpreter : public ASTVisitor {
             setError("only allow direct function(no member, no returned funciton) for now");
         }
         static std::map<std::string, std::function<double(double)>> oneParamFunc{
-            {"-", [](double x) {return -x; }},           {"not", [](double x) {return !x; }},
             {"sin", [](double x) {return sin(x); }},     {"cos", [](double x) {return cos(x); }},
             {"tan", [](double x) {return tan(x); }},     {"cot", [](double x) {return 1.0/tan(x); }},
             {"atan", [](double x) {return atan(x); }},   {"asin", [](double x) {return asin(x); }},
@@ -216,6 +215,19 @@ struct CQInterpreter : public ASTVisitor {
         } else {
             setError(std::format("bin op \"{}\" not support for now", v.op));
         }
+    }
+    VISIT_FUNCTION(UnaryOpExprAST) {
+        static std::map<std::string, std::function<double(double)>> unaryFunc{
+            {"-", [](double x) { return -x; }},
+            {"not", [](double x) { return !x; }},
+            {"!", [](double x) { return !x; }},
+        };
+        if(!unaryFunc.contains(v.op)){
+            setError(std::format("unary op \"{}\" not support for now", v.op));
+        }
+        v.rhs->accept(this);
+        getReturnedValue();
+        returned.value = unaryFunc[v.op](returned.value);
     }
     VISIT_FUNCTION(BranchExprAST) {
         returned.type = Value::EMPTY;

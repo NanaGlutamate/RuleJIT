@@ -12,22 +12,15 @@ namespace rulejit {
 struct IRGenerator : public ASTVisitor {
     void loadIRHolder(IRHolder *h) { holder = h; }
     void loadContext(ContextStack *context) { c = context; }
-    void friend operator|(std::unique_ptr<ExprAST> &ast, IRGenerator &irgen) {
-        if (auto p1 = isType<FunctionDefAST>(ast); p1) {
-
-        } else if (auto p2 = isType<TypeDefAST>(ast); p2) {
-
-        } else if (auto p3 = isType<SymbolDefAST>(ast); p3) {
-
-        } else {
-            // gen unnamed function
-        }
+    void friend operator|(std::pair<std::string, std::unique_ptr<FunctionDefAST>> &ast, IRGenerator &irgen) {
+        
     }
     VISIT_FUNCTION(IdentifierExprAST) {}
     VISIT_FUNCTION(MemberAccessExprAST) {}
     VISIT_FUNCTION(LiteralExprAST) {}
     VISIT_FUNCTION(FunctionCallExprAST) {}
     VISIT_FUNCTION(BinOpExprAST) {}
+    VISIT_FUNCTION(UnaryOpExprAST) {}
     VISIT_FUNCTION(BranchExprAST) {}
     VISIT_FUNCTION(ComplexLiteralExprAST) {}
     VISIT_FUNCTION(LoopAST) {}

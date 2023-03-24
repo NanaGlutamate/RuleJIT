@@ -8,6 +8,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <source_location>
 
 #include "defines/language.hpp"
 #include "frontend/lexer.h"
@@ -24,7 +25,7 @@ struct TypeInfo {
     TypeInfo(const TypeInfo &t) : idents(t.idents), subTypes(t.subTypes) {}
     TypeInfo(std::vector<std::string> &&s) : idents(std::move(s)), subTypes() {}
     TypeInfo(const std::vector<std::string> &s) : idents(s), subTypes() {}
-    TypeInfo(const std::string& s);
+    TypeInfo(const std::string &s);
     TypeInfo &operator=(const TypeInfo &t) {
         idents = t.idents;
         subTypes = t.subTypes;
@@ -102,7 +103,7 @@ struct TypeInfo {
             my_assert(subTypes.size() == 0 && idents.size() - real == 1, "only 1 ident in type name allowed");
             res = res + idents.back();
         }
-        if(res.empty()) {
+        if (res.empty()) {
             return "[[void]]";
         }
         return res;
@@ -113,7 +114,7 @@ struct TypeInfo {
     const TypeInfo &getMemberType(std::string token) const {
         my_assert(isComplexType(), "only complex type has member");
         auto it = std::find(idents.begin() + 1, idents.end(), token);
-        my_assert(it != idents.end(), "member not found: "+token);
+        my_assert(it != idents.end(), "member not found: " + token);
         return subTypes[it - idents.begin() - 1];
     }
     TypeInfo getPointerType() const {
@@ -158,7 +159,10 @@ struct TypeParser {
     friend TypeInfo operator|(ExpressionLexer &e, const TypeParser &t) { return t.parse(e); }
 
   private:
-    [[noreturn]] static TypeInfo error(const std::string &err) { throw std::logic_error("Type Parse Error: " + err); }
+    [[noreturn]] static TypeInfo error(const std::string &info,
+                                       const std::source_location location = std::source_location::current()) {
+        throw std::logic_error(std::format("Type Parse Error{}: {}", location.line(), info));
+    }
     // ExpressionLexer::Guidence end;
     static TypeInfo parse(ExpressionLexer &e) {
         TypeInfo info;
