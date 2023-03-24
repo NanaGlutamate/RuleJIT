@@ -57,7 +57,7 @@ struct ExpressionSemantic : public ASTVisitor {
         }
         return std::move(i);
     }
-    void checkFunction(const std::string& name){
+    void checkFunction(const std::string &name) {
         needChange = nullptr;
         needRelease = false;
         needCheckFunc.clear();
@@ -101,6 +101,7 @@ struct ExpressionSemantic : public ASTVisitor {
         } else {
             return setError(std::format("Variable \"{}\" not defined", v.name));
         }
+        processType(*v.type);
     }
     VISIT_FUNCTION(MemberAccessExprAST) {
         v.baseVar->accept(this);
@@ -117,6 +118,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 }
                 auto memberType = definedType->second.getMemberType(p->value);
                 *(v.type) = memberType;
+                processType(*v.type);
                 return;
             }
         }
@@ -131,9 +133,12 @@ struct ExpressionSemantic : public ASTVisitor {
             return setError(std::format("unknown member access {}[\"{}\"]", v.baseVar->type->toString(),
                                         v.memberToken->type->toString()));
         }
-        processType(v.type);
+        processType(*v.type);
     }
-    VISIT_FUNCTION(LiteralExprAST) { my_assert(bool(v.type)); }
+    VISIT_FUNCTION(LiteralExprAST) {
+        my_assert(bool(v.type));
+        processType(*v.type);
+    }
     VISIT_FUNCTION(FunctionCallExprAST) {
         for (auto &arg : v.params) {
             arg->accept(this);
@@ -195,7 +200,7 @@ struct ExpressionSemantic : public ASTVisitor {
             }
         }
         v.type = std::make_unique<TypeInfo>(v.functionIdent->type->getReturnedType());
-        processType(v.type);
+        processType(*v.type);
     }
     VISIT_FUNCTION(BinOpExprAST) {
         v.lhs->accept(this);
@@ -234,6 +239,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 needChange = std::make_unique<FunctionCallExprAST>(
                     std::make_unique<TypeInfo>(funcType.getReturnedType()),
                     std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(funcType), it->second), std::move(tmp));
+                processType(*v.type);
                 return;
             }
         }
@@ -241,6 +247,7 @@ struct ExpressionSemantic : public ASTVisitor {
             return setError(std::format("Operator \"{}\" between \"{}\" and \"{}\" not defined", v.op,
                                         v.lhs->type->toString(), v.rhs->type->toString()));
         }
+        processType(*v.type);
     }
     VISIT_FUNCTION(UnaryOpExprAST) {
         v.rhs->accept(this);
@@ -272,12 +279,14 @@ struct ExpressionSemantic : public ASTVisitor {
                 needChange = std::make_unique<FunctionCallExprAST>(
                     std::make_unique<TypeInfo>(type.getReturnedType()),
                     std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(type), realName), std::move(param));
+                processType(*v.type);
                 return;
             }
         }
         if (!buildIn) {
             return setError(std::format("Operator \"{}\" to \"{}\" not defined", v.op, v.rhs->type->toString()));
         }
+        processType(*v.type);
     }
     VISIT_FUNCTION(BranchExprAST) {
         v.condition->accept(this);
@@ -294,9 +303,10 @@ struct ExpressionSemantic : public ASTVisitor {
         } else {
             v.type = std::make_unique<TypeInfo>(*(v.trueExpr->type));
         }
+        processType(*v.type);
     }
     VISIT_FUNCTION(ComplexLiteralExprAST) {
-        processType(v.type);
+        processType(*v.type);
         if (v.type->isBaseType()) {
             auto it = globalInfo().typeDef.find(v.type->getBaseType());
             if (it == globalInfo().typeDef.end()) {
@@ -363,6 +373,7 @@ struct ExpressionSemantic : public ASTVisitor {
             v.type = std::make_unique<TypeInfo>(*(v.body->type));
         }
         c->pop();
+        processType(*v.type);
     }
     VISIT_FUNCTION(BlockExprAST) {
         c->push();
@@ -377,9 +388,11 @@ struct ExpressionSemantic : public ASTVisitor {
         }
         v.type = std::make_unique<TypeInfo>(*last);
         c->pop();
+        processType(*v.type);
     }
     VISIT_FUNCTION(ControlFlowAST) {
         // type define only allowed top-level
+        processType(*v.type);
         return setError("ControlFlowAST not supported");
     }
     VISIT_FUNCTION(TypeDefAST) {
@@ -396,10 +409,12 @@ struct ExpressionSemantic : public ASTVisitor {
             }
             if (t != RealType && t != IntType && t.isBaseType() && !globalInfo().typeDef.contains(t.toString())) {
                 // TODO: process each type
+                // TODO: array member/func member/pointer member?
                 return setError(std::format("type \"{}\" is not defined", t.toString()));
             }
         }
         globalInfo().typeDef[v.name] = *(v.definedType);
+        processType(*v.type);
         return;
     }
     VISIT_FUNCTION(VarDefAST) {
@@ -506,12 +521,19 @@ struct ExpressionSemantic : public ASTVisitor {
             needChange = nullptr;
         }
     }
-    void processType(std::unique_ptr<TypeInfo> &type) {
-        if (!type) {
+    void processType(const TypeInfo &type) {
+        if (!type || type == NoInstanceType) {
             return;
         }
-        if (type->isComplexType()) {
-            return setError(std::format("unnamed type \"{}\" is not allowed", type->toString()));
+        if (type.isComplexType()) {
+            return setError(std::format("unnamed type \"{}\" is not allowed", type.toString()));
+        }
+        if (type.getElementType()) {
+            return processType(type.getElementType());
+        }
+
+        if (type.isBaseType() && !globalInfo().typeDef.contains(type.getBaseType())) {
+            return setError(std::format("type \"{}\" is not defined", type.toString()));
         }
     }
     void checkRealFunction(const std::string &name) {

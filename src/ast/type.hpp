@@ -5,10 +5,10 @@
 #include <memory>
 #include <ranges>
 #include <set>
+#include <source_location>
 #include <string>
 #include <tuple>
 #include <vector>
-#include <source_location>
 
 #include "defines/language.hpp"
 #include "frontend/lexer.h"
@@ -117,6 +117,7 @@ struct TypeInfo {
         my_assert(it != idents.end(), "member not found: " + token);
         return subTypes[it - idents.begin() - 1];
     }
+    bool isPointerType() const { return isValid() && idents.size() >= 1 && idents[0] == "*"; }
     TypeInfo getPointerType() const {
         TypeInfo res = *this;
         res.idents.insert(res.idents.begin(), "*");
