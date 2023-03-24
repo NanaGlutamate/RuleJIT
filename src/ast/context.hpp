@@ -19,7 +19,7 @@ struct SymbolTable {
 
 struct ContextGlobal {
     // real function name
-    std::set<std::string> UncheckedFunc;
+    std::set<std::string> uncheckedFunc;
     // real function name -> function definition
     std::map<std::string, std::unique_ptr<FunctionDefAST>> realFuncDefinition;
     std::map<std::string, TypeInfo> externFuncDef;

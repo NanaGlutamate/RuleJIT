@@ -90,11 +90,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     VISIT_FUNCTION(LiteralExprAST) {
         if (v.type->isFunctionType()) {
-            if (v.value == "not") {
-                returned += "__not";
-            } else {
-                returned += v.value;
-            }
+            returned += v.value;
             return;
         }
         returned += "(";
@@ -146,6 +142,18 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             v.rhs->accept(this);
             returned += ")";
         }
+    }
+    VISIT_FUNCTION(UnaryOpExprAST) {
+        returned += "(";
+        if (v.op == "-") {
+            returned += "-";
+        } else if (v.op == "not" || v.op == "!") {
+            returned += "!";
+        } else {
+            return setError("Unknown unary op: " + v.op);
+        }
+        v.rhs->accept(this);
+        returned += ")";
     }
     VISIT_FUNCTION(BranchExprAST) {
         if (*(v.type) != NoInstanceType) {

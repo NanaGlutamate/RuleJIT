@@ -116,6 +116,11 @@ struct TypeInfo {
         my_assert(it != idents.end(), "member not found: "+token);
         return subTypes[it - idents.begin() - 1];
     }
+    TypeInfo getPointerType() const {
+        TypeInfo res = *this;
+        res.idents.insert(res.idents.begin(), "*");
+        return res;
+    }
     const TypeInfo &getReturnedType() const;
     // not complex nor function nor pointer nor array type
     bool isArrayType() const { return isValid() && idents.size() >= 1 && idents[0][0] == '['; }
