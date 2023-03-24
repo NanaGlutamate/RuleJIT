@@ -1,40 +1,51 @@
 #pragma once
 
+#include "defines/marco.hpp"
+
+#ifndef __DISABLE_ASSERT
+
 #if __cplusplus >= 202002L
 
-#include <string>
+#include <format>
 #include <iostream>
 #include <source_location>
-#include <format>
+#include <string>
 
-inline void my_assert(bool check,
-    const std::string& message = "",
-    const std::source_location location = std::source_location::current())
-{
+inline void my_assert(bool check, const std::string &message = "[assertion failed with no info provided]",
+                      const std::source_location location = std::source_location::current()) {
     using namespace std;
-    if(!check){
-        throw std::logic_error{format("error: {}\nin file {}, line {}", message, location.file_name(), location.line())};
+    if (!check) {
+        throw std::logic_error{
+            format("error: {}\nin file {}, line {}", message, location.file_name(), location.line())};
     }
 }
 
-#else
+#else // #if __cplusplus >= 202002L
 
 #ifdef assert
 
 #define my_assert(check, message) assert(check)
 
-#else
+#else // #ifdef assert
 
-#include <string>
 #include <iostream>
+#include <string>
 
-inline void my_assert(bool check, std::string message){
-    if(!check){
+inline void my_assert(bool check, std::string message) {
+    if (!check) {
         std::cout << message << std::endl;
         throw std::logic_error(message);
     }
 }
 
-#endif
+#endif // #ifdef assert
 
-#endif
+#endif  #if __cplusplus >= 202002L
+
+#else // #ifdef __ACTIVE_ASSERT
+
+inline void my_assert(bool check, std::string message) {
+    // do nothing
+}
+
+#endif // #ifdef __ACTIVE_ASSERT

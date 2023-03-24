@@ -139,10 +139,6 @@ extern "C" {{
 }}
 
 namespace {0}{{
-
-inline double __not(double v){{
-    return v == 0. ? 1. : 0.;
-}}
 {2}
 
 }}

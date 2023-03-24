@@ -11,6 +11,9 @@ using namespace rulejit::cppgen;
 
 std::string CppStyleType(const TypeInfo &type) {
     // only support vector and base type
+    if (type == NoInstanceType) {
+        return "void";
+    }
     if (type.isBaseType()) {
         return type.idents[0];
     }
@@ -63,6 +66,8 @@ class CStyleString {
     ~CStyleString() { delete[] s; };
 };
 
+constexpr auto preDefines = R"()";
+
 } // namespace
 
 namespace rulejit::cppgen {
@@ -70,9 +75,13 @@ namespace rulejit::cppgen {
 void CppEngine::buildFromSource(const std::string &srcXML) {
     using namespace rapidxml;
     using namespace templates;
+
+    preDefines | lexer | parser | semantic;
+
     xml_document<> doc;
     CStyleString s(srcXML);
     doc.parse<parse_default>(s.s);
+
     auto root = doc.first_node("RuleSet");
     if (auto it = root->first_attribute("version"); !it || it->value() != std::string("1.0")) {
         throw std::runtime_error("Unsupported version of RuleSet");
@@ -183,9 +192,34 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
     typeDefFile << std::format(typeDefHpp, namespaceName, prefix, typedefs);
-    
+
     std::ofstream funcDefFile(outputPath + prefix + "funcdef.hpp");
-    funcDefFile << std::format(funcDefHpp, namespaceName, prefix, "", "");
+    std::string funcDefs, externDefs;
+    for (auto &&[name, func] : stack.global.realFuncDefinition) {
+        if (!stack.global.checkedFunc.contains(name)) {
+            semantic.checkFunction(name);
+        }
+        std::string params;
+        for (auto &&arg : func->params) {
+            params += CppStyleType(*(arg->type)) + " " + arg->name + ", ";
+        }
+        if (!params.empty()) {
+            params.erase(params.size() - 2, 2);
+        }
+        funcDefs += std::format(funcDef, CppStyleType(func->type->getReturnedType()), name, params, func->returnValue | codegen);
+    }
+    for(auto &&[name, type] : stack.global.externFuncDef) {
+        std::string params;
+        size_t param_cnt = type.subTypes.size() - type.isReturnedFunctionType() ? 1 : 0;
+        for (size_t i = 0; i < param_cnt; ++i) {
+            params += CppStyleType(type.subTypes[i]) + ", ";
+        }
+        if (!params.empty()) {
+            params.erase(params.size() - 2, 2);
+        }
+        externDefs += std::format(externFuncDef, CppStyleType(type.getReturnedType()), name, params);
+    }
+    funcDefFile << std::format(funcDefHpp, namespaceName, prefix, funcDefs, externDefs);
 
     std::ofstream rulesetCppFile(outputPath + prefix + "ruleset.cpp");
     rulesetCppFile << std::format(rulesetCpp, namespaceName, prefix);

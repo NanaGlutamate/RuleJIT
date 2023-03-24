@@ -10,11 +10,17 @@
 namespace rulejit {
 
 struct IRGenerator : public ASTVisitor {
-    void loadIRHolder(IRHolder *h) { holder = h; }
-    void loadContext(ContextStack *context) { c = context; }
-    void friend operator|(std::pair<std::string, std::unique_ptr<FunctionDefAST>> &ast, IRGenerator &irgen) {
-        
+    IRGenerator(IRHolder &holder, ContextStack &context):h(holder), c(context){}
+    IRGenerator(const IRGenerator &) = delete;
+    IRGenerator(IRGenerator &&) = delete;
+    IRGenerator &operator=(const IRGenerator &) = delete;
+    IRGenerator &operator=(IRGenerator &&) = delete;
+    virtual ~IRGenerator() = default;
+    void clear() {}
+    void friend operator|(std::pair<std::string, std::unique_ptr<FunctionDefAST>> &src, IRGenerator &irgen) {
+        irgen.generate(src.first, src.second);
     }
+    void generate(const std::string &name, std::unique_ptr<FunctionDefAST> &ast) {}
     VISIT_FUNCTION(IdentifierExprAST) {}
     VISIT_FUNCTION(MemberAccessExprAST) {}
     VISIT_FUNCTION(LiteralExprAST) {}
@@ -30,11 +36,12 @@ struct IRGenerator : public ASTVisitor {
     VISIT_FUNCTION(VarDefAST) {}
     VISIT_FUNCTION(FunctionDefAST) {}
     VISIT_FUNCTION(SymbolDefAST) {}
-    virtual ~IRGenerator() = default;
 
   private:
-    IRHolder *holder;
-    ContextStack *c;
+    IRHolder &h;
+    ContextStack &c;
+    std::set<std::string> generatedFunc;
+    std::set<std::string> generatedVar;
 };
 
 } // namespace rulejit

@@ -35,25 +35,50 @@ struct ExpressionSemantic : public ASTVisitor {
         return std::move(ast);
     }
     std::unique_ptr<ExprAST> friend operator|(std::unique_ptr<ExprAST> i, ExpressionSemantic &t) {
-        // TODO: extend
-        // t.callStack.clear();
         t.needChange = nullptr;
         t.needRelease = false;
         t.needCheckFunc.clear();
+        if (t.c->size() == 0) {
+            t.c->clear();
+        }
+        while (t.c->size() != 1) {
+            t.c->pop();
+        }
 
         i->accept(&t);
         t.afterAccept(i);
         while (!t.needCheckFunc.empty()) {
-            auto name = t.needCheckFunc.begin().operator*();
-            if (auto it = t.globalInfo().uncheckedFunc.find(name); it != t.globalInfo().uncheckedFunc.end()) {
+            auto name = *t.needCheckFunc.begin();
+            if (auto it = t.globalInfo().checkedFunc.find(name); it == t.globalInfo().checkedFunc.end()) {
                 t.checkRealFunction(*it);
-                t.globalInfo().uncheckedFunc.erase(it);
+                t.globalInfo().checkedFunc.insert(name);
             }
             t.needCheckFunc.erase(name);
         }
         return std::move(i);
     }
+    void checkFunction(const std::string& name){
+        needChange = nullptr;
+        needRelease = false;
+        needCheckFunc.clear();
+        if (c->size() == 0) {
+            c->clear();
+        }
+        while (c->size() != 1) {
+            c->pop();
+        }
+        needCheckFunc.insert(name);
+        while (!needCheckFunc.empty()) {
+            auto name = *needCheckFunc.begin();
+            if (auto it = globalInfo().checkedFunc.find(name); it == globalInfo().checkedFunc.end()) {
+                checkRealFunction(*it);
+                globalInfo().checkedFunc.insert(name);
+            }
+            needCheckFunc.erase(name);
+        }
+    }
     VISIT_FUNCTION(IdentifierExprAST) {
+        // TODO: rename var which name starts with "__func"
         auto [find, type] = c->seekVarDef(v.name);
         if (auto it = globalInfo().funcDef.find(v.name); it != globalInfo().funcDef.end()) {
             // normal func
@@ -132,7 +157,8 @@ struct ExpressionSemantic : public ASTVisitor {
                         v.params.insert(v.params.begin(), std::unique_ptr<ExprAST>(p->baseVar.release()));
                         auto realName = funcNameIt->second;
                         needCheckFunc.insert(realName);
-                        v.functionIdent = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(c->getRealFunctionType(realName)), realName);
+                        v.functionIdent = std::make_unique<LiteralExprAST>(
+                            std::make_unique<TypeInfo>(c->getRealFunctionType(realName)), realName);
                     } else {
                         std::string paramTypeString;
                         for (auto &&type : paramType) {
@@ -211,8 +237,10 @@ struct ExpressionSemantic : public ASTVisitor {
                 return;
             }
         }
-        return setError(std::format("Operator \"{}\" between \"{}\" and \"{}\" not defined", v.op,
-                                    v.lhs->type->toString(), v.rhs->type->toString()));
+        if (!buildIn) {
+            return setError(std::format("Operator \"{}\" between \"{}\" and \"{}\" not defined", v.op,
+                                        v.lhs->type->toString(), v.rhs->type->toString()));
+        }
     }
     VISIT_FUNCTION(UnaryOpExprAST) {
         v.rhs->accept(this);
@@ -247,7 +275,9 @@ struct ExpressionSemantic : public ASTVisitor {
                 return;
             }
         }
-        return setError(std::format("Operator \"{}\" to \"{}\" not defined", v.op, v.rhs->type->toString()));
+        if (!buildIn) {
+            return setError(std::format("Operator \"{}\" to \"{}\" not defined", v.op, v.rhs->type->toString()));
+        }
     }
     VISIT_FUNCTION(BranchExprAST) {
         v.condition->accept(this);
@@ -373,6 +403,7 @@ struct ExpressionSemantic : public ASTVisitor {
         return;
     }
     VISIT_FUNCTION(VarDefAST) {
+        // TODO: rename var which name starts with "__func"
         v.definedValue->accept(this);
         afterAccept(v.definedValue);
         if (*(v.definedValue->type) != *(v.valueType) && *(v.valueType) != AutoType) {
@@ -386,6 +417,11 @@ struct ExpressionSemantic : public ASTVisitor {
             return setError(std::format("Var name \"{}\" already defined as a func", v.name));
         }
         c->top().varDef[v.name] = *(v.valueType);
+        if (c->size() == 1) {
+            needChange = std::make_unique<BinOpExprAST>(
+                std::make_unique<TypeInfo>(NoInstanceType), "=",
+                std::make_unique<IdentifierExprAST>(std::move(v.valueType), v.name), std::move(v.definedValue));
+        }
     }
     VISIT_FUNCTION(FunctionDefAST) {
         // func define only allowed top-level
@@ -393,7 +429,6 @@ struct ExpressionSemantic : public ASTVisitor {
             return setError("Only allow top-level func def");
         }
         // TODO: how to avoid same real name of func and var?
-        // TODO: rename var which name starts with "func"
         std::string realFuncName = c->generateUniqueName("__func", toLegalName(v.name));
         if (v.funcDefType == FunctionDefAST::FuncDefType::SYMBOLIC) {
             if (v.params.size() != 2 && (v.params.size() != 1 || !buildInUnary.contains(v.name))) {
@@ -430,7 +465,6 @@ struct ExpressionSemantic : public ASTVisitor {
         } else {
             return setError("only allow symbolic/member/normal function define");
         }
-        globalInfo().uncheckedFunc.emplace(realFuncName);
         globalInfo().realFuncDefinition[realFuncName] = std::unique_ptr<FunctionDefAST>(&v);
         needChange = nop();
         needRelease = true;
@@ -481,6 +515,7 @@ struct ExpressionSemantic : public ASTVisitor {
         }
     }
     void checkRealFunction(const std::string &name) {
+        // TODO: rename var which name starts with "__func"
         my_assert(c->size() == 1);
         auto &func = globalInfo().realFuncDefinition.find(name)->second;
         c->push();
