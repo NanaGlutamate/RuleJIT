@@ -58,8 +58,7 @@ struct ExpressionParser {
             lexer->top(),
             modified,
         };
-        throw std::logic_error(std::format("Parse Error in {}::{}, line{}: {}", location.file_name(),
-                                           location.function_name(), location.line(), modified));
+        throw std::logic_error(std::format("Parse Error{}: {}", location.line(), modified));
         // return nullptr;
     }
 

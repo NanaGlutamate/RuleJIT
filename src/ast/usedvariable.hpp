@@ -57,7 +57,7 @@ struct UsedVariable : public ASTVisitor{
         v.definedValue->accept(this);
     }
     VISIT_FUNCTION(FunctionDefAST){}
-    VISIT_FUNCTION(SymbolCommandAST){}
+    VISIT_FUNCTION(SymbolDefAST){}
     virtual ~UsedVariable() = default;
 private:
     std::set<std::string> used;

@@ -17,7 +17,7 @@ struct IRGenerator : public ASTVisitor {
 
         } else if (auto p2 = isType<TypeDefAST>(ast); p2) {
 
-        } else if (auto p3 = isType<SymbolCommandAST>(ast); p3) {
+        } else if (auto p3 = isType<SymbolDefAST>(ast); p3) {
 
         } else {
             // gen unnamed function
@@ -36,7 +36,7 @@ struct IRGenerator : public ASTVisitor {
     VISIT_FUNCTION(TypeDefAST) {}
     VISIT_FUNCTION(VarDefAST) {}
     VISIT_FUNCTION(FunctionDefAST) {}
-    VISIT_FUNCTION(SymbolCommandAST) {}
+    VISIT_FUNCTION(SymbolDefAST) {}
     virtual ~IRGenerator() = default;
 
   private:

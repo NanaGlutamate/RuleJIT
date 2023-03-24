@@ -38,8 +38,8 @@ inline const std::set<std::string_view> buildInType{
     typeident::RealTypeIdent,
 };
 
-inline const std::set<std::string> reloadableBuildInUnary{
-    "-", "not", "!", "&", "*", "~", "||", "&&", "*", "&", "<-",
+inline const std::set<std::string> buildInUnary{
+    "-", "not", "!", "&", "*", "~", "||", "&&", "*", "&", "<-", "->",
 };
 
 using Priority = int;

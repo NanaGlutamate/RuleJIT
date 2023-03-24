@@ -95,6 +95,7 @@
         "*.def": "cpp",
         "unordered_set": "cpp",
         "codecvt": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "queue": "cpp"
     }
 }

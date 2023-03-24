@@ -117,6 +117,16 @@ struct BinOpExprAST : public ExprAST {
         : BinOpExprAST(nullptr, std::move(op), std::move(lhs), std::move(rhs)) {}
 };
 
+struct UnaryOpExprAST : public ExprAST {
+    ACCEPT_FUNCTION;
+    std::string op;
+    std::unique_ptr<ExprAST> rhs;
+    UnaryOpExprAST(std::unique_ptr<TypeInfo> type, std::string op, std::unique_ptr<ExprAST> rhs)
+        : ExprAST(std::move(type)), op(std::move(op)), rhs(std::move(rhs)) {}
+    UnaryOpExprAST(std::string op, std::unique_ptr<ExprAST> rhs)
+        : UnaryOpExprAST(nullptr, std::move(op), std::move(rhs)) {}
+};
+
 // BRANCH := 'if' '(' EXPR ')' EXPR 'else' EXPR
 // if(a==0){1}else{2} | if(a) 1 else 4
 struct BranchExprAST : public ExprAST {
@@ -262,7 +272,7 @@ struct FunctionDefAST : public DefAST {
     enum class FuncDefType {
         NORMAL,
         MEMBER,
-        INFIX,
+        SYMBOLIC,
         LAMBDA,
     } funcDefType;
     template <typename S, typename V1>
@@ -282,7 +292,7 @@ inline decltype(auto) nop() { return std::make_unique<LiteralExprAST>(std::make_
 // extern type u64 as Vector3 struct {x f64; y f64; z f64;}
 // extern func vadd(u64, u64):u64 as +(Vector3, Vector3):Vector3
 // extern func memberAccess(u64, u64):f64 as .(Vector3, const string):f64
-struct SymbolCommandAST : public DefAST {
+struct SymbolDefAST : public DefAST {
     ACCEPT_FUNCTION;
     enum class SymbolCommandType {
         IMPORT,
@@ -291,7 +301,7 @@ struct SymbolCommandAST : public DefAST {
     } symbolCommandType;
     std::unique_ptr<TypeInfo> definedType;
     template <typename S>
-    SymbolCommandAST(S &&name, SymbolCommandType symbolCommandType, std::unique_ptr<TypeInfo> definedType)
+    SymbolDefAST(S &&name, SymbolCommandType symbolCommandType, std::unique_ptr<TypeInfo> definedType)
         : DefAST(std::forward<S>(name)), symbolCommandType(symbolCommandType), definedType(std::move(definedType)) {}
 };
 

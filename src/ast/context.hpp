@@ -18,6 +18,8 @@ struct SymbolTable {
 };
 
 struct ContextGlobal {
+    // real function name
+    std::set<std::string> UncheckedFunc;
     // real function name -> function definition
     std::map<std::string, std::unique_ptr<FunctionDefAST>> realFuncDefinition;
     std::map<std::string, TypeInfo> externFuncDef;
@@ -25,7 +27,7 @@ struct ContextGlobal {
     std::map<std::string, std::string> funcDef;
     // used function name("+") -> param type({"Vector3", "Vector3"}) -> real function
     //     name("func@0@2@+(Vector3,Vector3):Vector3")
-    std::map<std::string, std::map<std::tuple<TypeInfo, TypeInfo>, std::string>> infixFuncDef;
+    std::map<std::string, std::map<std::vector<TypeInfo>, std::string>> symbolicFuncDef;
     // used function name("add") -> param type({"Vector3", "Vector3"}) -> real function
     //     name("func@0@2@add(Vector3,Vector3):Vector3")
     std::map<std::string, std::map<std::vector<TypeInfo>, std::string>> memberFuncDef;
@@ -44,7 +46,7 @@ struct ContextGlobal {
 //                     3. add {used function name, func type} to vardef
 // when meet member/infix func def: 1. register to "realFuncDefinition"
 //                                  2. add {used function name, {param type, real function name}} to
-//                                     infixFuncDef/memberFuncDef
+//                                     symbolicFuncDef/memberFuncDef
 // only when all def in a scope processed can sub scope to be processed.
 struct ContextFrame {
     // var name / used function name -> type
@@ -66,14 +68,15 @@ struct ContextStack {
     ContextStack(ContextStack &&) = delete;
     ContextStack &operator=(const ContextStack &) = delete;
     ContextStack &operator=(ContextStack &&) = delete;
-    const TypeInfo &getTypeByRealFunctionName(const std::string &name) {
+    const TypeInfo &getRealFunctionType(const std::string &name) {
         if (auto it = global.realFuncDefinition.find(name); it != global.realFuncDefinition.end()) {
             return *(it->second->funcType);
-        } else if(auto it2 = global.externFuncDef.find(name); it2 != global.externFuncDef.end()){
-            return it2->second;
         } else {
             throw std::logic_error("cannot find function definition: " + name);
         }
+    }
+    size_t size() const {
+        return stackFrame.size();
     }
     void clear() {
         counter = 0;
@@ -114,7 +117,7 @@ struct ContextStack {
     // //! @return (find, escaped, value)
     // decltype(auto) seekFuncDef(const std::string &s) { return seek(&ContextFrame::funcDef, s); }
     // //! @return (find, escaped, value)
-    // decltype(auto) seekInfixFuncDef(const std::string &s) { return seek(&ContextFrame::infixFuncDef, s); }
+    // decltype(auto) seekInfixFuncDef(const std::string &s) { return seek(&ContextFrame::symbolicFuncDef, s); }
     // //! @return (find, escaped, value)
     // decltype(auto) seekMemberFuncDef(const std::string &s) { return seek(&ContextFrame::memberFuncDef, s); }
     // //! @return (find, escaped, value)

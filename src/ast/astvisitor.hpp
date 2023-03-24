@@ -13,6 +13,7 @@ struct MemberAccessExprAST;
 struct LiteralExprAST;
 struct FunctionCallExprAST;
 struct BinOpExprAST;
+struct UnaryOpExprAST;
 struct BranchExprAST;
 struct ComplexLiteralExprAST;
 struct LoopAST;
@@ -26,7 +27,7 @@ struct TypeDefAST;
 struct VarDefAST;
 struct FunctionDefAST;
 
-struct SymbolCommandAST;
+struct SymbolDefAST;
 
 // struct TopLevelAST;
 
@@ -54,20 +55,21 @@ struct ASTVisitor{
     PURE_VIRTUAL_VISIT_FUNCTION(LiteralExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(FunctionCallExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(BinOpExprAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(UnaryOpExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(BranchExprAST);
-    VIRTUAL_VISIT_FUNCTION(ComplexLiteralExprAST);
-    VIRTUAL_VISIT_FUNCTION(LoopAST);
-    VIRTUAL_VISIT_FUNCTION(BlockExprAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(ComplexLiteralExprAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(LoopAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(BlockExprAST);
 
     // VIRTUAL_VISIT_FUNCTION(AssignmentAST);
 
-    VIRTUAL_VISIT_FUNCTION(ControlFlowAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(ControlFlowAST);
 
-    VIRTUAL_VISIT_FUNCTION(TypeDefAST);
-    VIRTUAL_VISIT_FUNCTION(VarDefAST);
-    VIRTUAL_VISIT_FUNCTION(FunctionDefAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(TypeDefAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(VarDefAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(FunctionDefAST);
 
-    VIRTUAL_VISIT_FUNCTION(SymbolCommandAST);
+    PURE_VIRTUAL_VISIT_FUNCTION(SymbolDefAST);
 
     // VIRTUAL_VISIT_FUNCTION(TopLevelAST);
     virtual ~ASTVisitor() = default;

@@ -83,14 +83,12 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBinOpRHS(Priority priority, std:
 // cannot return unary function; returned unary function act as normal function
 // UNARYEXPR := unary UNARYEXPR | MEMBERACCESS
 std::unique_ptr<ExprAST> ExpressionParser::parseUnary() {
-    if (!reloadableBuildInUnary.contains(lexer->topCopy())) {
+    if (!buildInUnary.contains(lexer->topCopy())) {
         return parsePrimary();
     }
     auto op = lexer->popCopy(IGNORE_BREAK);
-    std::vector<std::unique_ptr<ExprAST>> args;
-    args.push_back(parseUnary());
-    return std::make_unique<FunctionCallExprAST>(
-        std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(BuildInUnaryType), op), std::move(args));
+    auto arg = parseUnary();
+    return std::make_unique<UnaryOpExprAST>(op, std::move(arg));
 }
 
 // PRIMARYEXPR :=
@@ -181,18 +179,10 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         (*lexer) >> tmp;
         lhs = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(StringType), std::move(tmp));
     } else if (lexer->top() == "(") {
-        // Parent | tokenized symbol
-        auto state = lexer->getState();
-        lexer->pop();
-        auto inner = lexer->tokenType();
-        if (auto sym = lexer->popCopy(); inner == TokenType::SYM && lexer->top() == ")") {
-            lhs = std::make_unique<IdentifierExprAST>(std::move(sym));
-        } else {
-            lexer->loadState(state);
-            lexer->pop(IGNORE_BREAK);
-            lhs = parseExpr(true);
-            eatBreak();
-        }
+        // Parent | tokenized symbol(not support cause may caused complex problem)
+        lexer->pop(IGNORE_BREAK);
+        lhs = parseExpr(true);
+        eatBreak();
         if (lexer->pop() != ")") {
             return setError("mismatch \")\"");
         }
@@ -344,14 +334,14 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         }
         FunctionDefAST::FuncDefType funcType = FunctionDefAST::FuncDefType::NORMAL;
         if (nameType == TokenType::SYM) {
-            funcType = FunctionDefAST::FuncDefType::INFIX;
+            funcType = FunctionDefAST::FuncDefType::SYMBOLIC;
         }
         std::string name = lexer->popCopy(IGNORE_BREAK);
         if (lexer->top() == "infix") {
             if (nameType == TokenType::SYM) {
                 return setError("operator overload is aotomatically infix or unary");
             }
-            funcType = FunctionDefAST::FuncDefType::INFIX;
+            funcType = FunctionDefAST::FuncDefType::SYMBOLIC;
             lexer->pop(IGNORE_BREAK);
         }
         // TODO: marco, param expr expressed as a func():Any; &&, || can and only can be defined through marco
@@ -360,7 +350,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         eatBreak();
         if (lexer->top() == "(") {
             // member func
-            if (funcType == FunctionDefAST::FuncDefType::INFIX) {
+            if (funcType == FunctionDefAST::FuncDefType::SYMBOLIC) {
                 return setError("infix member function is not supported");
             }
             if (params->size() != 1) {
@@ -472,7 +462,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseCommand() {
                 }
                 type.subTypes.push_back(returnType);
             }
-            return std::make_unique<SymbolCommandAST>(name, SymbolCommandAST::SymbolCommandType::EXTERN,
+            return std::make_unique<SymbolDefAST>(name, SymbolDefAST::SymbolCommandType::EXTERN,
                                                       std::make_unique<TypeInfo>(type));
         } else {
             return setError("only support extern func command");

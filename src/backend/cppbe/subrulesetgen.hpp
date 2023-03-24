@@ -253,7 +253,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         v.definedValue->accept(this);
     }
     VISIT_FUNCTION(FunctionDefAST) { return setError("FunctionDefAST not supported"); }
-    VISIT_FUNCTION(SymbolCommandAST) { return setError("SymbolCommandAST not supported"); }
+    VISIT_FUNCTION(SymbolDefAST) { return setError("SymbolDefAST not supported"); }
 
   private:
     bool isSubRuleSet;
@@ -280,8 +280,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     [[noreturn]] void setError(const std::string &info,
                                const std::source_location location = std::source_location::current()) {
 
-        throw std::logic_error(std::format("Code Generate Error in {}::{}, line{}: {}", location.file_name(),
-                                           location.function_name(), location.line(), info));
+        throw std::logic_error(std::format("Code Generate Error{}: {}", location.line(), info));
         // return nullptr;
     }
     ContextStack *c;

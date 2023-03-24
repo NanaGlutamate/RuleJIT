@@ -135,6 +135,10 @@ struct TypeInfo {
         return isValid() && idents.size() == 1 && idents[0] != "func" && idents[0] != "struct" &&
                idents[0] != "class" && idents[0] != "dynamic";
     }
+    std::string getBaseType() const {
+        my_assert(isBaseType(), "only base type can call getBaseType()");
+        return idents[0];
+    }
     bool isComplexType() const {
         return isValid() && idents.size() >= 1 &&
                (idents[0] == "struct" || idents[0] == "class" || idents[0] == "dynamic");

@@ -1,8 +1,6 @@
 #include <format>
 #include <string>
 
-#define CarPhyModel_EXPORTS
-
 #include "RuleEngine.h"
 
 namespace {
