@@ -78,6 +78,16 @@ struct ASTPrinter : public ASTVisitor {
         printIndent();
         buffer << ")";
     }
+    VISIT_FUNCTION(UnaryOpExprAST) {
+        buffer << "(" << v.op;
+        cnt++;
+        buffer << ", ";
+        printIndent();
+        v.rhs->accept(this);
+        cnt--;
+        printIndent();
+        buffer << ")";
+    }
     VISIT_FUNCTION(BranchExprAST) {
         buffer << "(branch, ";
         cnt++;
@@ -200,6 +210,9 @@ struct ASTPrinter : public ASTVisitor {
         cnt--;
         printIndent();
         buffer << ")";
+    }
+    VISIT_FUNCTION(SymbolDefAST) {
+        buffer << "[SYMBOL DEF]";
     }
     // VISIT_FUNCTION(TopLevelAST){
     //     buffer << "[toplevel]";

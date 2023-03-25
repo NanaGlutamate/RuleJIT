@@ -36,15 +36,28 @@ struct TypeInfo {
         subTypes = std::move(t.subTypes);
         return *this;
     }
-
-    operator bool() const { return isValid(); }
-    bool operator==(const TypeInfo &other) const {
-        // if (isComplexType() || other.isComplexType()) {
-        //     return false;
-        // }
-        return idents == other.idents && subTypes == other.subTypes;
+    std::strong_ordering operator<=>(const TypeInfo &other) const {
+        auto tmp = idents <=> other.idents;
+        // my_assert(tmp != std::strong_ordering::equivalent);
+        if (tmp == std::strong_ordering::equivalent) {
+            if(subTypes.size()<other.subTypes.size()){
+                return std::strong_ordering::less;
+            }else if(subTypes.size()>other.subTypes.size()){
+                return std::strong_ordering::greater;
+            }else{
+                for(size_t i=0;i<subTypes.size();++i){
+                    auto tmp2 = subTypes[i] <=> other.subTypes[i];
+                    if(tmp2!=std::strong_ordering::equivalent){
+                        return tmp2;
+                    }
+                }
+                return std::strong_ordering::equivalent;
+            }
+        } else {
+            return tmp;
+        }
     }
-    bool operator!=(const TypeInfo &other) const { return !(*this == other); }
+    bool operator==(const TypeInfo&) const = default;
     bool isValid() const { return idents.size() >= 1 && idents[0] != ""; }
     std::string baseType() const {
         if (!isValid()) {
@@ -111,6 +124,11 @@ struct TypeInfo {
     bool isFunctionType() const { return isValid() && idents[0] == "func"; }
     bool isNoReturnFunctionType() const { return isFunctionType() && idents.size() == 1; }
     bool isReturnedFunctionType() const { return isFunctionType() && idents.size() == 2 && idents[1] == ":"; }
+    bool hasMember(std::string token) const {
+        my_assert(isComplexType(), "only complex type has member");
+        auto it = std::find(idents.begin() + 1, idents.end(), token);
+        return it != idents.end();
+    }
     const TypeInfo &getMemberType(std::string token) const {
         my_assert(isComplexType(), "only complex type has member");
         auto it = std::find(idents.begin() + 1, idents.end(), token);
@@ -184,7 +202,10 @@ struct TypeParser {
                 e.pop(ignore_break);
             }
         }
-        if (e.top() == "func") {
+        if (e.tokenType() == TokenType::IDENT) {
+            info.idents.push_back(e.popCopy());
+            return info;
+        } else if (e.top() == "func") {
             // type of member function with define "func (recv Recv) foo ()->{}" is "func(Recv)", only log to "member
             // function table" 'func' ('[' (VARDEF | IDENT)* ']')? '(' (type (',' type)*)? ')' (':' type)? func type:
             // {"func", "(", (type, (",", type,)*)? ")", ":", (type | "")}
@@ -243,9 +264,6 @@ struct TypeParser {
                 }
             }
             e.pop();
-            return info;
-        } else if (e.tokenType() == TokenType::IDENT) {
-            info.idents.push_back(e.popCopy());
             return info;
         } else {
             return error("expect type identifier, found: " + e.topCopy());

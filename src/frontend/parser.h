@@ -16,6 +16,12 @@ namespace rulejit {
 // };
 
 struct ExpressionParser {
+    ExpressionParser() = default;
+    ExpressionParser(const ExpressionParser &) = delete;
+    ExpressionParser(ExpressionParser &&) = delete;
+    ExpressionParser &operator=(const ExpressionParser &) = delete;
+    ExpressionParser &operator=(ExpressionParser &&) = delete;
+
     struct Error {
         bool err;
         TokenType type;
@@ -28,27 +34,38 @@ struct ExpressionParser {
 
         END,
     };
-    ExpressionParser() = default;
-    friend std::unique_ptr<ExprAST> operator|(ExpressionLexer &src, ExpressionParser &e) {
+    void selectNextExpr() {
+        my_assert(lexer);
+        while (lexer->tokenType() == TokenType::ENDLINE) {
+            lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+        }
+    }
+    operator std::unique_ptr<ExprAST>() {
+        selectNextExpr();
+        if (lexer->tokenType() == TokenType::END) {
+            return nullptr;
+        }
+        return (parse());
+    }
+    friend ExpressionParser &operator|(ExpressionLexer &src, ExpressionParser &e) {
         e.bind(src);
-        auto tmp = e.parse();
-        e.lexer = nullptr;
-        return std::move(tmp);
+        return e;
     }
     // ExpressionParser &loadContext(ContextStack &c) {
     //     context = std::addressof(c);
     //     return *this;
     // }
-    std::map<AST*, size_t> AST2place;
+    std::map<AST *, size_t> AST2place;
+
   private:
     bool err() { return errorHandler.err; }
     [[noreturn]] std::nullptr_t setError(const std::string &info,
                                          const std::source_location location = std::source_location::current()) {
         std::string modified;
-        for(auto c : info){
-            if(c=='\n'){
+        for (auto c : info) {
+            if (c == '\n') {
                 modified += "\\n";
-            }else{
+            } else {
                 modified += c;
             }
         }
@@ -62,10 +79,14 @@ struct ExpressionParser {
         // return nullptr;
     }
 
-    std::unique_ptr<ExprAST> parse(){AST2place.clear(); return parseExpr();};
+    std::unique_ptr<ExprAST> parse() {
+        AST2place.clear();
+        return parseExpr();
+    };
     // add tuple after generics support
     std::unique_ptr<ExprAST> parseExpr(bool ignoreBreak = false, bool allowTuple = false);
-    std::unique_ptr<ExprAST> parseBinOpRHS(Priority priority, std::unique_ptr<ExprAST> lhs, bool ignoreBreak = false, bool allowTuple = false);
+    std::unique_ptr<ExprAST> parseBinOpRHS(Priority priority, std::unique_ptr<ExprAST> lhs, bool ignoreBreak = false,
+                                           bool allowTuple = false);
     std::unique_ptr<ExprAST> parseUnary();
     std::unique_ptr<ExprAST> parsePrimary();
     std::unique_ptr<ExprAST> parseBlock();

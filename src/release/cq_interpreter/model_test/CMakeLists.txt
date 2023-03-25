@@ -16,3 +16,4 @@ link_libraries(dl)
 endif(WIN32)
 
 add_executable(cq_dll_test ${SRCS} ${CSCONFIG_SRCS})
+add_dependencies(cq_dll_test ${PROJ_NAME}_interpreter)

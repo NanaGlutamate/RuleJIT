@@ -1,13 +1,16 @@
 #pragma once
 
 #include <cmath>
+#include <format>
 #include <functional>
 #include <iostream>
 
 #include "ast/ast.hpp"
 #include "ast/astvisitor.hpp"
+#include "ast/decompiler.hpp"
 #include "ast/type.hpp"
 #include "backend/cq/cqresourcehandler.h"
+#include "defines/marco.hpp"
 
 namespace rulejit::cq {
 
@@ -17,7 +20,12 @@ struct CQInterpreter : public ASTVisitor {
     CQInterpreter() : symbolStack({{{}}}) {}
 
     void setResourceHandler(ResourceHandler *h) { handler = h; };
-    void friend operator|(std::unique_ptr<ExprAST> &expr, CQInterpreter &interpreter) { expr->accept(&interpreter); }
+    void friend operator|(std::unique_ptr<ExprAST> &expr, CQInterpreter &interpreter) {
+#ifdef __RULEJIT_INTERPRETER_DEBUG
+        interpreter.ruleCnt = 1;
+#endif
+        expr->accept(&interpreter);
+    }
 
     VISIT_FUNCTION(IdentifierExprAST) {
         auto find = seekValue(v.name);
@@ -65,9 +73,6 @@ struct CQInterpreter : public ASTVisitor {
         // nop?
     }
     VISIT_FUNCTION(FunctionCallExprAST) {
-        if (!isType<IdentifierExprAST>(v.functionIdent.get())) {
-            setError("only allow direct function(no member, no returned funciton) for now");
-        }
         static std::map<std::string, std::function<double(double)>> oneParamFunc{
             {"sin", [](double x) {return sin(x); }},     {"cos", [](double x) {return cos(x); }},
             {"tan", [](double x) {return tan(x); }},     {"cot", [](double x) {return 1.0/tan(x); }},
@@ -80,8 +85,17 @@ struct CQInterpreter : public ASTVisitor {
             {"pow", [](double x, double y) { return pow(x, y); }},
             {"atan2", [](double x, double y) { return atan2(x, y); }},
         };
-        auto p = dynamic_cast<IdentifierExprAST *>(v.functionIdent.get());
-        if (p->name == "print") {
+        std::string funcName;
+        if (isType<IdentifierExprAST>(v.functionIdent.get())) {
+            auto p = dynamic_cast<IdentifierExprAST *>(v.functionIdent.get());
+            funcName = p->name;
+        } else if (isType<LiteralExprAST>(v.functionIdent.get())) {
+            auto p = dynamic_cast<LiteralExprAST *>(v.functionIdent.get());
+            funcName = p->value;
+        } else {
+            return setError("only allow direct function(no member, no returned funciton) for now");
+        }
+        if (funcName == "print") {
             my_assert(v.params.size() == 1, "\"print\" only accept 1 param");
             v.params[0]->accept(this);
             if (returned.type == Value::TOKEN) {
@@ -94,13 +108,13 @@ struct CQInterpreter : public ASTVisitor {
                 std::cout << returned.value << std::endl;
             }
             returned.type = Value::EMPTY;
-        } else if (auto it = oneParamFunc.find(p->name); it != oneParamFunc.end()) {
-            my_assert(v.params.size() == 1, std::format("\"{}\" only accept 1 param", p->name));
+        } else if (auto it = oneParamFunc.find(funcName); it != oneParamFunc.end()) {
+            my_assert(v.params.size() == 1, std::format("\"{}\" only accept 1 param", funcName));
             v.params[0]->accept(this);
             getReturnedValue();
             returned.value = it->second(returned.value);
-        } else if (auto it = twoParamFunc.find(p->name); it != twoParamFunc.end()) {
-            my_assert(v.params.size() == 2, std::format("\"{}\" only accept 2 param", p->name));
+        } else if (auto it = twoParamFunc.find(funcName); it != twoParamFunc.end()) {
+            my_assert(v.params.size() == 2, std::format("\"{}\" only accept 2 param", funcName));
             v.params[0]->accept(this);
             getReturnedValue();
             double tmp = returned.value;
@@ -108,14 +122,14 @@ struct CQInterpreter : public ASTVisitor {
             getReturnedValue();
             returned.value = it->second(tmp, returned.value);
         } else {
-            auto f = func.find(p->name);
+            auto f = func.find(funcName);
             if (f == func.end()) {
-                setError(std::format("function \"{}\" not found", p->name));
+                setError(std::format("function \"{}\" not found", funcName));
             }
             auto &callee = f->second;
             std::vector<std::map<std::string, rulejit::cq::CQInterpreter::Value>> frame{{}};
             my_assert(callee->params.size() == v.params.size(),
-                      std::format("\"{}\" only accept {} params, but {} was given", p->name, callee->params.size(),
+                      std::format("\"{}\" only accept {} params, but {} was given", funcName, callee->params.size(),
                                   v.params.size()));
             for (size_t i = 0; i < callee->params.size(); i++) {
                 auto &param = callee->params[i];
@@ -206,12 +220,35 @@ struct CQInterpreter : public ASTVisitor {
             v.lhs->accept(this);
             getReturnedValue();
             auto tmp = returned.value;
+#ifdef __RULEJIT_INTERPRETER_DEBUG
+            bool rhsEvaluate = false;
+            double tmp1;
+#endif
             if (it->second(tmp, 0) != it->second(tmp, 1)) {
                 v.rhs->accept(this);
                 getReturnedValue();
+#ifdef __RULEJIT_INTERPRETER_DEBUG
+                rhsEvaluate = true;
+                tmp1 = returned.value;
+#endif
                 returned.value = it->second(tmp, returned.value);
             }
             returned.type = Value::VALUE;
+#ifdef __RULEJIT_INTERPRETER_DEBUG
+            if (rhsEvaluate) {
+                std::cout << std::format("Evaluate: {0} {1} {2} =>\n"
+                                         "          {3} {1} {4} =>\n"
+                                         "          {5}",
+                                         v.lhs | Decompiler(), v.op, v.rhs | Decompiler(), tmp, tmp1, returned.value)
+                          << std::endl;
+            } else {
+                std::cout << std::format("Evaluate: {0} {1} {2} =>\n"
+                                         "          {3} {1} [Shortcutted] =>\n"
+                                         "          {4}",
+                                         v.lhs | Decompiler(), v.op, v.rhs | Decompiler(), tmp, returned.value)
+                          << std::endl;
+            }
+#endif
         } else {
             setError(std::format("bin op \"{}\" not support for now", v.op));
         }
@@ -222,7 +259,7 @@ struct CQInterpreter : public ASTVisitor {
             {"not", [](double x) { return !x; }},
             {"!", [](double x) { return !x; }},
         };
-        if(!unaryFunc.contains(v.op)){
+        if (!unaryFunc.contains(v.op)) {
             setError(std::format("unary op \"{}\" not support for now", v.op));
         }
         v.rhs->accept(this);
@@ -230,12 +267,18 @@ struct CQInterpreter : public ASTVisitor {
         returned.value = unaryFunc[v.op](returned.value);
     }
     VISIT_FUNCTION(BranchExprAST) {
+#ifdef __RULEJIT_INTERPRETER_DEBUG
+        std::cout << "[Check Rule No." << ruleCnt << "]" << std::endl;
+#endif
         returned.type = Value::EMPTY;
         v.condition->accept(this);
         getReturnedValue();
         if (returned.value != 0) {
             v.trueExpr->accept(this);
         } else {
+#ifdef __RULEJIT_INTERPRETER_DEBUG
+            ruleCnt++;
+#endif
             v.falseExpr->accept(this);
         }
     }
@@ -333,6 +376,7 @@ struct CQInterpreter : public ASTVisitor {
         returned.type = Value::EMPTY;
     }
     VISIT_FUNCTION(FunctionDefAST) { setError("function def should never be visit directly"); }
+    VISIT_FUNCTION(SymbolDefAST) { setError("symbol def should never be visit directly"); }
 
     // private:
     struct Value {
@@ -346,7 +390,6 @@ struct CQInterpreter : public ASTVisitor {
             EMPTY,
         } type;
     };
-
     ResourceHandler *handler;
     bool seekValue(const std::string &s) {
         for (auto it = symbolStack.back().rbegin(); it != symbolStack.back().rend(); ++it) {
@@ -357,9 +400,6 @@ struct CQInterpreter : public ASTVisitor {
         }
         return false;
     }
-    // caller pop stack
-    std::vector<std::vector<std::map<std::string, Value>>> symbolStack;
-    Value returned;
     bool isSupportType(const TypeInfo &type) {
         return type.isValid() && type.isBaseType() && (type.idents[0] == "f64" || type == AutoType);
     }
@@ -373,6 +413,13 @@ struct CQInterpreter : public ASTVisitor {
         }
     }
     [[noreturn]] void setError(const std::string &msg) { throw std::logic_error(msg); }
+
+    // caller pop stack
+    std::vector<std::vector<std::map<std::string, Value>>> symbolStack;
+    Value returned;
+#ifdef __RULEJIT_INTERPRETER_DEBUG
+    size_t ruleCnt;
+#endif
 };
 
 } // namespace rulejit::cq

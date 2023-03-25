@@ -102,14 +102,14 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         std::string name = input->first_attribute("name")->value(), type = input->first_attribute("type")->value();
         data.inputVar.push_back(name);
         data.varType[name] = type;
-        stack.stackFrame.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+        stack.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
     }
 
     for (auto cache = meta->first_node("Caches")->first_node("Param"); cache; cache = cache->next_sibling("Param")) {
         std::string name = cache->first_attribute("name")->value(), type = cache->first_attribute("type")->value();
         data.cacheVar.push_back(name);
         data.varType[name] = type;
-        stack.stackFrame.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+        stack.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
     }
 
     for (auto output = meta->first_node("Outputs")->first_node("Param"); output;
@@ -117,7 +117,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         std::string name = output->first_attribute("name")->value(), type = output->first_attribute("type")->value();
         data.outputVar.push_back(name);
         data.varType[name] = type;
-        stack.stackFrame.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+        stack.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
     }
 
     // gen subruleset defs
@@ -140,7 +140,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
         expr += "{-1}}";
         // std::cout<<expr;
-        auto ast = expr | lexer | parser | semantic;
+        auto ast = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
         subs += std::format(subRulesetDef, id, ast | codegen);
     }
     std::ofstream rulesetFile(outputPath + prefix + "ruleset.hpp");

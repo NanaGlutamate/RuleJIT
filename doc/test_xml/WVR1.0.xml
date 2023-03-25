@@ -1,0 +1,412 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet version="1.0">
+    <TypeDefines>
+        <TypeDefine type="Location">
+            <Variable name="altitude" type="float64"/>
+            <Variable name="longitude" type="float64"/>
+            <Variable name="latitude" type="float64"/>
+        </TypeDefine>
+        <TypeDefine type="Vector3">
+            <Variable name="x" type="float64"/>
+            <Variable name="y" type="float64"/>
+            <Variable name="z" type="float64"/>
+        </TypeDefine>
+    </TypeDefines>
+    <MetaInfo>
+        <Inputs>
+			<Param name="d" type="float64" display_name="敌我距离"/>
+			<Param name="phiA" type="float64" display_name="我机相对于敌机的方位角"/>
+			<Param name="phiT" type="float64" display_name="敌机相对于我机的方位角"/>
+			<Param name="psiA" type="float64" display_name="我机航向角"/>
+			<Param name="psiT" type="float64" display_name="敌机航向角"/>
+			<Param name="thetaA" type="float64" display_name="我机爬升角"/>
+			<Param name="thetaT" type="float64" display_name="敌机爬升角"/>
+            <Param name="HA" type="float64" display_name="我机高度"/>
+			<Param name="HT" type="float64" display_name="敌机高度"/>
+			<Param name="VA" type="float64" display_name="我机速度"/>
+			<Param name="VT" type="float64" display_name="敌机速度"/>
+            <Param name="DANmax" type="float64" display_name="我机近距弹最大攻击距离"/>
+			<Param name="DANmin" type="float64" display_name="我机近距弹最小攻击距离"/>
+			<Param name="DANok" type="float64" display_name="我机近距弹最佳攻击距离"/>
+			<Param name="DTNmax" type="float64" display_name="敌机近距弹最大攻击距离"/>
+			<Param name="DTNmin" type="float64" display_name="敌机近距弹最小攻击距离"/>
+			<Param name="DTNok" type="float64" display_name="敌机近距弹最佳攻击距离"/>
+            <Param name="phiANmax" type="float64" display_name="我机近距弹最大离轴发射角"/>
+            <Param name="flag" type="float64" display_name="切换动作标识符"/>
+        </Inputs>
+        <Outputs>
+            <Param name="tacticID" type="uint8" display_name="单机战术号"/>
+        </Outputs>
+        <Caches>
+            <Param name="Cache1" type="uint32">
+                <InitValue>0</InitValue>
+            </Param>
+        </Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="tacticID" type="uint8" display_name="单机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&gt;=0.5) and ((d&gt;DANmax) or (d&lt;DANmin)) and ((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&gt;0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&gt;=0.5) and ((d&gt;DANmax) or (d&lt;DANmin)) and (((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&lt;=0) and ((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&gt;=-100))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&gt;=0.5) and ((d&gt;DANmax) or (d&lt;DANmin)) and ((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&lt;-100)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&gt;=0.5) and ((d&lt;=DANmax) and (d&gt;=DANok)) and ((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&gt;0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&gt;=0.5) and ((d&lt;=DANmax) and (d&gt;=DANok)) and (((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&lt;=0) and ((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&gt;=-100))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&gt;=0.5) and ((d&lt;=DANmax) and (d&gt;=DANok)) and ((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&lt;-100)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&gt;=0.5) and ((d&lt;DANok) and (d&gt;DANmin)) and ((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&gt;0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&gt;=0.5) and ((d&lt;DANok) and (d&lt;DANmin)) and (((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&lt;=0) and ((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&gt;=-100))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&gt;=0.5) and ((d&lt;DANok) and (d&gt;DANmin)) and ((VT*cos(thetaT)*cos(psiT)-VA*cos(thetaA)*cos(psiA))&lt;=-100)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>8</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and (((abs(phiA)/180-abs(phiT)/180)&lt;0.5) and ((abs(phiA)/180-abs(phiT)/180)&gt;-0.5)) and ((d&gt;DANmax) or (d&lt;DANmin)) and (((HT-HA)&gt;-(0.3*d*sin(phiANmax))) or ((HT-HA)&lt;(0.3*d*sin(phiANmax))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and (((abs(phiA)/180-abs(phiT)/180)&lt;0.5) and ((abs(phiA)/180-abs(phiT)/180))) and ((d&gt;DANmax) or (d&lt;DANmin)) and ((HT-HA)&gt;(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and (((abs(phiA)/180-abs(phiT)/180)&lt;0.5) and ((abs(phiA)/180-abs(phiT)/180)&gt;-0.5)) and ((d&gt;DANmax) or (d&lt;DANmin)) and ((HT-HA)&lt;-(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and (((abs(phiA)/180-abs(phiT)/180)&lt;0.5) and ((abs(phiA)/180-abs(phiT)/180)&gt;-0.5)) and ((d&lt;DANmax) and (d&gt;DANok)) and (((HT-HA)&lt;(0.3*d*sin(phiANmax))) and ((HT-HA)&gt;-(0.3*d*sin(phiANmax))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and (((abs(phiA)/180-abs(phiT)/180)&lt;0.5) and ((abs(phiA)/180-abs(phiT)/180)&gt;-0.5)) and ((d&lt;DANmax) and (d&gt;DANok)) and ((HT-HA)&gt;(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and (((abs(phiA)/180-abs(phiT)/180)&lt;0.5) and ((abs(phiA)/180-abs(phiT)/180)&gt;-0.5)) and ((d&lt;DANmax) and (d&gt;DANok)) and ((HT-HA)&lt;-(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and (((abs(phiA)/180-abs(phiT)/180)&lt;0.5) and ((abs(phiA)/180-abs(phiT)/180)&gt;-0.5)) and ((d&lt;DANok) and (d&gt;DANmin)) and (((HT-HA)&lt;(0.3*d*sin(phiANmax))) and ((HT-HA)&gt;-(0.3*d*sin(phiANmax))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and (((abs(phiA)/180-abs(phiT)/180)&lt;0.5) and ((abs(phiA)/180-abs(phiT)/180)&gt;-0.5)) and ((d&lt;DANok) and (d&gt;DANmin)) and ((HT-HA)&gt;(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and (((abs(phiA)/180-abs(phiT)/180)&lt;0.5) and ((abs(phiA)/180-abs(phiT)/180)&gt;-0.5)) and ((d&lt;DANok) and (d&gt;DANmin)) and ((HT-HA)&lt;-(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&lt;=-0.5) and ((d&gt;DTNmax) or (d&lt;DTNmin)) and (((HT-HA)&lt;(0.3*d*sin(phiANmax))) and ((HT-HA)&gt;-(0.3*d*sin(phiANmax))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&lt;=-0.5) and ((d&gt;DTNmax) or (d&lt;DTNmin)) and ((HT-HA)&gt;(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&lt;=-0.5) and ((d&gt;DTNmax) or (d&lt;DTNmin)) and ((HT-HA)&lt;-(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&lt;=-0.5) and ((d&lt;DTNmax) and (d&gt;DTNok)) and (((HT-HA)&lt;(0.3*d*sin(phiANmax))) and ((HT-HA)&gt;-(0.3*d*sin(phiANmax))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&lt;=-0.5) and ((d&lt;DTNmax) and (d&gt;DTNok)) and ((HT-HA)&gt;(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>13</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&lt;=-0.5) and ((d&lt;DTNmax) and (d&gt;DTNok)) and ((HT-HA)&lt;-(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>12</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&lt;=-0.5) and ((d&lt;DTNok) and (d&gt;DTNmin)) and (((HT-HA)&lt;(0.3*d*sin(phiANmax))) and ((HT-HA)&gt;-(0.3*d*sin(phiANmax))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>14</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&lt;=-0.5) and ((d&lt;DTNok) and (d&gt;DTNmin)) and ((HT-HA)&gt;(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>13</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>flag==1 and ((abs(phiA)/180-abs(phiT)/180)&lt;=-0.5) and ((d&lt;DTNok) and (d&gt;DTNmin)) and ((HT-HA)&lt;-(0.3*d*sin(phiANmax)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>12</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

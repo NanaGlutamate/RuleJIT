@@ -11,12 +11,16 @@
 #include "ast/astvisitor.hpp"
 #include "ast/context.hpp"
 #include "defines/language.hpp"
+#include "frontend/parser.h"
 #include "tools/myassert.hpp"
 
 #define __RULEJIT_SEMANTIC_PUSH pushStack(v.get());
 #define __RULEJIT_SEMANTIC_POP popStack();
 
 namespace rulejit {
+
+constexpr inline auto reservePrefix = "__buildin_";
+constexpr inline auto replacePrefix = "user_defined";
 
 // 1. type inference
 // 2. TODO: name unnamed complex type(in vardef, typedef, literal and funcdef)
@@ -25,6 +29,11 @@ namespace rulejit {
 // 5. redefined symbol name(var, type and func name cannot be same)
 struct ExpressionSemantic : public ASTVisitor {
     ExpressionSemantic() = default;
+    ExpressionSemantic(const ExpressionSemantic &) = delete;
+    ExpressionSemantic(ExpressionSemantic &&) = delete;
+    ExpressionSemantic &operator=(const ExpressionSemantic &) = delete;
+    ExpressionSemantic &operator=(ExpressionSemantic &&) = delete;
+
     // ContextStack cannot be destructed before last process call of this
     void loadContext(ContextStack *context) { c = context; }
     std::vector<std::unique_ptr<ExprAST>> friend operator|(std::vector<std::unique_ptr<ExprAST>> ast,
@@ -33,6 +42,29 @@ struct ExpressionSemantic : public ASTVisitor {
             i = std::move(i) | t;
         }
         return std::move(ast);
+    }
+    std::vector<std::unique_ptr<ExprAST>> friend operator|(ExpressionParser &parser, ExpressionSemantic &semantic) {
+        std::vector<std::unique_ptr<ExprAST>> topLevelExprs;
+        std::unique_ptr<ExprAST> tmp;
+        while ((tmp = parser) != nullptr) {
+            tmp = std::move(tmp) | semantic;
+            if (tmp) {
+                auto p = isType<LiteralExprAST>(tmp);
+                if (p && *(p->type) == NoInstanceType) {
+                    continue;
+                }
+                topLevelExprs.push_back(std::move(tmp));
+            }
+        }
+        return std::move(topLevelExprs);
+        // if (topLevelExprs.size() == 0) {
+        //     return nop();
+        // } else if (topLevelExprs.size() == 1) {
+        //     return std::move(topLevelExprs[0]);
+        // } else {
+        //     return std::make_unique<BlockExprAST>(std::make_unique<TypeInfo>(*(topLevelExprs.back()->type)),
+        //                                           std::move(topLevelExprs));
+        // }
     }
     std::unique_ptr<ExprAST> friend operator|(std::unique_ptr<ExprAST> i, ExpressionSemantic &t) {
         t.needChange = nullptr;
@@ -50,7 +82,7 @@ struct ExpressionSemantic : public ASTVisitor {
         while (!t.needCheckFunc.empty()) {
             auto name = *t.needCheckFunc.begin();
             if (auto it = t.globalInfo().checkedFunc.find(name); it == t.globalInfo().checkedFunc.end()) {
-                t.checkRealFunction(*it);
+                t.checkRealFunction(name);
                 t.globalInfo().checkedFunc.insert(name);
             }
             t.needCheckFunc.erase(name);
@@ -78,7 +110,9 @@ struct ExpressionSemantic : public ASTVisitor {
         }
     }
     VISIT_FUNCTION(IdentifierExprAST) {
-        // TODO: rename var which name starts with "__func"
+        if (v.name.starts_with(reservePrefix)) {
+            v.name = replacePrefix + v.name;
+        }
         auto [find, type] = c->seekVarDef(v.name);
         if (auto it = globalInfo().funcDef.find(v.name); it != globalInfo().funcDef.end()) {
             // normal func
@@ -87,9 +121,11 @@ struct ExpressionSemantic : public ASTVisitor {
             needCheckFunc.insert(realName);
             needChange = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(c->getRealFunctionType(realName)),
                                                           realName);
+            processType(*needChange->type);
         } else if (auto it = globalInfo().externFuncDef.find(v.name); it != globalInfo().externFuncDef.end()) {
             // extern func
             needChange = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(it->second), v.name);
+            processType(*needChange->type);
         }
         if (find) {
             if (needChange) {
@@ -98,10 +134,10 @@ struct ExpressionSemantic : public ASTVisitor {
             }
             // normal var
             v.type = std::make_unique<TypeInfo>(type);
-        } else {
+            processType(*v.type);
+        } else if (!needChange) {
             return setError(std::format("Variable \"{}\" not defined", v.name));
         }
-        processType(*v.type);
     }
     VISIT_FUNCTION(MemberAccessExprAST) {
         v.baseVar->accept(this);
@@ -111,13 +147,13 @@ struct ExpressionSemantic : public ASTVisitor {
         if (isType<LiteralExprAST>(v.memberToken.get())) {
             auto p = dynamic_cast<LiteralExprAST *>(v.memberToken.get());
             if (*(p->type) == StringType && v.baseVar->type->isBaseType()) {
-                // struct member access; TODO: member function, access overload
+                // struct member access; TODO: access overload
                 auto definedType = globalInfo().typeDef.find(v.baseVar->type->getBaseType());
                 if (definedType == globalInfo().typeDef.end()) {
                     return setError(std::format("Type \"{}\" not defined", v.baseVar->type->getBaseType()));
                 }
                 auto memberType = definedType->second.getMemberType(p->value);
-                *(v.type) = memberType;
+                v.type = std::make_unique<TypeInfo>(memberType);
                 processType(*v.type);
                 return;
             }
@@ -128,7 +164,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 return setError(std::format("array index must be real or int type, but get \"{}\"",
                                             v.memberToken->type->toString()));
             }
-            *(v.type) = v.baseVar->type->getElementType();
+            v.type = std::make_unique<TypeInfo>(v.baseVar->type->getElementType());
         } else {
             return setError(std::format("unknown member access {}[\"{}\"]", v.baseVar->type->toString(),
                                         v.memberToken->type->toString()));
@@ -150,7 +186,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 afterAccept(p->baseVar);
                 bool isMember = canAccess(*p);
                 auto memberFuncIt = globalInfo().memberFuncDef.find(p1->value);
-                bool isMemberFunc = memberFuncIt == globalInfo().memberFuncDef.end();
+                bool isMemberFunc = memberFuncIt != globalInfo().memberFuncDef.end();
                 if (!isMember && isMemberFunc) {
                     std::vector<TypeInfo> paramType{*(p->baseVar->type)};
                     for (auto &arg : v.params) {
@@ -158,7 +194,7 @@ struct ExpressionSemantic : public ASTVisitor {
                     }
                     auto funcNameIt = memberFuncIt->second.find(paramType);
                     if (funcNameIt != memberFuncIt->second.end()) {
-                        // TODO: exactly member func
+                        // exactly member func
                         v.params.insert(v.params.begin(), std::unique_ptr<ExprAST>(p->baseVar.release()));
                         auto realName = funcNameIt->second;
                         needCheckFunc.insert(realName);
@@ -188,9 +224,10 @@ struct ExpressionSemantic : public ASTVisitor {
             return setError(std::format("Cannot call to non-function type \"{}\"", v.functionIdent->type->toString()));
         }
         auto needParamNum =
-            v.functionIdent->type->subTypes.size() - v.functionIdent->type->isReturnedFunctionType() ? 1 : 0;
-        my_assert(needParamNum == v.params.size(),
-                  std::format("Function need {} params, {} given", needParamNum, v.params.size()));
+            v.functionIdent->type->subTypes.size() - (v.functionIdent->type->isReturnedFunctionType() ? 1 : 0);
+        if (needParamNum != v.params.size()) {
+            return setError(std::format("Function need {} params, {} given", needParamNum, v.params.size()));
+        }
         for (size_t i = 0; i < v.params.size(); i++) {
             if (*(v.params[i]->type) != v.functionIdent->type->getArgType(i)) {
                 return setError(std::format(
@@ -217,7 +254,7 @@ struct ExpressionSemantic : public ASTVisitor {
             buildIn = true;
         } else if (v.op == "=") {
             v.type = std::make_unique<TypeInfo>(NoInstanceType);
-            // TODO: disable overload of "="
+            // disable overload of "="
             buildIn = true;
             if (*(v.lhs->type) != *(v.rhs->type) || *(v.lhs->type) == NoInstanceType) {
                 return setError(std::format("Assign between \"{}\" and \"{}\" not allowed", v.lhs->type->toString(),
@@ -225,7 +262,8 @@ struct ExpressionSemantic : public ASTVisitor {
             }
         }
         if (auto overLoad = globalInfo().symbolicFuncDef.find(v.op); overLoad != globalInfo().symbolicFuncDef.end()) {
-            if (auto it = overLoad->second.find({*(v.lhs->type), *(v.rhs->type)}); it != overLoad->second.end()) {
+            auto varType = std::vector<TypeInfo>{*(v.lhs->type), *(v.rhs->type)};
+            if (auto it = overLoad->second.find(varType); it != overLoad->second.end()) {
                 if (buildIn) {
                     return setError(std::format("Cannot overload operator \"{}\" bwtween \"{}\" and \"{}\"", v.op,
                                                 v.lhs->type->toString(), v.rhs->type->toString()));
@@ -238,8 +276,8 @@ struct ExpressionSemantic : public ASTVisitor {
                 auto &funcType = c->getRealFunctionType(RealName);
                 needChange = std::make_unique<FunctionCallExprAST>(
                     std::make_unique<TypeInfo>(funcType.getReturnedType()),
-                    std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(funcType), it->second), std::move(tmp));
-                processType(*v.type);
+                    std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(funcType), RealName), std::move(tmp));
+                processType(*needChange->type);
                 return;
             }
         }
@@ -279,7 +317,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 needChange = std::make_unique<FunctionCallExprAST>(
                     std::make_unique<TypeInfo>(type.getReturnedType()),
                     std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(type), realName), std::move(param));
-                processType(*v.type);
+                processType(*needChange->type);
                 return;
             }
         }
@@ -418,7 +456,9 @@ struct ExpressionSemantic : public ASTVisitor {
         return;
     }
     VISIT_FUNCTION(VarDefAST) {
-        // TODO: rename var which name starts with "__func"
+        if (v.name.starts_with(reservePrefix)) {
+            v.name = replacePrefix + v.name;
+        }
         v.definedValue->accept(this);
         afterAccept(v.definedValue);
         if (*(v.definedValue->type) != *(v.valueType) && *(v.valueType) != AutoType) {
@@ -436,15 +476,19 @@ struct ExpressionSemantic : public ASTVisitor {
             needChange = std::make_unique<BinOpExprAST>(
                 std::make_unique<TypeInfo>(NoInstanceType), "=",
                 std::make_unique<IdentifierExprAST>(std::move(v.valueType), v.name), std::move(v.definedValue));
+            processType(*needChange->type);
         }
     }
     VISIT_FUNCTION(FunctionDefAST) {
         // func define only allowed top-level
         if (c->size() != 1) {
+            // TODO: named lambda
             return setError("Only allow top-level func def");
         }
-        // TODO: how to avoid same real name of func and var?
-        std::string realFuncName = c->generateUniqueName("__func", toLegalName(v.name));
+        if (v.name.starts_with(reservePrefix)) {
+            v.name = replacePrefix + v.name;
+        }
+        std::string realFuncName = c->generateUniqueName(std::string(reservePrefix), toLegalName(v.name));
         if (v.funcDefType == FunctionDefAST::FuncDefType::SYMBOLIC) {
             if (v.params.size() != 2 && (v.params.size() != 1 || !buildInUnary.contains(v.name))) {
                 return setError("Infix function must have 2 params, "
@@ -477,7 +521,9 @@ struct ExpressionSemantic : public ASTVisitor {
             if (std::get<0>(c->seekVarDef(v.name))) {
                 return setError("Func name cannot same as var name");
             }
+            globalInfo().funcDef[v.name] = realFuncName;
         } else {
+            // TODO: lambda/named lambda
             return setError("only allow symbolic/member/normal function define");
         }
         globalInfo().realFuncDefinition[realFuncName] = std::unique_ptr<FunctionDefAST>(&v);
@@ -499,6 +545,8 @@ struct ExpressionSemantic : public ASTVisitor {
         for (auto c : token) {
             if (isalpha(c) || c == '_') {
                 tmp += c;
+            } else if (isdigit(c)) {
+                tmp += "_" + c;
             } else {
                 tmp += "_" + std::to_string((size_t)c);
             }
@@ -522,17 +570,17 @@ struct ExpressionSemantic : public ASTVisitor {
         }
     }
     void processType(const TypeInfo &type) {
-        if (!type || type == NoInstanceType) {
+        if (!type.isValid() || type == NoInstanceType) {
             return;
         }
         if (type.isComplexType()) {
             return setError(std::format("unnamed type \"{}\" is not allowed", type.toString()));
         }
-        if (type.getElementType()) {
+        if (type.isArrayType()) {
             return processType(type.getElementType());
         }
 
-        if (type.isBaseType() && !globalInfo().typeDef.contains(type.getBaseType())) {
+        if (type.isBaseType() && !globalInfo().typeDef.contains(type.getBaseType()) && !BuildInType.contains(type)) {
             return setError(std::format("type \"{}\" is not defined", type.toString()));
         }
     }
@@ -542,6 +590,9 @@ struct ExpressionSemantic : public ASTVisitor {
         auto &func = globalInfo().realFuncDefinition.find(name)->second;
         c->push();
         for (auto &&param : func->params) {
+            if (param->name.starts_with(reservePrefix)) {
+                param->name = replacePrefix + param->name;
+            }
             c->top().varDef[param->name] = *(param->type);
         }
         func->returnValue->accept(this);
@@ -561,8 +612,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 if (definedType == globalInfo().typeDef.end()) {
                     return false;
                 }
-                auto memberType = definedType->second.getMemberType(p->value);
-                return true;
+                return definedType->second.hasMember(p->value);
             }
         }
         return (v.baseVar->type->isArrayType() && *(v.memberToken->type) == IntType);

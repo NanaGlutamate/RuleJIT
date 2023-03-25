@@ -140,7 +140,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
                     }
                     key = parseExpr(true);
                 }
-                if (lexer->top() == ":") {
+                if (lexer->top() == ":" || lexer->top() == "=") {
                     lexer->pop(IGNORE_BREAK);
                     auto value = parseExpr(true);
                     // eatBreak();
@@ -319,8 +319,9 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         } else {
             type = std::make_unique<TypeInfo>((*lexer) | TypeParser());
             eatBreak();
-            if (lexer->popCopy(IGNORE_BREAK) != "=") {
-                return setError("expected \"=\" in var definition, found: " + lexer->topCopy());
+            auto tmp = lexer->pop(IGNORE_BREAK);
+            if (tmp != "=") {
+                return setError("expected \"=\" in var definition, found: " + std::string(tmp));
             }
         }
         return std::make_unique<VarDefAST>(indent, std::move(type), parseExpr());
@@ -351,7 +352,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         if (lexer->top() == "(") {
             // member func
             if (funcType == FunctionDefAST::FuncDefType::SYMBOLIC) {
-                return setError("infix member function is not supported");
+                return setError("member function name must be an ident, found: " + name);
             }
             if (params->size() != 1) {
                 return setError("member function must have only one accepter");
@@ -373,7 +374,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             type.idents.push_back(":");
             lexer->pop(IGNORE_BREAK);
             auto returnType = (*lexer) | TypeParser();
-            if (!returnType) {
+            if (!returnType.isValid()) {
                 return setError("expected return type in function definition after \":\", found: " + lexer->topCopy());
             }
             type.subTypes.push_back(returnType);
@@ -456,7 +457,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseCommand() {
                 type.idents.push_back(":");
                 lexer->pop(IGNORE_BREAK);
                 auto returnType = (*lexer) | TypeParser();
-                if (!returnType) {
+                if (!returnType.isValid()) {
                     return setError("expected return type in function definition after \":\", found: " +
                                     lexer->topCopy());
                 }

@@ -46,7 +46,7 @@ using Priority = int;
 
 // A "<-" B := (*A) = B
 inline const std::set<std::string_view> buildInMultiCharSymbol{
-    "==", "!=", ">=", "<=", "&&", "||", "->", "..", ">>", "<<", "<-", ":=",
+    "==", "!=", ">=", "<=", "&&", "||", "->", "..", ">>", "<<", /* "<-", */ ":=",
 };
 
 constexpr Priority UserDefinedPriority = 5;

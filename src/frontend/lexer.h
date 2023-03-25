@@ -41,8 +41,13 @@ inline std::ostream &operator<<(std::ostream &o, TokenType type) { return o << t
 
 #undef TOKEN
 
-class ExpressionLexer {
-  public:
+struct ExpressionLexer {    
+    ExpressionLexer() = default;
+    ExpressionLexer(const ExpressionLexer &e) = delete;
+    ExpressionLexer(ExpressionLexer &&e) = delete;
+    ExpressionLexer &operator=(const ExpressionLexer &e) = delete;
+    ExpressionLexer &operator=(ExpressionLexer &&e) = delete;
+
     struct Error {
         bool err;
         const char *begin, *next;
@@ -58,13 +63,6 @@ class ExpressionLexer {
     using Ele = char;
     using BufferType = std::string;
     using BufferView = std::string_view;
-    ExpressionLexer() = default;
-    ExpressionLexer(const ExpressionLexer &e) = delete;
-    ExpressionLexer(ExpressionLexer &&e) : buffer(std::move(e.buffer)), errorHandler(e.errorHandler), type(e.type) {
-        begin = buffer.data();
-        next = e.next - e.begin + begin;
-        end = buffer.length() + begin;
-    }
     template <typename SrcTy> ExpressionLexer &load(SrcTy &&expression) {
         buffer = std::forward<SrcTy>(expression);
         restart();
@@ -200,22 +198,5 @@ class ExpressionLexer {
     BufferType buffer;
     // std::istream *stream;
 };
-
-// struct BufferedExpressionLexer : public ExpressionLexer {
-//     void back(size_t steps = 1) {}
-//     void clear(size_t depth = 0) {}
-
-//   private:
-//     struct state {
-//         const char *begin, *next;
-//     };
-//     size_t current;
-//     std::vector<state> history;
-//     void restart() {
-//         current=0;
-//         ExpressionLexer::restart();
-//         clear();
-//     }
-// };
 
 } // namespace rulejit

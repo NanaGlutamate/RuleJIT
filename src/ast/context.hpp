@@ -62,8 +62,8 @@ struct ContextFrame {
 struct ContextStack {
     size_t counter;
     ContextGlobal global;
-    std::vector<ContextFrame> stackFrame;
-    ContextStack() : stackFrame({{}}), counter(0) {}
+    std::vector<ContextFrame> scope;
+    ContextStack() : scope({{}}), counter(0) {}
     ContextStack(const ContextStack &) = delete;
     ContextStack(ContextStack &&) = delete;
     ContextStack &operator=(const ContextStack &) = delete;
@@ -76,37 +76,37 @@ struct ContextStack {
         }
     }
     size_t size() const {
-        return stackFrame.size();
+        return scope.size();
     }
     void clear() {
         counter = 0;
         global = {};
-        stackFrame = {{}};
+        scope = {{}};
     }
-    ContextFrame &top() { return stackFrame.back(); }
+    ContextFrame &top() { return scope.back(); }
     std::string generateUniqueName(const std::string &prefix = "", const std::string &suffix = "") {
         std::string tmp = prefix + "_" + std::to_string(counter++) + "_" + suffix;
         return tmp;
     }
     ContextFrame &push() {
-        auto tmp = stackFrame.back().subScopeCounter++;
-        stackFrame.push_back({});
-        stackFrame.back().subScopeCounter = 0;
-        stackFrame.back().scopeID = tmp;
+        auto tmp = scope.back().subScopeCounter++;
+        scope.push_back({});
+        scope.back().subScopeCounter = 0;
+        scope.back().scopeID = tmp;
         return top();
     }
     ContextFrame &pop() {
-        stackFrame.pop_back();
+        scope.pop_back();
         return top();
     }
     template <typename Item, typename Index>
     //! @return (find, escaped, value)
     decltype(auto) seek(Item p, const Index &ind, size_t top = size_t(-1)) {
         if (top == size_t(-1)) {
-            top = stackFrame.size() - 1;
+            top = scope.size() - 1;
         }
-        auto it = (stackFrame[top].*p).find(ind);
-        if (it != (stackFrame[top].*p).end()) {
+        auto it = (scope[top].*p).find(ind);
+        if (it != (scope[top].*p).end()) {
             return std::tuple<bool, decltype(it->second) &>(true, it->second);
         } else if (top == 0) {
             static decltype(it->second) empty{};

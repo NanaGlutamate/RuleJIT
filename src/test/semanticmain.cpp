@@ -20,18 +20,18 @@ int testCase(const std::string &s, bool expectError = false) {
     try {
 #endif
         stack.clear();
-        std::vector<std::unique_ptr<ExprAST>> tmp;
-        s | lexer;
-        while (lexer.tokenType() == TokenType::ENDLINE) {
-            lexer.pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-        }
-        while (lexer.tokenType() != TokenType::END) {
-            tmp.push_back(lexer | parser);
-            while (lexer.tokenType() == TokenType::ENDLINE) {
-                lexer.pop(ExpressionLexer::Guidence::IGNORE_BREAK);
-            }
-        }
-        tmp = std::move(tmp) | semantic;
+        std::vector<std::unique_ptr<ExprAST>> tmp = s | lexer | parser | semantic;
+        // s | lexer;
+        // while (lexer.tokenType() == TokenType::ENDLINE) {
+        //     lexer.pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+        // }
+        // while (lexer.tokenType() != TokenType::END) {
+        //     tmp.push_back(lexer | parser);
+        //     while (lexer.tokenType() == TokenType::ENDLINE) {
+        //         lexer.pop(ExpressionLexer::Guidence::IGNORE_BREAK);
+        //     }
+        // }
+        // tmp = std::move(tmp) | semantic;
         cout << "PASSED" << endl;
         for (auto &e : tmp) {
             cout << "    " << e->type->toString() << endl;
@@ -89,29 +89,47 @@ int main() {
     //     }
     //     var b:=1
     // )");
+    // testCase(R"(
+    //     extern func print(a f64)
+    //     func isPrime(n f64): f64 -> {
+    //         var i f64 = 2
+    //         var isP f64 = 1
+    //         while (isP && n % i != 0 && i*i <= n)@main {
+    //             i = i + 1
+    //         }
+    //         isP
+    //     }
+    //     func iter():f64->{
+    //         0
+    //     }
+    //     func getIter(a []f64):func():f64{
+    //         iter
+    //     }
+    //     var a []f64 = []f64{1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0}
+    //     var it := getIter(a)
+    //     while (it()) {
+    //         print(it())
+    //     }
+    // )");
+    // testCase("var a:=1; a = if(a > 0) 1 else 0");
+    // testCase(R"(
+    //     func add(a f64) (b f64):f64->a+b
+    //     var a f64 = 1
+    //     a.add(2)
+    // )");
     testCase(R"(
-        extern func print(a f64)
-        func isPrime(n f64): f64 -> {
-            var i f64 = 2
-            var isP f64 = 1
-            while (isP && n % i != 0 && i*i <= n)@main {
-                i = i + 1
-            }
-            isP
+        type Vector3 struct {x f64;y f64;z f64}
+        func add(a Vector3) (b Vector3):Vector3->{
+            Vector3{.x:a.x+b.x,.y:a.y+b.y,.z:a.z+b.z}
         }
-        func iter():f64->{
-            0
+        func +(a Vector3, b Vector3):Vector3->{
+            Vector3{.x:a.x+b.x,.y:a.y+b.y,.z:a.z+b.z}
         }
-        func getIter(a []f64):func():f64{
-            iter
-        }
-        var a []f64 = []f64{1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0}
-        var iter := getIter(a)
-        while (iter()) {
-            print(iter())
-        }
+        var a Vector3 = Vector3{.x:1,.y:2,.z:3}
+        var b Vector3 = Vector3{.x:1,.y:2,.z:3}
+        a.add(b)
+        a+b
     )");
-    testCase("var a:=1; a = if(a > 0) 1 else 0");
 
     return 0;
 }

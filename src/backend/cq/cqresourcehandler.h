@@ -244,9 +244,9 @@ struct ResourceHandler {
         } else if (v.type() == typeid(uint32_t)) {
             return std::any_cast<uint32_t>(v);
         } else if (v.type() == typeid(int64_t)) {
-            return std::any_cast<int64_t>(v);
+            return (double)std::any_cast<int64_t>(v);
         } else if (v.type() == typeid(uint64_t)) {
-            return std::any_cast<uint64_t>(v);
+            return (double)std::any_cast<uint64_t>(v);
         } else if (v.type() == typeid(float)) {
             return std::any_cast<float>(v);
         } else if (v.type() == typeid(double)) {

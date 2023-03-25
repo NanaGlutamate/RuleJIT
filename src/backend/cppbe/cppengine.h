@@ -19,7 +19,7 @@ struct CppEngine {
         codegen.loadMetaInfo(&data);
         namespaceName = "ruleset";
         outputPath = "./src/";
-        auto &tar = stack.stackFrame.back().varDef;
+        auto &tar = stack.scope.back().varDef;
         auto& oneParamFunc = BuildInUnaryType;
         tar.emplace("not", oneParamFunc);
         tar.emplace("sin", oneParamFunc);
