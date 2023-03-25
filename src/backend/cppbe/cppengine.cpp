@@ -102,14 +102,14 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         std::string name = input->first_attribute("name")->value(), type = input->first_attribute("type")->value();
         data.inputVar.push_back(name);
         data.varType[name] = type;
-        stack.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+        context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
     }
 
     for (auto cache = meta->first_node("Caches")->first_node("Param"); cache; cache = cache->next_sibling("Param")) {
         std::string name = cache->first_attribute("name")->value(), type = cache->first_attribute("type")->value();
         data.cacheVar.push_back(name);
         data.varType[name] = type;
-        stack.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+        context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
     }
 
     for (auto output = meta->first_node("Outputs")->first_node("Param"); output;
@@ -117,7 +117,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         std::string name = output->first_attribute("name")->value(), type = output->first_attribute("type")->value();
         data.outputVar.push_back(name);
         data.varType[name] = type;
-        stack.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+        context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
     }
 
     // gen subruleset defs
@@ -140,7 +140,8 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
         expr += "{-1}}";
         // std::cout<<expr;
-        auto ast = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
+        auto astName = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
+        auto& ast = context.global.realFuncDefinition[astName];
         subs += std::format(subRulesetDef, id, ast | codegen);
     }
     std::ofstream rulesetFile(outputPath + prefix + "ruleset.hpp");
@@ -178,7 +179,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
-    for (auto &&[name, type] : stack.global.typeDef) {
+    for (auto &&[name, type] : context.global.typeDef) {
         // TODO: buffer << std::format(typeDef, );
         std::string member, serialize, deserialize;
         if (type.subTypes.size() + 1 != type.idents.size() || type.idents[0] != "struct") {
@@ -195,8 +196,8 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
 
     std::ofstream funcDefFile(outputPath + prefix + "funcdef.hpp");
     std::string funcDefs, externDefs;
-    for (auto &&[name, func] : stack.global.realFuncDefinition) {
-        if (!stack.global.checkedFunc.contains(name)) {
+    for (auto &&[name, func] : context.global.realFuncDefinition) {
+        if (!context.global.checkedFunc.contains(name)) {
             semantic.checkFunction(name);
         }
         std::string params;
@@ -208,7 +209,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
         funcDefs += std::format(funcDef, CppStyleType(func->type->getReturnedType()), name, params, func->returnValue | codegen);
     }
-    for(auto &&[name, type] : stack.global.externFuncDef) {
+    for(auto &&[name, type] : context.global.externFuncDef) {
         std::string params;
         size_t param_cnt = type.subTypes.size() - type.isReturnedFunctionType() ? 1 : 0;
         for (size_t i = 0; i < param_cnt; ++i) {

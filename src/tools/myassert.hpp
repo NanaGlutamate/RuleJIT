@@ -40,7 +40,7 @@ inline void my_assert(bool check, std::string message) {
 
 #endif // #ifdef assert
 
-#endif  #if __cplusplus >= 202002L
+#endif  // #if __cplusplus >= 202002L
 
 #else // #ifdef __ACTIVE_ASSERT
 

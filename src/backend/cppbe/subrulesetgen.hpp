@@ -47,7 +47,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
                            "return " + (func.second->returnValue | t) + ";");
     }
     std::string friend operator|(std::unique_ptr<ExprAST> &e, SubRuleSetCodeGen &t) {
-        t.isSubRuleSet = true;
+        // t.isSubRuleSet = true;
         t.loadedVar.clear();
         t.returned.clear();
         t.tmp = 0;
@@ -264,7 +264,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     VISIT_FUNCTION(SymbolDefAST) { return setError("SymbolDefAST not supported"); }
 
   private:
-    bool isSubRuleSet;
+    // bool isSubRuleSet;
     std::set<std::string> loadedVar;
     std::string returned;
     std::size_t tmp;

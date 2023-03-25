@@ -31,98 +31,33 @@ constexpr inline auto reservedPrefix = "__buildin";
 // 4. capture analysis
 // 5. redefined symbol name(var, type and func name cannot be same)
 struct ExpressionSemantic : public ASTVisitor {
-    ExpressionSemantic() = default;
+    ExpressionSemantic(ContextStack& context):c(&context){};
     ExpressionSemantic(const ExpressionSemantic &) = delete;
     ExpressionSemantic(ExpressionSemantic &&) = delete;
     ExpressionSemantic &operator=(const ExpressionSemantic &) = delete;
     ExpressionSemantic &operator=(ExpressionSemantic &&) = delete;
 
     // ContextStack cannot be destructed before last process call of this
-    void loadContext(ContextStack *context) { c = context; }
-    std::string addUnnamedFunction(std::vector<std::unique_ptr<ExprAST>> ast) {
-        init();
-        std::unique_ptr<ExprAST> tmp;
-        if (ast.size() == 0) {
-            // return "";
-            tmp = nop();
-        } else if (ast.size() == 1) {
-            tmp = std::move(ast[0]);
-        } else {
-            tmp = std::make_unique<BlockExprAST>(std::make_unique<TypeInfo>(*(ast.back()->type)), std::move(ast));
-        }
-        auto name = c->generateUniqueName(reservedPrefix, "unnamed");
-        auto type = std::make_unique<TypeInfo>();
-        if (*(tmp->type) != NoInstanceType) {
-            type->idents = {"func", ":"};
-            type->subTypes.push_back(*(tmp->type));
-        } else {
-            type->idents = {"func"};
-        }
-        globalInfo().realFuncDefinition[name] = std::make_unique<FunctionDefAST>(
-            name, std::move(type), std::vector<std::unique_ptr<VarDefAST>>(), std::move(tmp), std::move(tmp));
-        try {
-            checkFunction(name);
-        } catch (std::exception &e) {
-            needCheckFunc.clear();
-            globalInfo().realFuncDefinition.erase(name);
-            throw e;
-        }
-        return name;
-    }
-    // TODO: return unnamed func
-    std::vector<std::unique_ptr<ExprAST>> friend operator|(ExpressionParser &parser, ExpressionSemantic &semantic) {
-        semantic.init();
+    // void loadContext(ContextStack *context) { c = context; }
+    // used for file parsing
+    std::string friend operator|(ExpressionParser &parser, ExpressionSemantic &semantic) {
         std::vector<std::unique_ptr<ExprAST>> topLevelExprs;
         std::unique_ptr<ExprAST> tmp;
         while ((tmp = parser) != nullptr) {
-            tmp = std::move(tmp) | semantic;
-            if (tmp) {
-                auto p = isType<LiteralExprAST>(tmp);
-                if (p && *(p->type) == NoInstanceType) {
-                    continue;
-                }
-                topLevelExprs.push_back(std::move(tmp));
-            }
+            topLevelExprs.push_back(std::move(tmp));
         }
-        return std::move(topLevelExprs);
+        return semantic.addUnnamedFunction(std::move(topLevelExprs));
     }
-    // TODO: return unnamed func
-    std::unique_ptr<ExprAST> friend operator|(std::unique_ptr<ExprAST> i, ExpressionSemantic &t) {
-        t.init();
-        try {
-            i->accept(&t);
-            t.afterAccept(i);
-            t.checkNeedCheck();
-        } catch (std::exception &e) {
-            t.needCheckFunc.clear();
-            throw e;
-        }
-        return std::move(i);
+    // used for repl
+    std::string friend operator|(std::unique_ptr<ExprAST> i, ExpressionSemantic &t) {
+        std::vector<std::unique_ptr<ExprAST>> tmp;
+        tmp.push_back(std::move(i));
+        return t.addUnnamedFunction(std::move(tmp));
     }
     void checkFunction(const std::string &name) {
         init();
-        try {
-            checkRealFunction(name);
-            checkNeedCheck();
-        } catch (std::exception &e) {
-            // TODO: cannot simply clear.
-            // if A depends on B, A pass check but B not, will incorrectly generate IR
-            // 1. store dependent graph?
-            // 2. check only apply to function?
-            needCheckFunc.clear();
-            throw e;
-        }
-    }
-    void init() {
-        needChange = nullptr;
-        needRelease = false;
-        my_assert(needCheckFunc.empty());
-        if (c->size() == 0) {
-            c->clear();
-        }
-        while (c->size() != 1) {
-            c->pop();
-        }
+        auto tmp = checkRealFunction(name);
+        checkRealFunctionSet(tmp);
     }
 
     VISIT_FUNCTION(IdentifierExprAST) {
@@ -131,7 +66,7 @@ struct ExpressionSemantic : public ASTVisitor {
             // normal func
             auto realName = it->second;
             // TODO: only check if called?(but how to check called through variable?)
-            needCheckFunc.insert(realName);
+            funcDependencyRealName.insert(realName);
             needChange = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(c->getRealFunctionType(realName)),
                                                           realName);
             processType(*needChange->type);
@@ -210,7 +145,7 @@ struct ExpressionSemantic : public ASTVisitor {
                         // exactly member func
                         v.params.insert(v.params.begin(), std::unique_ptr<ExprAST>(p->baseVar.release()));
                         auto realName = funcNameIt->second;
-                        needCheckFunc.insert(realName);
+                        funcDependencyRealName.insert(realName);
                         v.functionIdent = std::make_unique<LiteralExprAST>(
                             std::make_unique<TypeInfo>(c->getRealFunctionType(realName)), realName);
                     } else {
@@ -285,7 +220,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 tmp.push_back(std::move(v.lhs));
                 tmp.push_back(std::move(v.rhs));
                 auto RealName = it->second;
-                needCheckFunc.insert(RealName);
+                funcDependencyRealName.insert(RealName);
                 auto &funcType = c->getRealFunctionType(RealName);
                 needChange = std::make_unique<FunctionCallExprAST>(
                     std::make_unique<TypeInfo>(funcType.getReturnedType()),
@@ -323,7 +258,7 @@ struct ExpressionSemantic : public ASTVisitor {
                         std::format("Cannot overload unary operator \"{}\" to \"{}\"", v.op, v.rhs->type->toString()));
                 }
                 auto realName = it2->second;
-                needCheckFunc.insert(realName);
+                funcDependencyRealName.insert(realName);
                 auto &type = c->getRealFunctionType(realName);
                 auto param = std::vector<std::unique_ptr<ExprAST>>{};
                 param.push_back(std::move(v.rhs));
@@ -549,6 +484,62 @@ struct ExpressionSemantic : public ASTVisitor {
     }
 
   private:
+    std::string addUnnamedFunction(std::vector<std::unique_ptr<ExprAST>> topLevelExpr) {
+        init();
+        std::unique_ptr<ExprAST> tmp;
+        try {
+            for (auto it = topLevelExpr.begin(); it != topLevelExpr.end();) {
+                (*it)->accept(this);
+                afterAccept(*it);
+                if (it + 1 != topLevelExpr.end() && isType<LiteralExprAST>(*it) &&
+                    *(isType<LiteralExprAST>(*it)->type) == NoInstanceType) {
+                    it = topLevelExpr.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+        } catch (std::exception &e) {
+            funcDependencyRealName.clear();
+            while(c->size()!=1){
+                c->pop();
+            }
+            throw e;
+        }
+        if (topLevelExpr.size() == 0) {
+            // TODO: return "";
+            tmp = nop();
+        } else if (topLevelExpr.size() == 1) {
+            tmp = std::move(topLevelExpr[0]);
+        } else {
+            tmp = std::make_unique<BlockExprAST>(std::make_unique<TypeInfo>(*(topLevelExpr.back()->type)),
+                                                 std::move(topLevelExpr));
+        }
+        auto type = std::make_unique<TypeInfo>();
+        if (*(tmp->type) != NoInstanceType) {
+            type->idents = {"func", ":"};
+            type->subTypes.push_back(*(tmp->type));
+        } else {
+            type->idents = {"func"};
+        }
+        auto name = c->generateUniqueName(reservedPrefix, "unnamed");
+        globalInfo().funcDependency.emplace(name, std::move(funcDependencyRealName));
+        funcDependencyRealName.clear();
+        std::vector<std::unique_ptr<IdentifierExprAST>> params;
+        globalInfo().realFuncDefinition[name] = std::make_unique<FunctionDefAST>(
+            name, std::move(type), std::move(params), std::move(tmp));
+        // only check func when called, assume top-level expr is directly called, so check it
+        checkFunction(name);
+        return name;
+    }
+    void init() {
+        my_assert(!needChange);
+        my_assert(!needRelease);
+        my_assert(funcDependencyRealName.empty());
+        // if(c->size() == 0) {
+        //     c->clear();
+        // }
+        my_assert(c->size() == 1);
+    }
     rulejit::ContextGlobal &globalInfo() { return c->global; }
     std::string toLegalName(const std::string &token) {
         std::string tmp;
@@ -591,32 +582,45 @@ struct ExpressionSemantic : public ASTVisitor {
             return setError(std::format("type \"{}\" is not defined", type.toString()));
         }
     }
-    void checkRealFunction(const std::string &name) {
-        // TODO: erase real function def(and func/member/etc.) if error? never erase
+    // TODO: change
+    std::set<std::string> checkRealFunction(const std::string &name) {
         my_assert(c->size() == 1);
         if (globalInfo().checkedFunc.contains(name)) {
-            return;
+            return {};
         }
         auto &func = globalInfo().realFuncDefinition.find(name)->second;
+        my_assert(funcDependencyRealName.empty());
         c->push();
-        for (auto &&param : func->params) {
-            c->top().varDef[param->name] = *(param->type);
-        }
-        func->returnValue->accept(this);
-        afterAccept(func->returnValue);
-        if (*(func->returnValue->type) != func->funcType->getReturnedType()) {
-            throw std::logic_error(std::format("function \"{}\" declared return \"{}\", but return \"{}\" actually",
-                                               func->name, func->funcType->getReturnedType().toString(),
-                                               func->returnValue->type->toString()));
+        try {
+            for (auto &&param : func->params) {
+                // TODO: var name conflit with func?
+                processType(*(param->type));
+                c->top().varDef[param->name] = *(param->type);
+            }
+            func->returnValue->accept(this);
+            afterAccept(func->returnValue);
+            if (*(func->returnValue->type) != func->funcType->getReturnedType()) {
+                setError(std::format("function \"{}\" declared return \"{}\", but return \"{}\" actually", func->name,
+                                     func->funcType->getReturnedType().toString(),
+                                     func->returnValue->type->toString()));
+            }
+        } catch (std::exception &e) {
+            funcDependencyRealName.clear();
+            while (c->size() != 1) {
+                c->pop();
+            }
+            throw e;
         }
         c->pop();
-        globalInfo().checkedFunc.insert(name);
+        globalInfo().funcDependency[name] = std::move(funcDependencyRealName);
+        funcDependencyRealName.clear();
+        return globalInfo().funcDependency[name];
     }
-    void checkNeedCheck() {
-        while (!needCheckFunc.empty()) {
-            auto name = *needCheckFunc.begin();
-            checkRealFunction(name);
-            needCheckFunc.erase(name);
+    void checkRealFunctionSet(std::set<std::string> &needCheck) {
+        while (!needCheck.empty()) {
+            auto name = *needCheck.begin();
+            needCheck.erase(needCheck.begin());
+            needCheck.merge(checkRealFunction(name));
         }
     }
     bool canAccess(MemberAccessExprAST &v) {
@@ -637,7 +641,7 @@ struct ExpressionSemantic : public ASTVisitor {
     // temp variable need trans through function
     bool needRelease;
     std::unique_ptr<ExprAST> needChange;
-    std::set<std::string> needCheckFunc;
+    std::set<std::string> funcDependencyRealName;
 };
 
 } // namespace rulejit

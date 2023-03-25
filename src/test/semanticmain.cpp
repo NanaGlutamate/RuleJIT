@@ -8,19 +8,18 @@ int testCase(const std::string &s, bool expectError = false) {
     using namespace std;
     using namespace rulejit;
 
+    static ContextStack stack;
     static ExpressionLexer lexer;
     static ExpressionParser parser;
-    static ExpressionSemantic semantic;
-    static ContextStack stack;
+    static ExpressionSemantic semantic(stack);
     static ASTPrinter printer;
-
-    semantic.loadContext(&stack);
 
 #ifdef CATCH_EXCEPTION
     try {
 #endif
         stack.clear();
-        std::vector<std::unique_ptr<ExprAST>> tmp = s | lexer | parser | semantic;
+        auto name = s | lexer | parser | semantic;
+        auto &e = stack.global.realFuncDefinition[name]->returnValue;
         // s | lexer;
         // while (lexer.tokenType() == TokenType::ENDLINE) {
         //     lexer.pop(ExpressionLexer::Guidence::IGNORE_BREAK);
@@ -33,9 +32,7 @@ int testCase(const std::string &s, bool expectError = false) {
         // }
         // tmp = std::move(tmp) | semantic;
         cout << "PASSED" << endl;
-        for (auto &e : tmp) {
-            cout << "    " << e->type->toString() << endl;
-        }
+        cout << "    " << e->type->toString() << endl;
         for (auto &f : stack.global.realFuncDefinition) {
             cout << "    " << f.first << ": " << f.second->funcType->toString() << endl;
         }
@@ -146,7 +143,6 @@ int main() {
         var tmp := Tmp{}
         tmp.__buildin__0_a()
     )");
-
 
     return 0;
 }

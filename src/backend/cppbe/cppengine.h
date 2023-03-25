@@ -13,13 +13,13 @@
 namespace rulejit::cppgen {
 
 struct CppEngine {
-    CppEngine() : stack() {
-        semantic.loadContext(&stack);
-        codegen.loadContext(&stack);
+    CppEngine() : context() {
+        semantic.loadContext(&context);
+        codegen.loadContext(&context);
         codegen.loadMetaInfo(&data);
         namespaceName = "ruleset";
         outputPath = "./src/";
-        auto &tar = stack.scope.back().varDef;
+        auto &tar = context.scope.back().varDef;
         auto& oneParamFunc = BuildInUnaryType;
         tar.emplace("not", oneParamFunc);
         tar.emplace("sin", oneParamFunc);
@@ -67,7 +67,7 @@ struct CppEngine {
 
   private:
     MetaInfo data;
-    ContextStack stack;
+    ContextStack context;
     ExpressionLexer lexer;
     ExpressionParser parser;
     ExpressionSemantic semantic;
