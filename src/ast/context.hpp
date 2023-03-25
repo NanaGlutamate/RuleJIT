@@ -18,6 +18,8 @@ struct SymbolTable {
 };
 
 struct ContextGlobal {
+    // real function dependency graph
+    std::map<std::string, std::set<std::string>> funcDependency;
     // real function name
     std::set<std::string> checkedFunc;
     // real function name -> function definition
@@ -51,9 +53,8 @@ struct ContextGlobal {
 struct ContextFrame {
     // var name / used function name -> type
     std::map<std::string, TypeInfo> varDef;
-    // // var name / used function name -> type
-    // std::map<std::string, TypeInfo> literalVarDef;
-    // std::set<std::string> capturedSymbol;
+    // // var name -> real func closure type name list that capture this var
+    // std::map<std::string, std::vector<std::string>> capturedInfo;
     size_t scopeID = 0;
     size_t subScopeCounter = 0;
 };

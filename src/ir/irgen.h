@@ -15,6 +15,7 @@ struct IRGenerator : public ASTVisitor {
     IRGenerator(IRGenerator &&) = delete;
     IRGenerator &operator=(const IRGenerator &) = delete;
     IRGenerator &operator=(IRGenerator &&) = delete;
+    
     virtual ~IRGenerator() = default;
     void clear() {}
     void friend operator|(std::pair<std::string, std::unique_ptr<FunctionDefAST>> &src, IRGenerator &irgen) {

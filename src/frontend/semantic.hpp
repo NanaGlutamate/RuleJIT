@@ -17,6 +17,9 @@
 #define __RULEJIT_SEMANTIC_PUSH pushStack(v.get());
 #define __RULEJIT_SEMANTIC_POP popStack();
 
+// TODO: bugs
+// 1. func's unused param has undefined type will pass check
+
 namespace rulejit {
 
 // any symbol starts with reservedPrefix is real function name
@@ -36,14 +39,39 @@ struct ExpressionSemantic : public ASTVisitor {
 
     // ContextStack cannot be destructed before last process call of this
     void loadContext(ContextStack *context) { c = context; }
-    std::vector<std::unique_ptr<ExprAST>> friend operator|(std::vector<std::unique_ptr<ExprAST>> ast,
-                                                           ExpressionSemantic &t) {
-        for (auto &i : ast) {
-            i = std::move(i) | t;
+    std::string addUnnamedFunction(std::vector<std::unique_ptr<ExprAST>> ast) {
+        init();
+        std::unique_ptr<ExprAST> tmp;
+        if (ast.size() == 0) {
+            // return "";
+            tmp = nop();
+        } else if (ast.size() == 1) {
+            tmp = std::move(ast[0]);
+        } else {
+            tmp = std::make_unique<BlockExprAST>(std::make_unique<TypeInfo>(*(ast.back()->type)), std::move(ast));
         }
-        return std::move(ast);
+        auto name = c->generateUniqueName(reservedPrefix, "unnamed");
+        auto type = std::make_unique<TypeInfo>();
+        if (*(tmp->type) != NoInstanceType) {
+            type->idents = {"func", ":"};
+            type->subTypes.push_back(*(tmp->type));
+        } else {
+            type->idents = {"func"};
+        }
+        globalInfo().realFuncDefinition[name] = std::make_unique<FunctionDefAST>(
+            name, std::move(type), std::vector<std::unique_ptr<VarDefAST>>(), std::move(tmp), std::move(tmp));
+        try {
+            checkFunction(name);
+        } catch (std::exception &e) {
+            needCheckFunc.clear();
+            globalInfo().realFuncDefinition.erase(name);
+            throw e;
+        }
+        return name;
     }
+    // TODO: return unnamed func
     std::vector<std::unique_ptr<ExprAST>> friend operator|(ExpressionParser &parser, ExpressionSemantic &semantic) {
+        semantic.init();
         std::vector<std::unique_ptr<ExprAST>> topLevelExprs;
         std::unique_ptr<ExprAST> tmp;
         while ((tmp = parser) != nullptr) {
@@ -57,58 +85,46 @@ struct ExpressionSemantic : public ASTVisitor {
             }
         }
         return std::move(topLevelExprs);
-        // if (topLevelExprs.size() == 0) {
-        //     return nop();
-        // } else if (topLevelExprs.size() == 1) {
-        //     return std::move(topLevelExprs[0]);
-        // } else {
-        //     return std::make_unique<BlockExprAST>(std::make_unique<TypeInfo>(*(topLevelExprs.back()->type)),
-        //                                           std::move(topLevelExprs));
-        // }
     }
+    // TODO: return unnamed func
     std::unique_ptr<ExprAST> friend operator|(std::unique_ptr<ExprAST> i, ExpressionSemantic &t) {
-        t.needChange = nullptr;
-        t.needRelease = false;
-        t.needCheckFunc.clear();
-        if (t.c->size() == 0) {
-            t.c->clear();
-        }
-        while (t.c->size() != 1) {
-            t.c->pop();
-        }
-
-        i->accept(&t);
-        t.afterAccept(i);
-        while (!t.needCheckFunc.empty()) {
-            auto name = *t.needCheckFunc.begin();
-            if (auto it = t.globalInfo().checkedFunc.find(name); it == t.globalInfo().checkedFunc.end()) {
-                t.checkRealFunction(name);
-                t.globalInfo().checkedFunc.insert(name);
-            }
-            t.needCheckFunc.erase(name);
+        t.init();
+        try {
+            i->accept(&t);
+            t.afterAccept(i);
+            t.checkNeedCheck();
+        } catch (std::exception &e) {
+            t.needCheckFunc.clear();
+            throw e;
         }
         return std::move(i);
     }
     void checkFunction(const std::string &name) {
+        init();
+        try {
+            checkRealFunction(name);
+            checkNeedCheck();
+        } catch (std::exception &e) {
+            // TODO: cannot simply clear.
+            // if A depends on B, A pass check but B not, will incorrectly generate IR
+            // 1. store dependent graph?
+            // 2. check only apply to function?
+            needCheckFunc.clear();
+            throw e;
+        }
+    }
+    void init() {
         needChange = nullptr;
         needRelease = false;
-        needCheckFunc.clear();
+        my_assert(needCheckFunc.empty());
         if (c->size() == 0) {
             c->clear();
         }
         while (c->size() != 1) {
             c->pop();
         }
-        needCheckFunc.insert(name);
-        while (!needCheckFunc.empty()) {
-            auto name = *needCheckFunc.begin();
-            if (auto it = globalInfo().checkedFunc.find(name); it == globalInfo().checkedFunc.end()) {
-                checkRealFunction(*it);
-                globalInfo().checkedFunc.insert(name);
-            }
-            needCheckFunc.erase(name);
-        }
     }
+
     VISIT_FUNCTION(IdentifierExprAST) {
         auto [find, type] = c->seekVarDef(v.name);
         if (auto it = globalInfo().funcDef.find(v.name); it != globalInfo().funcDef.end()) {
@@ -455,6 +471,9 @@ struct ExpressionSemantic : public ASTVisitor {
     VISIT_FUNCTION(VarDefAST) {
         v.definedValue->accept(this);
         afterAccept(v.definedValue);
+        if (*(v.definedValue->type) == NoInstanceType) {
+            return setError("Var defined value has no return");
+        }
         if (*(v.definedValue->type) != *(v.valueType) && *(v.valueType) != AutoType) {
             return setError("Var def type mismatch");
         } else if (*(v.valueType) == AutoType) {
@@ -573,7 +592,11 @@ struct ExpressionSemantic : public ASTVisitor {
         }
     }
     void checkRealFunction(const std::string &name) {
+        // TODO: erase real function def(and func/member/etc.) if error? never erase
         my_assert(c->size() == 1);
+        if (globalInfo().checkedFunc.contains(name)) {
+            return;
+        }
         auto &func = globalInfo().realFuncDefinition.find(name)->second;
         c->push();
         for (auto &&param : func->params) {
@@ -587,6 +610,14 @@ struct ExpressionSemantic : public ASTVisitor {
                                                func->returnValue->type->toString()));
         }
         c->pop();
+        globalInfo().checkedFunc.insert(name);
+    }
+    void checkNeedCheck() {
+        while (!needCheckFunc.empty()) {
+            auto name = *needCheckFunc.begin();
+            checkRealFunction(name);
+            needCheckFunc.erase(name);
+        }
     }
     bool canAccess(MemberAccessExprAST &v) {
         if (isType<LiteralExprAST>(v.memberToken.get())) {
