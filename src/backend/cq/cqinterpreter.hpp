@@ -268,7 +268,8 @@ struct CQInterpreter : public ASTVisitor {
     }
     VISIT_FUNCTION(BranchExprAST) {
 #ifdef __RULEJIT_INTERPRETER_DEBUG
-        std::cout << "[Check Rule No." << ruleCnt << "]" << std::endl;
+        // TODO: if expr in condition?
+        std::cout << "[Check Rule No." << ruleCnt++ << "]" << std::endl;
 #endif
         returned.type = Value::EMPTY;
         v.condition->accept(this);
@@ -276,9 +277,6 @@ struct CQInterpreter : public ASTVisitor {
         if (returned.value != 0) {
             v.trueExpr->accept(this);
         } else {
-#ifdef __RULEJIT_INTERPRETER_DEBUG
-            ruleCnt++;
-#endif
             v.falseExpr->accept(this);
         }
     }

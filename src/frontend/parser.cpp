@@ -83,7 +83,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBinOpRHS(Priority priority, std:
 // cannot return unary function; returned unary function act as normal function
 // UNARYEXPR := unary UNARYEXPR | MEMBERACCESS
 std::unique_ptr<ExprAST> ExpressionParser::parseUnary() {
-    if (!buildInUnary.contains(lexer->topCopy())) {
+    if (!reloadableBuildInUnary.contains(lexer->topCopy())) {
         return parsePrimary();
     }
     auto op = lexer->popCopy(IGNORE_BREAK);

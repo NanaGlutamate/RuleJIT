@@ -117,19 +117,36 @@ int main() {
     //     var a f64 = 1
     //     a.add(2)
     // )");
+    // testCase(R"(
+    //     type Vector3 struct {x f64;y f64;z f64}
+    //     func add(a Vector3) (b Vector3):Vector3->{
+    //         Vector3{.x:a.x+b.x,.y:a.y+b.y,.z:a.z+b.z}
+    //     }
+    //     func +(a Vector3, b Vector3):Vector3->{
+    //         Vector3{.x:a.x+b.x,.y:a.y+b.y,.z:a.z+b.z}
+    //     }
+    //     var a Vector3 = Vector3{.x:1,.y:2,.z:3}
+    //     var b Vector3 = Vector3{.x:1,.y:2,.z:3}
+    //     a.add(b)
+    //     a+b
+    // )");
+    // testCase(R"(
+    //     type Tmp struct {a func()}
+    //     func a(a Tmp)(){
+    //         a.a()
+    //     }
+    //     var tmp := Tmp{}
+    //     tmp.a()
+    // )");
     testCase(R"(
-        type Vector3 struct {x f64;y f64;z f64}
-        func add(a Vector3) (b Vector3):Vector3->{
-            Vector3{.x:a.x+b.x,.y:a.y+b.y,.z:a.z+b.z}
+        type Tmp struct {x func()}
+        func __buildin__0_a(a Tmp)(){
+            a.x()
         }
-        func +(a Vector3, b Vector3):Vector3->{
-            Vector3{.x:a.x+b.x,.y:a.y+b.y,.z:a.z+b.z}
-        }
-        var a Vector3 = Vector3{.x:1,.y:2,.z:3}
-        var b Vector3 = Vector3{.x:1,.y:2,.z:3}
-        a.add(b)
-        a+b
+        var tmp := Tmp{}
+        tmp.__buildin__0_a()
     )");
+
 
     return 0;
 }

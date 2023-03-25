@@ -57,16 +57,16 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     VISIT_FUNCTION(IdentifierExprAST) {
         // only thing differs from common cppcodegen
         if (std::find(m->inputVar.begin(), m->inputVar.end(), v.name) != m->inputVar.end()) {
-            returned += std::format("(std::add_const(base.in.{}))", v.name);
+            returned += std::format("(_in.{})", v.name);
         } else if (std::find(m->outputVar.begin(), m->outputVar.end(), v.name) != m->outputVar.end()) {
-            returned += std::format("(base.out.{})", v.name);
+            returned += std::format("(_out.{})", v.name);
         } else if (std::find(m->cacheVar.begin(), m->cacheVar.end(), v.name) != m->cacheVar.end()) {
             // cannot remove loadCache, cause assign will evaluate rhs befor lhs
             // TODO: name string & member pointer -> index & boost::pfr
 
             // if (!loadedVar.contains(v.name)) {
             auto cnt = std::find(m->cacheVar.begin(), m->cacheVar.end(), v.name) - m->cacheVar.begin();
-            returned += std::format("(loadCache(base, &Cache::{0}, {1}), cache.{0})", v.name, cnt);
+            returned += std::format("(loadCache(_base, &Cache::{0}, {1}), cache.{0})", v.name, cnt);
             //     loadedVar.emplace(v.name);
             // }else{
             //     returned += std::format("(cache.{})", v.name);

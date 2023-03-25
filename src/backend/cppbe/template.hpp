@@ -216,7 +216,9 @@ inline constexpr auto subRulesetDef = R"(    struct {{
                 }});
             }}
         }}
-        int Tick(RuleSet& base){{
+        int Tick(RuleSet& _base){{
+            const auto& _in = _base.in;
+            auto& _out = _base.out;
             return {1};
         }}
         void writeBack(RuleSet& base){{
@@ -242,6 +244,7 @@ endif()
 
 add_library(${{PROJ_NAME}} SHARED {1}ruleset.cpp)
 add_executable(${{PROJ_NAME}}_test testmain.cpp)
+add_dependencies(${{PROJ_NAME}}_test ${{PROJ_NAME}})
 if(UNIX)
 target_link_libraries(${{PROJ_NAME}} dl)
 else(UNIX)

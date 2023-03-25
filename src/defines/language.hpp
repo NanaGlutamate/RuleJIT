@@ -38,15 +38,15 @@ inline const std::set<std::string_view> buildInType{
     typeident::RealTypeIdent,
 };
 
-inline const std::set<std::string> buildInUnary{
+inline const std::set<std::string> reloadableBuildInUnary{
     "-", "not", "!", "&", "*", "~", "||", "&&", "*", "&", "<-", "->",
 };
 
 using Priority = int;
 
-// A "<-" B := (*A) = B
+// A "<-" B := (*A) = B TODO: A < -B? use <<-
 inline const std::set<std::string_view> buildInMultiCharSymbol{
-    "==", "!=", ">=", "<=", "&&", "||", "->", "..", ">>", "<<", /* "<-", */ ":=",
+    "==", "!=", ">=", "<=", "&&", "||", "->", "..", ">>", "<<", "<<-", ":=",
 };
 
 constexpr Priority UserDefinedPriority = 5;
@@ -82,7 +82,7 @@ inline const std::map<std::string, Priority> reloadableBuildInInfix{
     {"..", UserDefinedPriority},
 
     {"=", AssignPriority},
-    {"<-", AssignPriority},
+    {"<<-", AssignPriority},
 };
 
 inline const std::set<std::string_view> defKeyWords{

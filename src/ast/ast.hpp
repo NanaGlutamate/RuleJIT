@@ -299,21 +299,11 @@ struct SymbolDefAST : public DefAST {
         EXPORT,
         EXTERN,
     } symbolCommandType;
+    // TODO: alias name
     std::unique_ptr<TypeInfo> definedType;
     template <typename S>
     SymbolDefAST(S &&name, SymbolCommandType symbolCommandType, std::unique_ptr<TypeInfo> definedType)
         : DefAST(std::forward<S>(name)), symbolCommandType(symbolCommandType), definedType(std::move(definedType)) {}
 };
-
-// // TODO:
-// // var x i32 = 1
-// //     + 12 //legal?
-// // TOP := PACKAGECOMMAND TOP | TOPEXPR
-// // TOPEXPR := (EXPR | DEF | ASSIGN) ENDLINE TOPEXPR | ()
-// struct TopLevelAST : public AST {
-//     ACCEPT_FUNCTION;
-//     std::vector<std::unique_ptr<AST>> statements;
-//     template <typename V> TopLevelAST(V &&statements) : statements(std::forward<V>(statements)) {}
-// };
 
 } // namespace rulejit

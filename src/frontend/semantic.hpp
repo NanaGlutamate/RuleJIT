@@ -19,8 +19,8 @@
 
 namespace rulejit {
 
-constexpr inline auto reservePrefix = "__buildin_";
-constexpr inline auto replacePrefix = "user_defined";
+// any symbol starts with reservedPrefix is real function name
+constexpr inline auto reservedPrefix = "__buildin";
 
 // 1. type inference
 // 2. TODO: name unnamed complex type(in vardef, typedef, literal and funcdef)
@@ -110,9 +110,6 @@ struct ExpressionSemantic : public ASTVisitor {
         }
     }
     VISIT_FUNCTION(IdentifierExprAST) {
-        if (v.name.starts_with(reservePrefix)) {
-            v.name = replacePrefix + v.name;
-        }
         auto [find, type] = c->seekVarDef(v.name);
         if (auto it = globalInfo().funcDef.find(v.name); it != globalInfo().funcDef.end()) {
             // normal func
@@ -456,9 +453,6 @@ struct ExpressionSemantic : public ASTVisitor {
         return;
     }
     VISIT_FUNCTION(VarDefAST) {
-        if (v.name.starts_with(reservePrefix)) {
-            v.name = replacePrefix + v.name;
-        }
         v.definedValue->accept(this);
         afterAccept(v.definedValue);
         if (*(v.definedValue->type) != *(v.valueType) && *(v.valueType) != AutoType) {
@@ -485,12 +479,9 @@ struct ExpressionSemantic : public ASTVisitor {
             // TODO: named lambda
             return setError("Only allow top-level func def");
         }
-        if (v.name.starts_with(reservePrefix)) {
-            v.name = replacePrefix + v.name;
-        }
-        std::string realFuncName = c->generateUniqueName(std::string(reservePrefix), toLegalName(v.name));
+        std::string realFuncName = c->generateUniqueName(std::string(reservedPrefix), toLegalName(v.name));
         if (v.funcDefType == FunctionDefAST::FuncDefType::SYMBOLIC) {
-            if (v.params.size() != 2 && (v.params.size() != 1 || !buildInUnary.contains(v.name))) {
+            if (v.params.size() != 2 && (v.params.size() != 1 || !reloadableBuildInUnary.contains(v.name))) {
                 return setError("Infix function must have 2 params, "
                                 "and operator overload must match the number of params");
             }
@@ -545,8 +536,6 @@ struct ExpressionSemantic : public ASTVisitor {
         for (auto c : token) {
             if (isalpha(c) || c == '_') {
                 tmp += c;
-            } else if (isdigit(c)) {
-                tmp += "_" + c;
             } else {
                 tmp += "_" + std::to_string((size_t)c);
             }
@@ -579,20 +568,15 @@ struct ExpressionSemantic : public ASTVisitor {
         if (type.isArrayType()) {
             return processType(type.getElementType());
         }
-
         if (type.isBaseType() && !globalInfo().typeDef.contains(type.getBaseType()) && !BuildInType.contains(type)) {
             return setError(std::format("type \"{}\" is not defined", type.toString()));
         }
     }
     void checkRealFunction(const std::string &name) {
-        // TODO: rename var which name starts with "__func"
         my_assert(c->size() == 1);
         auto &func = globalInfo().realFuncDefinition.find(name)->second;
         c->push();
         for (auto &&param : func->params) {
-            if (param->name.starts_with(reservePrefix)) {
-                param->name = replacePrefix + param->name;
-            }
             c->top().varDef[param->name] = *(param->type);
         }
         func->returnValue->accept(this);
@@ -617,8 +601,6 @@ struct ExpressionSemantic : public ASTVisitor {
         }
         return (v.baseVar->type->isArrayType() && *(v.memberToken->type) == IntType);
     }
-    // void pushStack(AST* v){callStack.push_back(v);}
-    // void popStack(){callStack.pop_back();}
     ContextStack *c;
 
     // temp variable need trans through function

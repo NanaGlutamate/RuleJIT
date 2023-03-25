@@ -51,11 +51,11 @@ int main() {
         }
         if (in == "\n")
             continue;
-        if (in.size() > 5 && in[0] == 'f' && in[1] == 'u' && in[2] == 'n' && in[3] == 'c' && in[4] == ' ') {
+        if (in.starts_with("func ")) {
             in = "{" + in + "}";
         }
         try {
-            auto expr = in | lexer | parser;
+            std::unique_ptr<ExprAST> expr = in | lexer | parser;
             expr | interpreter;
             if (interpreter.returned.type == CQInterpreter::Value::VALUE) {
                 cout << interpreter.returned.value;
