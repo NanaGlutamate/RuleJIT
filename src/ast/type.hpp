@@ -40,14 +40,14 @@ struct TypeInfo {
         auto tmp = idents <=> other.idents;
         // my_assert(tmp != std::strong_ordering::equivalent);
         if (tmp == std::strong_ordering::equivalent) {
-            if(subTypes.size()<other.subTypes.size()){
+            if (subTypes.size() < other.subTypes.size()) {
                 return std::strong_ordering::less;
-            }else if(subTypes.size()>other.subTypes.size()){
+            } else if (subTypes.size() > other.subTypes.size()) {
                 return std::strong_ordering::greater;
-            }else{
-                for(size_t i=0;i<subTypes.size();++i){
+            } else {
+                for (size_t i = 0; i < subTypes.size(); ++i) {
                     auto tmp2 = subTypes[i] <=> other.subTypes[i];
-                    if(tmp2!=std::strong_ordering::equivalent){
+                    if (tmp2 != std::strong_ordering::equivalent) {
                         return tmp2;
                     }
                 }
@@ -57,23 +57,23 @@ struct TypeInfo {
             return tmp;
         }
     }
-    bool operator==(const TypeInfo&) const = default;
+    bool operator==(const TypeInfo &) const = default;
     bool isValid() const { return idents.size() >= 1 && idents[0] != ""; }
-    std::string baseType() const {
-        if (!isValid()) {
-            return "";
-        }
-        std::string res;
-        auto it = idents.begin();
-        while (it != idents.end() && ((*it)[0] == '[' || *it == "*")) {
-            ++it;
-        }
-        while (it != idents.end()) {
-            res += *it;
-            ++it;
-        }
-        return res;
-    }
+    // std::string baseType() const {
+    //     if (!isValid()) {
+    //         return "";
+    //     }
+    //     std::string res;
+    //     auto it = idents.begin();
+    //     while (it != idents.end() && ((*it)[0] == '[' || *it == "*")) {
+    //         ++it;
+    //     }
+    //     while (it != idents.end()) {
+    //         res += *it;
+    //         ++it;
+    //     }
+    //     return res;
+    // }
     std::string toString() const {
         std::string res;
         size_t real = 0;
@@ -121,9 +121,29 @@ struct TypeInfo {
         }
         return res;
     }
-    bool isFunctionType() const { return isValid() && idents[0] == "func"; }
-    bool isNoReturnFunctionType() const { return isFunctionType() && idents.size() == 1; }
-    bool isReturnedFunctionType() const { return isFunctionType() && idents.size() == 2 && idents[1] == ":"; }
+
+
+    bool isBaseType() const {
+        return isValid() && idents.size() == 1 && idents[0] != "func" && idents[0] != "struct" &&
+               idents[0] != "class" && idents[0] != "dynamic";
+    }
+    TypeInfo getBaseType() const {
+        TypeInfo tmp = *this;
+        while(tmp.idents[0] == "*" || tmp.idents[0] == "const" || tmp.idents[0][0] == '[') {
+            tmp.idents.erase(tmp.idents.begin());
+        }
+        return tmp;
+    }
+    std::string getBaseTypeString() const {
+        my_assert(isBaseType(), "only base type can call getBaseTypeString()");
+        return idents[0];
+    }
+
+
+    bool isComplexType() const {
+        return isValid() && idents.size() >= 1 &&
+               (idents[0] == "struct" || idents[0] == "class" || idents[0] == "dynamic");
+    }
     bool hasMember(std::string token) const {
         my_assert(isComplexType(), "only complex type has member");
         auto it = std::find(idents.begin() + 1, idents.end(), token);
@@ -135,41 +155,42 @@ struct TypeInfo {
         my_assert(it != idents.end(), "member not found: " + token);
         return subTypes[it - idents.begin() - 1];
     }
+    const std::string &getMemberName(size_t index) const {
+        my_assert(isComplexType(), "only complex type has member");
+        return idents[index + 1];
+    }
+    size_t getMemberCount() const {
+        my_assert(isComplexType(), "only complex type has member");
+        my_assert(idents.size() == subTypes.size() + 1, "idents and subTypes size mismatch");
+        return subTypes.size();
+    }
+
+
+    bool isFunctionType() const { return isValid() && idents[0] == "func"; }
+    bool isNoReturnFunctionType() const { return isFunctionType() && idents.size() == 1; }
+    bool isReturnedFunctionType() const { return isFunctionType() && idents.size() == 2 && idents[1] == ":"; }
+    const TypeInfo &getArgType(size_t index) const {
+        my_assert(isFunctionType(), "only function type has arg");
+        my_assert(index < subTypes.size(), "index out of range");
+        return subTypes[index];
+    }
+    const TypeInfo &getReturnedType() const;
+
+
     bool isPointerType() const { return isValid() && idents.size() >= 1 && idents[0] == "*"; }
     TypeInfo getPointerType() const {
         TypeInfo res = *this;
         res.idents.insert(res.idents.begin(), "*");
         return res;
     }
-    const TypeInfo &getReturnedType() const;
     // not complex nor function nor pointer nor array type
     bool isArrayType() const { return isValid() && idents.size() >= 1 && idents[0][0] == '['; }
-
-    const TypeInfo &getArgType(size_t index) const {
-        my_assert(isFunctionType(), "only function type has arg");
-        my_assert(index < subTypes.size(), "index out of range");
-        return subTypes[index];
-    }
     TypeInfo getElementType() const {
         my_assert(isArrayType(), "only array type has element");
         TypeInfo res = *this;
         res.idents.erase(res.idents.begin());
         return res;
     }
-    bool isBaseType() const {
-        return isValid() && idents.size() == 1 && idents[0] != "func" && idents[0] != "struct" &&
-               idents[0] != "class" && idents[0] != "dynamic";
-    }
-    std::string getBaseType() const {
-        my_assert(isBaseType(), "only base type can call getBaseType()");
-        return idents[0];
-    }
-    bool isComplexType() const {
-        return isValid() && idents.size() >= 1 &&
-               (idents[0] == "struct" || idents[0] == "class" || idents[0] == "dynamic");
-    }
-    // {"struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"}
-    TypeInfo memberType(std::string token);
 };
 
 struct TypeParser {
@@ -274,18 +295,6 @@ struct TypeParser {
 inline TypeInfo make_type(const std::string &type) {
     static ExpressionLexer lexer;
     return type | lexer | TypeParser();
-}
-
-inline TypeInfo TypeInfo::memberType(std::string token) {
-    static ExpressionLexer lexer;
-    if (!isComplexType()) {
-        return {};
-    }
-    for (size_t start = 1; start < idents.size(); start++) {
-        if (idents[start] == token) {
-            return subTypes[start - 1];
-        }
-    }
 }
 
 } // namespace rulejit

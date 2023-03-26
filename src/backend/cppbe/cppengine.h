@@ -13,10 +13,7 @@
 namespace rulejit::cppgen {
 
 struct CppEngine {
-    CppEngine() : context() {
-        semantic.loadContext(&context);
-        codegen.loadContext(&context);
-        codegen.loadMetaInfo(&data);
+    CppEngine() : context(), data(), semantic(context), codegen(context, data) {
         namespaceName = "ruleset";
         outputPath = "./src/";
         auto &tar = context.scope.back().varDef;

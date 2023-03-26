@@ -23,6 +23,20 @@ std::string CppStyleType(const TypeInfo &type) {
     throw std::logic_error(std::format("unsupported type: {}", type.toString()));
 }
 
+std::string CppStyleParamType(const TypeInfo &type) {
+    // only support vector and base type
+    if (type == NoInstanceType) {
+        return "void";
+    }
+    if (type.isBaseType()) {
+        return type.idents[0];
+    }
+    if (type.idents.size() == 2 && type.idents[0] == "[]") {
+        return "const std::vector<" + type.idents[1] + ">&";
+    }
+    throw std::logic_error(std::format("unsupported type: {}", type.toString()));
+}
+
 std::string innerType(std::string type) {
     std::string tmp;
     while (type.back() == ']') {
@@ -66,7 +80,16 @@ class CStyleString {
     ~CStyleString() { delete[] s; };
 };
 
-constexpr auto preDefines = R"()";
+constexpr auto preDefines = R"(
+type Vector3 struct {
+    x f64;
+    y f64;
+    z f64;
+}
+func addv(a Vector3, b Vector3):Vector3 {
+    Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
+}
+)";
 
 } // namespace
 
@@ -76,7 +99,9 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     using namespace rapidxml;
     using namespace templates;
 
-    preDefines | lexer | parser | semantic;
+    std::set<std::string> notGenerate;
+
+    notGenerate.insert(preDefines | lexer | parser | semantic);
 
     xml_document<> doc;
     CStyleString s(srcXML);
@@ -90,7 +115,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
          typeDef = typeDef->next_sibling("TypeDefine")) {
         std::string type = typeDef->first_attribute("type")->value();
         if (type == "Input" || type == "Output" || type == "Cache") {
-            throw std::logic_error("Donot support user defined type name Input/Output/Cache");
+            throw std::logic_error("Donot support user defined type name _Input/_Output/_Cache");
         }
         auto &tar = data.typeDefines[type];
         for (auto member = typeDef->first_node("Variable"); member; member = member->next_sibling("Variable")) {
@@ -141,7 +166,8 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         expr += "{-1}}";
         // std::cout<<expr;
         auto astName = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
-        auto& ast = context.global.realFuncDefinition[astName];
+        notGenerate.insert(astName);
+        auto &ast = context.global.realFuncDefinition[astName]->returnValue;
         subs += std::format(subRulesetDef, id, ast | codegen);
     }
     std::ofstream rulesetFile(outputPath + prefix + "ruleset.hpp");
@@ -155,9 +181,9 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     // gen typedefs
     std::string typedefs;
     std::ofstream typeDefFile(outputPath + prefix + "typedef.hpp");
-    data.typeDefines.emplace("Input", assembleType(data.inputVar, data));
-    data.typeDefines.emplace("Output", assembleType(data.outputVar, data));
-    data.typeDefines.emplace("Cache", assembleType(data.cacheVar, data));
+    data.typeDefines.emplace("_Input", assembleType(data.inputVar, data));
+    data.typeDefines.emplace("_Output", assembleType(data.outputVar, data));
+    data.typeDefines.emplace("_Cache", assembleType(data.cacheVar, data));
     for (auto &&[name, members] : data.typeDefines) {
         std::string member, serialize, deserialize;
         for (auto [token, type] : members) {
@@ -194,25 +220,32 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     }
     typeDefFile << std::format(typeDefHpp, namespaceName, prefix, typedefs);
 
+    // gen func def
     std::ofstream funcDefFile(outputPath + prefix + "funcdef.hpp");
     std::string funcDefs, externDefs;
     for (auto &&[name, func] : context.global.realFuncDefinition) {
+        if (notGenerate.contains(name)) {
+            continue;
+        }
         if (!context.global.checkedFunc.contains(name)) {
             semantic.checkFunction(name);
         }
         std::string params;
         for (auto &&arg : func->params) {
-            params += CppStyleType(*(arg->type)) + " " + arg->name + ", ";
+            params += CppStyleParamType(*(arg->type)) + " " + arg->name + ", ";
         }
         if (!params.empty()) {
             params.erase(params.size() - 2, 2);
         }
-        funcDefs += std::format(funcDef, CppStyleType(func->type->getReturnedType()), name, params, func->returnValue | codegen);
+        funcDefs +=
+            std::format(funcDef, CppStyleType(func->funcType->getReturnedType()), name, params,
+                        (func->funcType->isReturnedFunctionType() ? "return" : "") + (func->returnValue | codegen));
     }
-    for(auto &&[name, type] : context.global.externFuncDef) {
+    for (auto &&[name, type] : context.global.externFuncDef) {
         std::string params;
         size_t param_cnt = type.subTypes.size() - type.isReturnedFunctionType() ? 1 : 0;
         for (size_t i = 0; i < param_cnt; ++i) {
+            // TODO: array param?
             params += CppStyleType(type.subTypes[i]) + ", ";
         }
         if (!params.empty()) {

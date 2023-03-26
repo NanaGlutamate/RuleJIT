@@ -152,7 +152,7 @@ inline constexpr auto externFuncDef = R"(
 // returntype, funcname, params, body
 inline constexpr auto funcDef = R"(
 inline {0} {1}({2}) {{
-    {3}
+    {3};
 }}
 )";
 
@@ -168,9 +168,9 @@ inline constexpr auto rulesetHpp = R"(#pragma once
 namespace {0}{{
 
 struct RuleSet{{
-    Input in;
-    Output out;
-    Cache cache;
+    _Input in;
+    _Output out;
+    _Cache cache;
     CSValueMap out_map;
     RuleSet() = default;
     void Init(){{

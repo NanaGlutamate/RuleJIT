@@ -19,9 +19,7 @@
 namespace rulejit::cppgen {
 
 struct SubRuleSetCodeGen : public ASTVisitor {
-    SubRuleSetCodeGen() = default;
-    void loadContext(ContextStack *context) { c = context; }
-    void loadMetaInfo(MetaInfo* metaInfo) { m = metaInfo; }
+    SubRuleSetCodeGen(ContextStack &context, MetaInfo& metaInfo):c(context), m(metaInfo) {};
     std::string friend operator|(const std::pair<std::string, std::unique_ptr<FunctionDefAST>> &func,
                                  SubRuleSetCodeGen &t) {
         std::string returnedType, funcName, params, body;
@@ -56,16 +54,16 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     VISIT_FUNCTION(IdentifierExprAST) {
         // only thing differs from common cppcodegen
-        if (std::find(m->inputVar.begin(), m->inputVar.end(), v.name) != m->inputVar.end()) {
+        if (std::find(m.inputVar.begin(), m.inputVar.end(), v.name) != m.inputVar.end()) {
             returned += std::format("(_in.{})", v.name);
-        } else if (std::find(m->outputVar.begin(), m->outputVar.end(), v.name) != m->outputVar.end()) {
+        } else if (std::find(m.outputVar.begin(), m.outputVar.end(), v.name) != m.outputVar.end()) {
             returned += std::format("(_out.{})", v.name);
-        } else if (std::find(m->cacheVar.begin(), m->cacheVar.end(), v.name) != m->cacheVar.end()) {
+        } else if (std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) != m.cacheVar.end()) {
             // cannot remove loadCache, cause assign will evaluate rhs befor lhs
             // TODO: name string & member pointer -> index & boost::pfr
 
             // if (!loadedVar.contains(v.name)) {
-            auto cnt = std::find(m->cacheVar.begin(), m->cacheVar.end(), v.name) - m->cacheVar.begin();
+            auto cnt = std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) - m.cacheVar.begin();
             returned += std::format("(loadCache(_base, &Cache::{0}, {1}), cache.{0})", v.name, cnt);
             //     loadedVar.emplace(v.name);
             // }else{
@@ -182,8 +180,8 @@ struct SubRuleSetCodeGen : public ASTVisitor {
                 returned += ", ";
             }
         } else if (v.type->isBaseType()) {
-            auto it = c->global.typeDef.find(v.type->toString());
-            if (it == c->global.typeDef.end()) {
+            auto it = c.global.typeDef.find(v.type->toString());
+            if (it == c.global.typeDef.end()) {
                 return setError("Unknown type: " + v.type->toString());
             }
             auto &def = it->second;
@@ -245,9 +243,9 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     VISIT_FUNCTION(ControlFlowAST) { return setError("ControlFlowAST not supported"); }
     VISIT_FUNCTION(TypeDefAST) { return setError("TypeDefAST not supported"); }
     VISIT_FUNCTION(VarDefAST) {
-        if (std::find(m->inputVar.begin(), m->inputVar.end(), v.name) != m->inputVar.end() ||
-            std::find(m->outputVar.begin(), m->outputVar.end(), v.name) != m->outputVar.end() ||
-            std::find(m->cacheVar.begin(), m->cacheVar.end(), v.name) != m->cacheVar.end()) {
+        if (std::find(m.inputVar.begin(), m.inputVar.end(), v.name) != m.inputVar.end() ||
+            std::find(m.outputVar.begin(), m.outputVar.end(), v.name) != m.outputVar.end() ||
+            std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) != m.cacheVar.end()) {
             return setError("Variable redefined(already a input/output/cache): " + v.name);
         }
         if (*(v.valueType) == RealType) {
@@ -270,7 +268,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     std::size_t tmp;
     std::string getTmpVarName() {
         std::string name = std::format("_tmp{}", tmp++);
-        while (std::get<0>(c->seekVarDef(name))) {
+        while (std::get<0>(c.seekVarDef(name))) {
             name = std::format("__tmp{}", tmp++);
         }
         return name;
@@ -291,8 +289,8 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         throw std::logic_error(std::format("Code Generate Error{}: {}", location.line(), info));
         // return nullptr;
     }
-    ContextStack *c;
-    MetaInfo *m;
+    ContextStack &c;
+    MetaInfo &m;
 };
 
 } // namespace rulejit::cppgen
