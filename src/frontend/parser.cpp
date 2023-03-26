@@ -438,7 +438,8 @@ std::unique_ptr<std::vector<std::unique_ptr<IdentifierExprAST>>> ExpressionParse
 }
 
 std::unique_ptr<ExprAST> ExpressionParser::parseCommand() {
-    if (lexer->pop(IGNORE_BREAK) == "extern") {
+    if (lexer->top() == "extern") {
+        lexer->pop(IGNORE_BREAK);
         if (lexer->top() == "func") {
             lexer->pop(IGNORE_BREAK);
             auto nameType = lexer->tokenType();

@@ -11,6 +11,9 @@ using namespace rulejit::cppgen;
 
 std::string CppStyleType(const TypeInfo &type) {
     // only support vector and base type
+    if (type == RealType) {
+        return "double";
+    }
     if (type == NoInstanceType) {
         return "void";
     }
@@ -81,6 +84,7 @@ class CStyleString {
 };
 
 constexpr auto preDefines = R"(
+extern func sin (i f64):f64
 type Vector3 struct {
     x f64;
     y f64;
@@ -241,6 +245,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
             std::format(funcDef, CppStyleType(func->funcType->getReturnedType()), name, params,
                         (func->funcType->isReturnedFunctionType() ? "return" : "") + (func->returnValue | codegen));
     }
+    // gen extern func type
     for (auto &&[name, type] : context.global.externFuncDef) {
         std::string params;
         size_t param_cnt = type.subTypes.size() - type.isReturnedFunctionType() ? 1 : 0;
