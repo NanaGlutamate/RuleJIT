@@ -178,8 +178,8 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     }
     auto meta = root->first_node("MetaInfo");
 
-    /// collect input/cache/output vars, and if element <Param> has sub element
-    /// named "Value", add assignment to preprocessOriginal
+    // collect input/cache/output vars, and if element <Param> has sub element
+    // named "Value", add assignment to preprocessOriginal
     std::string preprocessOriginal = "{";
 
     for (auto input = meta->first_node("Inputs")->first_node("Param"); input; input = input->next_sibling("Param")) {
@@ -241,7 +241,6 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
             expr += std::to_string(act) + "}else ";
         }
         expr += "{-1}}";
-        // std::cout<<expr;
         auto astName = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
         notGenerate.insert(astName);
         auto &ast = context.global.realFuncDefinition[astName]->returnValue;

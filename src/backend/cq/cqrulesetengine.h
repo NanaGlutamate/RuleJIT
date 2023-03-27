@@ -3,7 +3,7 @@
  * @author djw
  * @brief CQ/Interpreter/RuleSetEngine
  * @date 2023-03-27
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -33,8 +33,11 @@ struct SubRuleSet {
      */
     SubRuleSet(DataStore &data) : handler(data), interpreter(handler), subruleset(nullptr) {}
     SubRuleSet() = delete;
+    /// @brief resource handler
     ResourceHandler handler;
+    /// @brief expression interpreter
     CQInterpreter interpreter;
+    /// @brief subruleset AST
     std::unique_ptr<ExprAST> subruleset;
 };
 
@@ -109,10 +112,15 @@ struct RuleSetEngine {
     std::unordered_map<std::string, std::any> *getOutput() { return data.GetOutput(); }
 
   private:
+    /// @brief data storage
     DataStore data;
+    /// @brief rule set
     RuleSet ruleset;
+    /// @brief expression lexer
     ExpressionLexer lexer;
+    /// @brief expression parser
     ExpressionParser parser;
+    /// @brief pre-process subruleset, which will called tick() and writeBack() before all subruleset
     SubRuleSet preProcess;
 };
 

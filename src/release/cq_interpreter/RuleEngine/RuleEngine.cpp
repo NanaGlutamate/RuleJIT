@@ -1,3 +1,25 @@
+/**
+ * @file RuleEngine.cpp
+ * @author djw
+ * @brief CQ/Interpreter/Rule engine
+ * @date 2023-03-27
+ * 
+ * @details Includes platform interface function and member function defines of RuleEngine
+ * @see RuleEngine
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
+#ifdef _WIN32
+#include <Windows.h>
+#include <atlbase.h>
+#include <atlwin.h>
+#else
+#include <dlfcn.h>
+#endif
 #include <format>
 #include <string>
 

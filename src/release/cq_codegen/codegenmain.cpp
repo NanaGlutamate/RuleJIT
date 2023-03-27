@@ -1,3 +1,17 @@
+/**
+ * @file codegenmain.cpp
+ * @author djw
+ * @brief CQ/CPPBE/Command line tools
+ * @date 2023-03-27
+ * 
+ * @details Provides a command line tool to generate cpp code from ruleset XML
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -65,7 +79,6 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-    // std::cout << "write to " << codegen.outputPath << std::endl;
     try {
         codegen.buildFromFile(in);
     } catch (std::exception &e) {

@@ -1,3 +1,17 @@
+/**
+ * @file type.hpp
+ * @author djw
+ * @brief AST/Type
+ * @date 2023-03-27
+ * 
+ * @details Includes data structures hold and parse type info
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include <algorithm>
@@ -16,6 +30,11 @@
 
 namespace rulejit {
 
+/**
+ * @ingroup ast
+ * @brief Structural type info
+ * 
+ */
 struct TypeInfo {
     // TODO: remove direct access to idents
     std::vector<std::string> idents; // ("[]" | "*")* (ident | "func" ":"? | struct (ident)* | class (ident)*)
@@ -36,6 +55,11 @@ struct TypeInfo {
         subTypes = std::move(t.subTypes);
         return *this;
     }
+    /**
+     * @brief "spaceship operators" provides compare function between TypeInfo,
+     * allows TypeInfo to act as key in std::set or std::map
+     * 
+     */
     std::strong_ordering operator<=>(const TypeInfo &other) const {
         auto tmp = idents <=> other.idents;
         // my_assert(tmp != std::strong_ordering::equivalent);
@@ -58,22 +82,21 @@ struct TypeInfo {
         }
     }
     bool operator==(const TypeInfo &) const = default;
+    /**
+     * @brief check if this is a valid type
+     * 
+     * @return true 
+     * @return false 
+     */
     bool isValid() const { return idents.size() >= 1 && idents[0] != ""; }
-    // std::string baseType() const {
-    //     if (!isValid()) {
-    //         return "";
-    //     }
-    //     std::string res;
-    //     auto it = idents.begin();
-    //     while (it != idents.end() && ((*it)[0] == '[' || *it == "*")) {
-    //         ++it;
-    //     }
-    //     while (it != idents.end()) {
-    //         res += *it;
-    //         ++it;
-    //     }
-    //     return res;
-    // }
+    /**
+     * @brief get human-readable form string of this type.
+     * permitted to be able to reconstruct from generated string through TypeParser
+     * 
+     * @see TypeParser
+     * 
+     * @return std::string type string
+     */
     std::string toString() const {
         std::string res;
         size_t real = 0;
@@ -193,6 +216,11 @@ struct TypeInfo {
     }
 };
 
+/**
+ * @brief Parser which can get TypeInfo from string.
+ * @see TypeInfo
+ * 
+ */
 struct TypeParser {
     // may leave '\n' as a ENDLINE
     // that means, last 'pop' called by TypeParser is with no Guidence

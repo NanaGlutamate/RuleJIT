@@ -8,6 +8,8 @@
  * AST designed in Visitor Pattern, provides flexibility in AST operations developments.
  * also contains marcos to simplify development.
  * 
+ * @see ASTVisitor
+ * 
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -42,6 +44,8 @@ struct FunctionDefAST;
 
 struct SymbolDefAST;
 
+// template
+
 // struct Foo : public ASTVisitor{
 //     VISIT_FUNCTION(IdentifierExprAST);
 //     VISIT_FUNCTION(MemberAccessExprAST);
@@ -58,6 +62,11 @@ struct SymbolDefAST;
 //     VISIT_FUNCTION(FunctionDefAST);
 // };
 
+/**
+ * @ingroup ast
+ * @brief Pure virtual interface as part of Visitor Design Pattern
+ * 
+ */
 struct ASTVisitor{
     ASTVisitor() = default;
     PURE_VIRTUAL_VISIT_FUNCTION(IdentifierExprAST);

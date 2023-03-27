@@ -1,3 +1,17 @@
+/**
+ * @file ast.hpp
+ * @author djw
+ * @brief AST/AST
+ * @date 2023-03-27
+ * 
+ * @details Includes AST node defines
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 // member pointer of AST to AST is permitted not to be nullptr; type pointer to nullptr means auto type
@@ -19,13 +33,32 @@ using ASTTokenType = std::string;
 
 namespace rulejit {
 
+/**
+ * @brief base class for all AST node
+ * 
+ */
 struct AST {
     virtual void accept(ASTVisitor *) = 0;
     virtual ~AST() = default;
 };
 
+/**
+ * @brief check if AST node can dynamic_cast to given AST type
+ * 
+ * @tparam T target AST type
+ * @param ast pointer to AST need checked
+ * @return bool
+ */
 template <typename T> bool isType(AST *ast) { return dynamic_cast<T *>(ast) != nullptr; }
 
+/**
+ * @brief dynamic_cast through unique_ptr holds AST node
+ * 
+ * @tparam T target AST type
+ * @tparam Src source unique pointer type
+ * @param ast source pointer
+ * @return std::unique_ptr<T> target unique pointer type
+ */
 template <typename T, typename Src> std::unique_ptr<T> asType(Src ast) { return std::unique_ptr<T>(ast.release()); }
 
 // EXPR := BINOP | LEXPR | LITERAL | FUNCCALL | COMPLEX | BRANCH | LOOP | BLOCK | '(' EXPR ')'

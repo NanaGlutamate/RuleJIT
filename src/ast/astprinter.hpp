@@ -26,6 +26,7 @@
 namespace rulejit {
 
 /**
+ * @ingroup ast
  * @brief class to print ast structure
  *
  */
