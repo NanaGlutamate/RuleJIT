@@ -25,7 +25,7 @@
 //     content nextFram[];
 // };
 
-namespace rulejit {
+namespace rulejit::gc {
 
 // TODO: destructor support
 // std::vector<std::function<void(uint64_t*)>> funcTable;

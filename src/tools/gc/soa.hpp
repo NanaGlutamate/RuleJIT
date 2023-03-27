@@ -7,7 +7,7 @@
 #include <stack>
 #include <vector>
 
-namespace rulejit {
+namespace rulejit::gc {
 
 #ifdef __RULEJIT_SOA_VIRTUAL
 struct ISmallObjectAllocator {

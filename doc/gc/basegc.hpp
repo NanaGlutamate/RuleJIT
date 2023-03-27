@@ -14,7 +14,7 @@
 //     content nextFram[];
 // };
 
-namespace rulejit {
+namespace rulejit::gc {
 // template<typename Alloc = std::allocator<size_t>>
 struct [[deprecated]]StaticExtendableMarkSweepGarbageCollector {
     using DataType = int64_t;
