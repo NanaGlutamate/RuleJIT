@@ -1,3 +1,18 @@
+/**
+ * @file escapedanalyzer.hpp
+ * @author djw
+ * @brief AST/Escaped variable analyzer
+ * @date 2023-03-28
+ * 
+ * @details Includes a tool to analyze escaped variables for capture analysis,
+ * not used for now
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include "ast/ast.hpp"

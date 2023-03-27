@@ -1,3 +1,17 @@
+/**
+ * @file parser.h
+ * @author djw
+ * @brief FrontEnd/Parser
+ * @date 2023-03-28
+ * 
+ * @details Parser
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include <format>
@@ -10,10 +24,6 @@
 #include "frontend/lexer.h"
 
 namespace rulejit {
-
-// template <class T>
-// struct Parser{
-// };
 
 struct ExpressionParser {
     ExpressionParser() = default;
@@ -116,10 +126,5 @@ struct ExpressionParser {
     ExpressionLexer *lexer;
     // TokenStream* stream;
 };
-
-// TODO: struct TopLevelParser {}; // infix and unary func must use after define, while normal func don't need to
-
-// auto tmp = s | lexer | parser | compiler;
-// TODO: auto tmp = cin | lexer | parser | interpreter;
 
 } // namespace rulejit

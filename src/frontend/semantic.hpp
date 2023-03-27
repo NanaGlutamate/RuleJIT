@@ -1,3 +1,17 @@
+/**
+ * @file semantic.hpp
+ * @author djw
+ * @brief FrontEnd/Semantic
+ * @date 2023-03-28
+ * 
+ * @details Includes ExpressionSemantic which does semantic analysis
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include <format>
@@ -22,7 +36,7 @@
 
 namespace rulejit {
 
-// any symbol starts with reservedPrefix is real function name
+/// any symbol starts with reservedPrefix is real function name
 constexpr inline auto reservedPrefix = "__buildin";
 
 // 1. type inference

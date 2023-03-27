@@ -145,69 +145,158 @@ struct TypeInfo {
         return res;
     }
 
-
+    /**
+     * @brief check if this type is base type, which means it is not complex type, function
+     * type, const type or pointer and array type
+     * 
+     * @return bool
+     */
     bool isBaseType() const {
         return isValid() && idents.size() == 1 && idents[0] != "func" && idents[0] != "struct" &&
                idents[0] != "class" && idents[0] != "dynamic";
     }
+    /**
+     * @brief get base type of pointer, array or const type.
+     * @attention return type must be base type, that means pointer to, array of or const 
+     * function and complex type cannot call this function
+     * 
+     * @return TypeInfo 
+     */
     TypeInfo getBaseType() const {
         TypeInfo tmp = *this;
         while(tmp.idents[0] == "*" || tmp.idents[0] == "const" || tmp.idents[0][0] == '[') {
             tmp.idents.erase(tmp.idents.begin());
         }
+        my_assert(tmp.isBaseType());
         return tmp;
     }
+    /**
+     * @brief get base type as string, only basetype can call this function.
+     * 
+     * @return std::string base type string
+     */
     std::string getBaseTypeString() const {
         my_assert(isBaseType(), "only base type can call getBaseTypeString()");
         return idents[0];
     }
 
-
+    /**
+     * @brief return if this type a complex type
+     * 
+     * @return bool
+     */
     bool isComplexType() const {
         return isValid() && idents.size() >= 1 &&
                (idents[0] == "struct" || idents[0] == "class" || idents[0] == "dynamic");
     }
+    /**
+     * @brief check if complex type have given member
+     * 
+     * @param token member name need to be checked
+     * @return bool
+     */
     bool hasMember(std::string token) const {
         my_assert(isComplexType(), "only complex type has member");
         auto it = std::find(idents.begin() + 1, idents.end(), token);
         return it != idents.end();
     }
+    /**
+     * @brief get type of member with given name
+     * 
+     * @param token member name
+     * @return const TypeInfo& type of that member
+     */
     const TypeInfo &getMemberType(std::string token) const {
         my_assert(isComplexType(), "only complex type has member");
         auto it = std::find(idents.begin() + 1, idents.end(), token);
         my_assert(it != idents.end(), "member not found: " + token);
         return subTypes[it - idents.begin() - 1];
     }
+    /**
+     * @brief get name of the index-th one member
+     * 
+     * @param index member index
+     * @return const std::string& member name
+     */
     const std::string &getMemberName(size_t index) const {
         my_assert(isComplexType(), "only complex type has member");
         return idents[index + 1];
     }
+    /**
+     * @brief get count of member this complex type have
+     * 
+     * @return size_t count of member
+     */
     size_t getMemberCount() const {
         my_assert(isComplexType(), "only complex type has member");
         my_assert(idents.size() == subTypes.size() + 1, "idents and subTypes size mismatch");
         return subTypes.size();
     }
 
-
+    /**
+     * @brief check if this type is function type
+     * 
+     * @return bool
+     */
     bool isFunctionType() const { return isValid() && idents[0] == "func"; }
+    /**
+     * @brief check if this function type has no return value
+     * 
+     * @return bool
+     */
     bool isNoReturnFunctionType() const { return isFunctionType() && idents.size() == 1; }
+    /**
+     * @brief check if this function type has return value
+     * 
+     * @return bool
+     */
     bool isReturnedFunctionType() const { return isFunctionType() && idents.size() == 2 && idents[1] == ":"; }
+    /**
+     * @brief get the type of index-th argument
+     * 
+     * @param index index of argument
+     * @return const TypeInfo& type of that arg
+     */
     const TypeInfo &getArgType(size_t index) const {
         my_assert(isFunctionType(), "only function type has arg");
         my_assert(index < subTypes.size(), "index out of range");
         return subTypes[index];
     }
+    /**
+     * @brief get returned type of this function type
+     * @attention no need to check isReturnedFunctionType(), will return NoInstanceType if no return
+     * 
+     * @return const TypeInfo& returned type
+     */
     const TypeInfo &getReturnedType() const;
 
-
+    /**
+     * @brief check if this type is pointer type
+     * 
+     * @return bool
+     */
     bool isPointerType() const { return isValid() && idents.size() >= 1 && idents[0] == "*"; }
+    /**
+     * @brief get type that is pointer to this type
+     * 
+     * @return TypeInfo 
+     */
     TypeInfo getPointerType() const {
         TypeInfo res = *this;
         res.idents.insert(res.idents.begin(), "*");
         return res;
     }
-    // not complex nor function nor pointer nor array type
+    /**
+     * @brief check if this type is array type
+     * 
+     * @return bool
+     */
     bool isArrayType() const { return isValid() && idents.size() >= 1 && idents[0][0] == '['; }
+    /**
+     * @brief get element type of this array type
+     * 
+     * @return TypeInfo 
+     */
     TypeInfo getElementType() const {
         my_assert(isArrayType(), "only array type has element");
         TypeInfo res = *this;
@@ -222,8 +311,13 @@ struct TypeInfo {
  * 
  */
 struct TypeParser {
-    // may leave '\n' as a ENDLINE
-    // that means, last 'pop' called by TypeParser is with no Guidence
+    /**
+     * @brief stream operator| to parse a TypeInfo from ExpressionLexer stream
+     * 
+     * @param e ExpressionLexer which lexer the input string
+     * @param t TypeParser to be exactly called parse function, normally a temporary object
+     * @return TypeInfo 
+     */
     friend TypeInfo operator|(ExpressionLexer &e, const TypeParser &t) { return t.parse(e); }
 
   private:
@@ -255,8 +349,9 @@ struct TypeParser {
             info.idents.push_back(e.popCopy());
             return info;
         } else if (e.top() == "func") {
-            // type of member function with define "func (recv Recv) foo ()->{}" is "func(Recv)", only log to "member
-            // function table" 'func' ('[' (VARDEF | IDENT)* ']')? '(' (type (',' type)*)? ')' (':' type)? func type:
+            // type of member function with define "func foo (recv Recv)()->{}" is "func(Recv)", only log to "member
+            // function table" 
+            // 'func' ('[' (VARDEF | IDENT)* ']')? '(' (type (',' type)*)? ')' (':' type)? func type:
             // {"func", "(", (type, (",", type,)*)? ")", ":", (type | "")}
             // TODO: closure: {"closure", "[", (type, ",",)* "]", "(", (type, (",", type,)*)? ")", (type | "")}
             info.idents.push_back(e.popCopy(ignore_break));
@@ -320,6 +415,12 @@ struct TypeParser {
     };
 };
 
+/**
+ * @brief tool function to make a TypeInfo from string without constructing ExpressionLexer
+ * 
+ * @param type type string
+ * @return TypeInfo 
+ */
 inline TypeInfo make_type(const std::string &type) {
     static ExpressionLexer lexer;
     return type | lexer | TypeParser();

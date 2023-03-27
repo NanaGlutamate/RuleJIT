@@ -62,20 +62,30 @@ template <typename T> bool isType(AST *ast) { return dynamic_cast<T *>(ast) != n
 template <typename T, typename Src> std::unique_ptr<T> asType(Src ast) { return std::unique_ptr<T>(ast.release()); }
 
 // EXPR := BINOP | LEXPR | LITERAL | FUNCCALL | COMPLEX | BRANCH | LOOP | BLOCK | '(' EXPR ')'
+/**
+ * @brief indicates Expression AST
+ * 
+ */
 struct ExprAST : public AST {
     std::unique_ptr<TypeInfo> type;
     ExprAST(std::unique_ptr<TypeInfo> type) : type(std::move(type)) {}
 };
 
+/**
+ * @brief check if AST node can dynamic_cast to given AST type
+ * 
+ * @tparam T target AST type
+ * @param ast unique pointer to AST need checked
+ * @return T*, reuse for visit ast as AST type T
+ */
 template <typename T> T* isType(std::unique_ptr<ExprAST>& ast) { return dynamic_cast<T *>(ast.get()); }
-
-// // LEXPR := IDENT | MEMBER
-// struct AssignableExprAST : public ExprAST {
-//     AssignableExprAST(std::unique_ptr<TypeInfo> type) : ExprAST(std::move(type)) {}
-// };
 
 // IDENT
 // x
+/**
+ * @brief indicates Identifier
+ * 
+ */
 struct IdentifierExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     ASTTokenType name;
@@ -87,6 +97,10 @@ struct IdentifierExprAST : public ExprAST {
 
 // MEMBER := EXPR '.' IDENT | EXPR '[' EXPR ']'
 // vector.x (equals to vector["x"](literal string only)) | make_vector(1, 2, 3).x
+/**
+ * @brief indicated member access expression
+ * 
+ */
 struct MemberAccessExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<ExprAST> baseVar;
@@ -101,6 +115,10 @@ struct MemberAccessExprAST : public ExprAST {
 
 // LITERAL
 // "abc" | 12 | 1e3 TODO: | named literal: constexpr
+/**
+ * @brief indicates string, int and real literal
+ * 
+ */
 struct LiteralExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::string value;
@@ -114,6 +132,10 @@ struct LiteralExprAST : public ExprAST {
 // TODO: | EXPR INFIX EXPR
 // TODO: | add(1)(2)
 // add(1+3)
+/**
+ * @brief indicates function call expression
+ * 
+ */
 struct FunctionCallExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<ExprAST> functionIdent;
@@ -126,6 +148,10 @@ struct FunctionCallExprAST : public ExprAST {
         : FunctionCallExprAST(nullptr, std::move(functionIdent), std::forward<V>(params)) {}
 };
 
+/**
+ * @brief indicates binary op expression
+ * 
+ */
 struct BinOpExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::string op;
@@ -137,6 +163,10 @@ struct BinOpExprAST : public ExprAST {
         : BinOpExprAST(nullptr, std::move(op), std::move(lhs), std::move(rhs)) {}
 };
 
+/**
+ * @brief indicates unary op expression
+ * 
+ */
 struct UnaryOpExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::string op;
@@ -149,6 +179,10 @@ struct UnaryOpExprAST : public ExprAST {
 
 // BRANCH := 'if' '(' EXPR ')' EXPR 'else' EXPR
 // if(a==0){1}else{2} | if(a) 1 else 4
+/**
+ * @brief indicates branch expression like "if(*condition*) *expr1* else *expr2*"
+ * 
+ */
 struct BranchExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<ExprAST> condition;
@@ -168,6 +202,10 @@ struct BranchExprAST : public ExprAST {
 // EXPR)*)?
 // '}'
 // []i64{1, 2, 3} | Info{base: Base{.name: "abc", .value: 3}, .time: 13} | Vector3{.x: 1, .y: 2, .z: 3}
+/**
+ * @brief indicates complex literal like "Vector3{.x: 1, .y: 2, .z: 3}"
+ * 
+ */
 struct ComplexLiteralExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::vector<std::tuple<std::unique_ptr<ExprAST>, std::unique_ptr<ExprAST>>> members;
@@ -181,6 +219,10 @@ struct ComplexLiteralExprAST : public ExprAST {
 // LOOP := 'while' '(' EXPR ')' EXPR
 // while(x!=0){x+=1;x;}
 // {init;while(condition){body})}, init and body must have same type
+/**
+ * @brief indicates loop statement like "while(*condition*) *expr*", normally no returns
+ * 
+ */
 struct LoopAST : public ExprAST {
     ACCEPT_FUNCTION;
     ASTTokenType label;
@@ -201,6 +243,10 @@ struct LoopAST : public ExprAST {
 
 // BLOCK := '{' ((EXPR | DEF | ASSIGN) ENDLINE)* EXPR ENDLINE? '}'
 // {var x i64 = 12; x;}
+/**
+ * @brief indicates block expression like "{1; 2}"
+ * 
+ */
 struct BlockExprAST : public ExprAST {
     ACCEPT_FUNCTION;
     std::vector<std::unique_ptr<ExprAST>> exprs;
@@ -210,20 +256,18 @@ struct BlockExprAST : public ExprAST {
     BlockExprAST(std::vector<std::unique_ptr<ExprAST>> &&exprs) : BlockExprAST(nullptr, std::move(exprs)) {}
 };
 
-// // ASSIGN := LEXPR '=' EXPR
-// // x = 12 CAUTION: no returns and not an expression
-// struct AssignmentAST : public AST {
-//     ACCEPT_FUNCTION;
-//     std::unique_ptr<AssignableExprAST> target;
-//     std::unique_ptr<ExprAST> value;
-//     AssignmentAST(std::unique_ptr<AssignableExprAST> target, std::unique_ptr<ExprAST> value)
-//         : target(std::move(target)), value(std::move(value)) {}
-// };
-
+/**
+ * @brief base class for expressions with no return
+ * 
+ */
 struct NoReturnExprAST : public ExprAST {
     NoReturnExprAST() : ExprAST(std::make_unique<TypeInfo>(NoInstanceType)) {}
 };
 
+/**
+ * @brief indicates control flow command like continue, break or return
+ * 
+ */
 struct ControlFlowAST : public NoReturnExprAST {
     ACCEPT_FUNCTION;
     enum class ControlFlowType {
@@ -240,6 +284,10 @@ struct ControlFlowAST : public NoReturnExprAST {
 };
 
 // DEF := TYPEDEF | VARDEF | FUNCDEF
+/**
+ * @brief base class for definition AST
+ * 
+ */
 struct DefAST : public NoReturnExprAST {
     ASTTokenType name;
     template <typename S> DefAST(S &&name) : name(std::forward<S>(name)), NoReturnExprAST() {}
@@ -247,6 +295,10 @@ struct DefAST : public NoReturnExprAST {
 
 // TYPEDEF := 'type' IDENT TYPE ('|' TYPE)*
 // type Vector3 struct {x f64; y f64; z f64;} | type double f64 | TODO: type Reference<T> class {T item;}
+/**
+ * @brief indicates type defines
+ * 
+ */
 struct TypeDefAST : public DefAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<TypeInfo> definedType;
@@ -265,6 +317,10 @@ struct TypeDefAST : public DefAST {
 // TODO: var x [4]f64;
 // TODO: var x [-]i64 {1, 3, 4};
 // TODO: var x []i64 {1, 3, 4};
+/**
+ * @brief indicates variable defines
+ * 
+ */
 struct VarDefAST : public DefAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<TypeInfo> valueType;
@@ -283,6 +339,10 @@ struct VarDefAST : public DefAST {
 // FUNCDEF := 'func' IDENT '(' (IDENT? TYPE (',' IDENT? TYPE)*)? ')' ('->' TYPE)? ':' EXPR | 'extern' IDENT '(' (IDENT?
 // TYPE (',' IDENT? TYPE)*)? ')' ('->' TYPE)?
 // TODO: return lambda
+/**
+ * @brief indicates function defines
+ * 
+ */
 struct FunctionDefAST : public DefAST {
     ACCEPT_FUNCTION;
     std::unique_ptr<TypeInfo> funcType;
@@ -304,6 +364,11 @@ struct FunctionDefAST : public DefAST {
     }
 };
 
+/**
+ * @brief tool function to instantly get a literal expression with type NoInstanceType
+ * 
+ * @return unique pointer to Literal expression AST which type is NoInstanceType
+ */
 inline decltype(auto) nop() { return std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(NoInstanceType), ""); }
 
 // symbol table operations
@@ -312,6 +377,10 @@ inline decltype(auto) nop() { return std::make_unique<LiteralExprAST>(std::make_
 // extern type u64 as Vector3 struct {x f64; y f64; z f64;}
 // extern func vadd(u64, u64):u64 as +(Vector3, Vector3):Vector3
 // extern func memberAccess(u64, u64):f64 as .(Vector3, const string):f64
+/**
+ * @brief indicates symbol definition statements like "extern sin(f64):f64"
+ * 
+ */
 struct SymbolDefAST : public DefAST {
     ACCEPT_FUNCTION;
     enum class SymbolCommandType {

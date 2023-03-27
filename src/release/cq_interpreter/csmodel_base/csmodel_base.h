@@ -1,4 +1,18 @@
-﻿#ifndef CS_MODEL_BASE_H
+﻿/**
+ * @file csmodel_base.h
+ * @author djw
+ * @brief CQ/Interpreter/CQ Base
+ * @date 2023-03-28
+ * 
+ * @details CQ interface for model
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
+#ifndef CS_MODEL_BASE_H
 #define CS_MODEL_BASE_H
 
 #include <any>

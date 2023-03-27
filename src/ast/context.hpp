@@ -1,5 +1,17 @@
-#pragma once
-
+/**
+ * @file context.hpp
+ * @author djw
+ * @brief AST/Context
+ * @date 2023-03-28
+ * 
+ * @details Includes data structure to store context informations used in frontend or IR generation
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include <map>

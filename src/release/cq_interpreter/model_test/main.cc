@@ -1,3 +1,17 @@
+/**
+ * @file main.cc
+ * @author djw
+ * @brief CQ/Interpreter/Test main
+ * @date 2023-03-28
+ * 
+ * @details test function for interpreter dll
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #include <any>
 #include <chrono>
 #include <cstdint>
