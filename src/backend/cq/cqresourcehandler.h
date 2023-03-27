@@ -1,3 +1,15 @@
+/**
+ * @file cqresourcehandler.h
+ * @author djw
+ * @brief CQ/CQResourceHandler
+ * @date 2023-03-27
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include <any>
@@ -196,6 +208,10 @@ struct ResourceHandler {
             return it->second;
         }
         if (data.isArray(std::get<1>(buffer[base]))) {
+            if(token == "length"){
+                // the only member an array has is length
+                return arrayLength(base);
+            }
             throw std::logic_error(std::format("type \"{}\" is an array", std::get<1>(buffer[base])));
         }
         auto tmp = std::any_cast<CSValueMap>(std::get<0>(buffer[base]))[token];

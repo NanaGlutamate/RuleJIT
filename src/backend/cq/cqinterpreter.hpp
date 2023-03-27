@@ -1,3 +1,16 @@
+/**
+ * @file cqinterpreter.hpp
+ * @author djw
+ * @brief CQ/Interpreter
+ * @date 2023-03-27
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
+
 #pragma once
 
 #include <cmath>
@@ -14,11 +27,22 @@
 
 namespace rulejit::cq {
 
-// will change original AST
+/**
+ * @brief main class to interprete ast in cq environment
+ * @attention will change original ast
+ * 
+ */
 struct CQInterpreter : public ASTVisitor {
+    // function defs
     std::map<std::string, std::unique_ptr<FunctionDefAST>> func;
     CQInterpreter(ResourceHandler &h) : symbolStack({{{}}}), handler(h) {}
 
+    /**
+     * @brief stream operator| to interprete ast
+     * 
+     * @param expr expr ast need to be interpreted
+     * @param interpreter acceptor interpreter object
+     */
     void friend operator|(std::unique_ptr<ExprAST> &expr, CQInterpreter &interpreter) {
 #ifdef __RULEJIT_INTERPRETER_DEBUG
         interpreter.ruleCnt = 1;
@@ -29,6 +53,7 @@ struct CQInterpreter : public ASTVisitor {
     VISIT_FUNCTION(IdentifierExprAST) {
         auto find = seekValue(v.name);
         if (!find) {
+            // !find means its a variable hold by CQResourceHandler, so read it
             returned.token = handler.readIn(v.name);
             returned.type = Value::TOKEN;
         }
@@ -40,23 +65,14 @@ struct CQInterpreter : public ASTVisitor {
             setError("number have no members");
         }
         if(!v.memberToken->type){
+            // v.memberToken->type = nullptr means it need to be evaluate
             v.memberToken->accept(this);
             getReturnedValue();
-            returned.token = double(handler.arrayAccess(base.token, returned.value));
+            returned.token = handler.arrayAccess(base.token, static_cast<size_t>(returned.value));
             returned.type = Value::TOKEN;
             return;
         }
         if (*(v.memberToken->type) == StringType) {
-            if (v.memberToken->type->isArrayType()) {
-                auto p = dynamic_cast<LiteralExprAST *>(v.memberToken.get());
-                if (p && p->value == "length") {
-                    returned.value = (double)handler.arrayLength(base.token);
-                    returned.type = Value::VALUE;
-                } else {
-                    setError("array only have \"length\" member");
-                }
-                return;
-            }
             returned.token =
                 handler.memberAccess(base.token, dynamic_cast<LiteralExprAST *>(v.memberToken.get())->value);
         } else if (*(v.memberToken->type) == RealType) {
@@ -383,6 +399,7 @@ struct CQInterpreter : public ASTVisitor {
     VISIT_FUNCTION(SymbolDefAST) { setError("symbol def should never be visit directly"); }
 
     // private:
+    // Value type, may be a double or a token which indicate a variable hold by CQResourceHandler
     struct Value {
         union {
             size_t token;
@@ -394,6 +411,7 @@ struct CQInterpreter : public ASTVisitor {
             EMPTY,
         } type;
     };
+    // holds CQ-related variables
     ResourceHandler &handler;
     bool seekValue(const std::string &s) {
         for (auto it = symbolStack.back().rbegin(); it != symbolStack.back().rend(); ++it) {

@@ -99,7 +99,14 @@ std::any toAny(const T& t){{
     }}
 }}
 
-struct NoInstanceType{{}};
+struct NoInstanceType{{
+    NoInstanceType() = default;
+    NoInstanceType(const NoInstanceType&) = delete;
+    NoInstanceType& operator=(const NoInstanceType&) = delete;
+    NoInstanceType(NoInstanceType&&) = delete;
+    NoInstanceType& operator=(NoInstanceType&&) = delete;
+}};
+}};
 
 {2}
 
@@ -486,7 +493,7 @@ int main() {
 #endif
     if (!hmodule) {
         std::cout << "load ruleset failed" << std::endl;
-        return -1;
+        return false;
     }
 
 #ifdef _WIN32
@@ -503,12 +510,12 @@ int main() {
         if (!dlclose(hmodule))
 #endif
             std::cout << "release dll error" << std::endl;
-        return -1;
+        return false;
     }
     CSModelObject *model_obj_ = create_obj_();
     if (nullptr == model_obj_) {
         std::cerr << "create model error" << std::endl;
-        return -1;
+        return false;
     }
     auto engine = model_obj_;
     // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
