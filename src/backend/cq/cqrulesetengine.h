@@ -1,3 +1,15 @@
+/**
+ * @file cqrulesetengine.h
+ * @author djw
+ * @brief CQ/Interpreter/RuleSetEngine
+ * @date 2023-03-27
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include <fstream>
@@ -72,14 +84,14 @@ struct RuleSetEngine {
     void tick() {
         preProcess.subruleset | preProcess.interpreter;
         preProcess.handler.writeBack();
-        preProcess.interpreter.symbolStack = {{{}}};
+        preProcess.interpreter.reset();
 
         for (auto &&s : ruleset.subRuleSets) {
             s.subruleset | s.interpreter;
         }
         for (auto &&s : ruleset.subRuleSets) {
             s.handler.writeBack();
-            s.interpreter.symbolStack = {{{}}};
+            s.interpreter.reset();
         }
     }
     /**

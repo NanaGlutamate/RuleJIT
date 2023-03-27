@@ -1,3 +1,17 @@
+/**
+ * @file astprinter.hpp
+ * @author djw
+ * @brief AST/AST printer
+ * @date 2023-03-27
+ *
+ * @details Includes a simple example implementing the AST Visitor, the ASTPrinter.
+ *
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include <format>
@@ -11,15 +25,32 @@
 
 namespace rulejit {
 
+/**
+ * @brief class to print ast structure
+ *
+ */
 struct ASTPrinter : public ASTVisitor {
-    std::stringstream buffer;
-    bool indent;
-    size_t cnt;
-
+    /**
+     * @brief stream operator| provides function to print given ast
+     *
+     * @param v given ast
+     * @param p operator receiver
+     * @return std::string printed string
+     */
     friend std::string operator|(std::unique_ptr<ExprAST> &v, ASTPrinter &p) { return p.printAST(v.get(), true); }
 
-    // std::map<std::string, std::unique_ptr<DefAST>> context;
+    /**
+     * @brief Construct a new ASTPrinter object
+     *
+     */
     ASTPrinter() = default;
+    /**
+     * @brief print given ast. same as operator|, but provides more detailed control like is indent
+     *
+     * @param ast ast needs to print
+     * @param isIndent indicate if need indent in output
+     * @return std::string printed string
+     */
     std::string printAST(AST *ast, bool isIndent = false) {
         buffer.clear();
         if (isIndent) {
@@ -30,10 +61,7 @@ struct ASTPrinter : public ASTVisitor {
         }
         ast->accept(this);
         std::string out;
-        std::string tmp;
-        while (std::getline(buffer, tmp)) {
-            out += tmp + '\n';
-        }
+        std::string tmp((std::istreambuf_iterator<char>(buffer)), std::istreambuf_iterator<char>());
         return out;
     }
 
@@ -211,14 +239,12 @@ struct ASTPrinter : public ASTVisitor {
         printIndent();
         buffer << ")";
     }
-    VISIT_FUNCTION(SymbolDefAST) {
-        buffer << "[SYMBOL DEF]";
-    }
-    // VISIT_FUNCTION(TopLevelAST){
-    //     buffer << "[toplevel]";
-    // }
+    VISIT_FUNCTION(SymbolDefAST) { buffer << "[SYMBOL DEF]"; }
 
   private:
+    std::stringstream buffer; /*< print buffer*/
+    bool indent;
+    size_t cnt;
     void printIndent() {
         if (indent) {
             buffer << '\n';

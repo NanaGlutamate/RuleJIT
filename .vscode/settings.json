@@ -23,6 +23,8 @@
     "doxdocgen.cpp.tparamTemplate": "@tparam {param} ",
     // Additional file documentation. One tag per line will be added. Can template `{year}`, `{date}`, `{author}`, `{email}` and `{file}`. You have to specify the prefix.
     "doxdocgen.file.customTag": [
+        "@details ",
+        "",
         "@par history",
         "<table>",
         "<tr><th>Author</th><th>Date</th><th>Changes</th></tr>",

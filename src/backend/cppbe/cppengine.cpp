@@ -1,3 +1,18 @@
+/**
+ * @file cppengine.cpp
+ * @author djw
+ * @brief CQ/CPPBE/Cpp Engine
+ * @date 2023-03-27
+ * 
+ * @details Includes main logic of cpp-backend, such as
+ * XML-parsering and code generate.
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #include "cppengine.h"
 
 #include <iostream>
@@ -9,6 +24,12 @@ namespace {
 using namespace rulejit;
 using namespace rulejit::cppgen;
 
+/**
+ * @brief transform inner type string to cpp style string
+ * 
+ * @param type inner type string
+ * @return std::string cpp style string
+ */
 std::string CppStyleType(const TypeInfo &type) {
     // only support vector and base type
     if (type == RealType) {
@@ -26,13 +47,23 @@ std::string CppStyleType(const TypeInfo &type) {
     throw std::logic_error(std::format("unsupported type: {}", type.toString()));
 }
 
+/**
+ * @brief transform inner param type string to cpp style string
+ * @attention will use const reference type for complex type and array type
+ * 
+ * @param type inner type string
+ * @return std::string cpp style string
+ */
 std::string CppStyleParamType(const TypeInfo &type) {
     // only support vector and base type
     if (type == NoInstanceType) {
         return "void";
     }
-    if (type.isBaseType()) {
+    if (type.isBaseType() && baseData.contains(type.idents[0])) {
         return type.idents[0];
+    }
+    if (type.isBaseType()) {
+        return "const " + type.idents[0] + "&";
     }
     if (type.idents.size() == 2 && type.idents[0] == "[]") {
         return "const std::vector<" + type.idents[1] + ">&";
@@ -40,6 +71,12 @@ std::string CppStyleParamType(const TypeInfo &type) {
     throw std::logic_error(std::format("unsupported type: {}", type.toString()));
 }
 
+/**
+ * @brief transform cpp style type string to inner type string
+ * 
+ * @param type cpp style type string
+ * @return std::string inner type string
+ */
 std::string innerType(std::string type) {
     std::string tmp;
     while (type.back() == ']') {
@@ -58,6 +95,15 @@ std::string innerType(std::string type) {
     return tmp;
 }
 
+/**
+ * @brief for each name in src, look up type defines in meta info,
+ * select type string of given name, assemble them in std::pair and emplace into std::vector,
+ * then return the vector. only unsed for _Input/_Output/_Cache type defines
+ * 
+ * @param src vector containes name of variable
+ * @param m meta info which containes type defines
+ * @return std::vector<std::tuple<std::string, std::string>> assembled type which can used in type defines
+ */
 std::vector<std::tuple<std::string, std::string>> assembleType(const std::vector<std::string> &src, MetaInfo &m) {
     std::vector<std::tuple<std::string, std::string>> ret;
     for (auto &&name : src) {
@@ -68,21 +114,25 @@ std::vector<std::tuple<std::string, std::string>> assembleType(const std::vector
     return ret;
 }
 
-struct file {
-    std::string name;
-    std::string content;
-};
-
+/**
+ * @brief writable c style string used for rapidxml to process
+ * 
+ */
 class CStyleString {
   public:
     char *s;
     CStyleString(size_t n) : s(new char[n]){};
     CStyleString(const CStyleString &s) = delete;
     void operator=(const CStyleString &s) = delete;
-    CStyleString(const std::string &str) : s(new char[str.size() + 5]) { memcpy(s, str.c_str(), str.size() + 1); };
+    CStyleString(const std::string &str) : s(new char[str.size() + 1]) { memcpy(s, str.c_str(), str.size() + 1); };
     ~CStyleString() { delete[] s; };
 };
 
+/**
+ * @brief pre-defines which will be process before ruleset xml,
+ * can add some tool functions and types
+ * 
+ */
 constexpr auto preDefines = R"(
 extern func sin (i f64):f64
 type Vector3 struct {
@@ -128,6 +178,8 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     }
     auto meta = root->first_node("MetaInfo");
 
+    /// collect input/cache/output vars, and if element <Param> has sub element
+    /// named "Value", add assignment to preprocessOriginal
     std::string preprocessOriginal = "{";
 
     for (auto input = meta->first_node("Inputs")->first_node("Param"); input; input = input->next_sibling("Param")) {
@@ -165,11 +217,12 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     }
 
     preprocessOriginal += "}";
+    // parse preprocessOriginal, add generated code to RuleSet::Tick() in front of subruleset calls
     auto pre = std::unique_ptr<rulejit::ExprAST>(preprocessOriginal | lexer | parser) | semantic;
     notGenerate.insert(pre);
     std::string preprocess = context.global.realFuncDefinition[pre]->returnValue | codegen;
 
-    // gen subruleset defs
+    // generate subruleset defs
     std::string subs;
     size_t id = 0;
     for (auto subruleset = root->first_node("SubRuleSets")->first_node("SubRuleSet"); subruleset;
@@ -202,7 +255,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     }
     rulesetFile << std::format(rulesetHpp, namespaceName, prefix, subcall, subwrite, subs, "", preprocess);
 
-    // gen typedefs
+    // generate typedefs
     std::string typedefs;
     std::ofstream typeDefFile(outputPath + prefix + "typedef.hpp");
     data.typeDefines.emplace("_Input", assembleType(data.inputVar, data));
@@ -230,7 +283,6 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
     for (auto &&[name, type] : context.global.typeDef) {
-        // TODO: buffer << std::format(typeDef, );
         std::string member, serialize, deserialize;
         if (type.subTypes.size() + 1 != type.idents.size() || type.idents[0] != "struct") {
             throw std::logic_error(std::format("unsupported type: {}", type.toString()));
@@ -244,7 +296,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     }
     typeDefFile << std::format(typeDefHpp, namespaceName, prefix, typedefs);
 
-    // gen func def
+    // generate func def
     std::ofstream funcDefFile(outputPath + prefix + "funcdef.hpp");
     std::string funcDefs, externDefs;
     for (auto &&[name, func] : context.global.realFuncDefinition) {
@@ -265,7 +317,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
             std::format(funcDef, CppStyleType(func->funcType->getReturnedType()), name, params,
                         (func->funcType->isReturnedFunctionType() ? "return" : "") + (func->returnValue | codegen));
     }
-    // gen extern func type
+    // generate extern func type
     for (auto &&[name, type] : context.global.externFuncDef) {
         std::string params;
         size_t param_cnt = type.subTypes.size() - type.isReturnedFunctionType() ? 1 : 0;

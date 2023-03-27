@@ -1,7 +1,7 @@
 /**
  * @file cqresourcehandler.h
  * @author djw
- * @brief CQ/CQResourceHandler
+ * @brief CQ/Interpreter/CQResourceHandler
  * @date 2023-03-27
  * 
  * @par history

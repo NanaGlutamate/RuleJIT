@@ -1,16 +1,25 @@
+/**
+ * @file template.hpp
+ * @author djw
+ * @brief CQ/CPPBE/Code templates
+ * @date 2023-03-27
+ * 
+ * @details Includes template strings used in std::format for code generation.
+ * specifically, {prefix}funcdef.hpp, {prefix}typedef.hpp
+ * {prefix}ruleset.hpp, {prefix}ruleset.cpp, testmain.cpp, cqinterface.hpp and CMakeLists.txt
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 // TODO: vector<bool> -> vector<char>
 
 namespace rulejit::cppgen::templates {
 
-// template <typename T>
-// struct CStyleVector{{
-//     T* data;
-//     size_t length;
-//     size_t capacity;
-//     size_t elementSize;
-// }};
 // namespace, prefix, defs
 inline constexpr auto typeDefHpp = R"(#pragma once
 

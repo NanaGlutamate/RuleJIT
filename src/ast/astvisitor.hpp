@@ -1,3 +1,19 @@
+/**
+ * @file astvisitor.hpp
+ * @author djw
+ * @brief AST/AST visitor
+ * @date 2023-03-27
+ * 
+ * @details Includes defines of struct ASTVisitor, which a part of AST design.
+ * AST designed in Visitor Pattern, provides flexibility in AST operations developments.
+ * also contains marcos to simplify development.
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #define VISIT_FUNCTION_DEF(c, type) void c::visit (type & v) override
@@ -9,7 +25,6 @@ namespace rulejit {
 
 struct IdentifierExprAST;
 struct MemberAccessExprAST;
-// struct ArrayIndexExprAST;
 struct LiteralExprAST;
 struct FunctionCallExprAST;
 struct BinOpExprAST;
@@ -19,8 +34,6 @@ struct ComplexLiteralExprAST;
 struct LoopAST;
 struct BlockExprAST;
 
-// struct AssignmentAST;
-
 struct ControlFlowAST;
 
 struct TypeDefAST;
@@ -28,8 +41,6 @@ struct VarDefAST;
 struct FunctionDefAST;
 
 struct SymbolDefAST;
-
-// struct TopLevelAST;
 
 // struct Foo : public ASTVisitor{
 //     VISIT_FUNCTION(IdentifierExprAST);

@@ -1,3 +1,15 @@
+/**
+ * @file cqrulesetengine.cpp
+ * @author djw
+ * @brief CQ/Interpreter/RuleSetEngine
+ * @date 2023-03-27
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #include "cqrulesetengine.h"
 
 #include <iostream>
@@ -6,13 +18,17 @@
 
 namespace {
 
+/**
+ * @brief writable c style string used for rapidxml to process
+ * 
+ */
 class CStyleString {
   public:
     char *s;
     CStyleString(size_t n) : s(new char[n]){};
     CStyleString(const CStyleString &s) = delete;
     void operator=(const CStyleString &s) = delete;
-    CStyleString(const std::string &str) : s(new char[str.size() + 5]) { memcpy(s, str.c_str(), str.size() + 1); };
+    CStyleString(const std::string &str) : s(new char[str.size() + 1]) { memcpy(s, str.c_str(), str.size() + 1); };
     ~CStyleString() { delete[] s; };
 };
 

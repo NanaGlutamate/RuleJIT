@@ -1,8 +1,10 @@
 /**
  * @file cqinterpreter.hpp
  * @author djw
- * @brief CQ/Interpreter
+ * @brief CQ/Interpreter/Interpreter
  * @date 2023-03-27
+ * 
+ * @details 
  * 
  * @par history
  * <table>
@@ -33,9 +35,26 @@ namespace rulejit::cq {
  * 
  */
 struct CQInterpreter : public ASTVisitor {
-    // function defs
+    /**
+     * @brief defined functions
+     * 
+     */
     std::map<std::string, std::unique_ptr<FunctionDefAST>> func;
+    /**
+     * @brief Constructor, will init symbolStack with empty stack and empty scope,
+     * then set handler to h
+     * 
+     * @param h ResourceHandler which handles variable for this object
+     */
     CQInterpreter(ResourceHandler &h) : symbolStack({{{}}}), handler(h) {}
+    /**
+     * @brief reset the interpreter(reset symbolStack, specifically)
+     * @attention will not remove the function definitions
+     * 
+     */
+    void reset(){
+        symbolStack = {{{}}};
+    }
 
     /**
      * @brief stream operator| to interprete ast
@@ -95,6 +114,7 @@ struct CQInterpreter : public ASTVisitor {
         }
     }
     VISIT_FUNCTION(FunctionCallExprAST) {
+        // build in function with 1 param
         static std::map<std::string, std::function<double(double)>> oneParamFunc{
             {"sin", [](double x) {return sin(x); }},     {"cos", [](double x) {return cos(x); }},
             {"tan", [](double x) {return tan(x); }},     {"cot", [](double x) {return 1.0/tan(x); }},
@@ -103,6 +123,7 @@ struct CQInterpreter : public ASTVisitor {
             {"exp", [](double x) {return exp(x); }},     {"abs", [](double x) {return fabs(x); }},
             {"floor", [](double x) {return floor(x); }},
         };
+        // build in function with 2 param
         static std::map<std::string, std::function<double(double, double)>> twoParamFunc{
             {"pow", [](double x, double y) { return pow(x, y); }},
             {"atan2", [](double x, double y) { return atan2(x, y); }},
@@ -398,21 +419,37 @@ struct CQInterpreter : public ASTVisitor {
     VISIT_FUNCTION(FunctionDefAST) { setError("function def should never be visit directly"); }
     VISIT_FUNCTION(SymbolDefAST) { setError("symbol def should never be visit directly"); }
 
-    // private:
-    // Value type, may be a double or a token which indicate a variable hold by CQResourceHandler
+  private:
+    /**
+     * @brief Value type passes through visit functions,
+     * may be a double or a token which indicate a variable hold by CQResourceHandler
+     * 
+     */
     struct Value {
         union {
             size_t token;
             double value;
         };
+        /**
+         * @brief type of value, for now only support VALUE(which mean Value::value is available),
+         * TOKEN(which mean Value::token is available),
+         * and EMPTY(which mean both is not available)
+         * 
+         */
         enum valueType {
             TOKEN,
             VALUE,
             EMPTY,
         } type;
     };
-    // holds CQ-related variables
-    ResourceHandler &handler;
+    ResourceHandler &handler;/**< holds CQ-related variables*/
+    /**
+     * @brief seek variable with given name in current stack frame
+     * @attention if found, will modify returned
+     * 
+     * @param s variable name
+     * @return bool true if found
+     */
     bool seekValue(const std::string &s) {
         for (auto it = symbolStack.back().rbegin(); it != symbolStack.back().rend(); ++it) {
             if (auto it2 = it->find(s); it2 != it->end()) {
@@ -422,9 +459,22 @@ struct CQInterpreter : public ASTVisitor {
         }
         return false;
     }
+    /**
+     * @brief check if given type supported
+     * 
+     * @param type string of type name
+     * @return true if is supported type
+     */
     bool isSupportType(const TypeInfo &type) {
         return type.isValid() && type.isBaseType() && (type.idents[0] == "f64" || type == AutoType);
     }
+    /**
+     * @brief make "returned" a value,
+     * specifically, if returned is a token, get its value from CQResourceHandler;
+     * if returned is already a value, do nothing.
+     * if returned is empty, throw an exception.
+     * 
+     */
     void getReturnedValue() {
         if (returned.type == Value::EMPTY) {
             setError("no value returned");
@@ -434,10 +484,22 @@ struct CQInterpreter : public ASTVisitor {
             returned.type = Value::VALUE;
         }
     }
+    /**
+     * @brief set errors
+     * 
+     * @param msg error message
+     */
     [[noreturn]] void setError(const std::string &msg) { throw std::logic_error(msg); }
 
-    // caller pop stack
+    /**
+     * @brief caller pop stack, stack frame is scope stack
+     * 
+     */
     std::vector<std::vector<std::map<std::string, Value>>> symbolStack;
+    /**
+     * @brief value passed through visit functions
+     * 
+     */
     Value returned;
 #ifdef __RULEJIT_INTERPRETER_DEBUG
     size_t ruleCnt;
