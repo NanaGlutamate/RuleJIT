@@ -64,7 +64,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
 
             // if (!loadedVar.contains(v.name)) {
             auto cnt = std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) - m.cacheVar.begin();
-            returned += std::format("(loadCache(_base, &Cache::{0}, {1}), cache.{0})", v.name, cnt);
+            returned += std::format("(loadCache(_base, &_Cache::{0}, {1}), cache.{0})", v.name, cnt);
             //     loadedVar.emplace(v.name);
             // }else{
             //     returned += std::format("(cache.{})", v.name);

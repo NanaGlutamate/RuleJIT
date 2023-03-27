@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet version="1.0">
+    <TypeDefines>
+        <TypeDefine type="Location">
+            <Variable name="altitude" type="float64"/>
+            <Variable name="longitude" type="float64"/>
+            <Variable name="latitude" type="float64"/>
+        </TypeDefine>
+        <TypeDefine type="Vector3">
+            <Variable name="x" type="float64"/>
+            <Variable name="y" type="float64"/>
+            <Variable name="z" type="float64"/>
+        </TypeDefine>
+        <TypeDefine type="output_info_">
+            <Variable name="Longitude" type="float64"/>
+            <Variable name="Latitude" type="float64"/>
+            <Variable name="Altitude" type="float64"/>
+            <Variable name="Speed" type="float64"/>
+            <Variable name="Roll" type="float64"/>
+            <Variable name="Pitch" type="float64"/>
+            <Variable name="Yaw" type="float64"/>
+        </TypeDefine>
+        <TypeDefine type="rel">
+            <Variable name="phiA" type="float64"/>
+            <Variable name="phiT" type="float64"/>
+            <Variable name="d" type="float64"/>
+        </TypeDefine>
+    </TypeDefines>
+    <MetaInfo>
+        <Inputs>
+            <Param name="Rel_" type="rel" display_name="相对态势"/>
+            <Param name="A_output" type="output_info_" display_name="我机信息"/>
+            <Param name="T_output" type="output_info_" display_name="敌机信息"/>
+
+            <Param name="DANmax" type="float64" display_name="我机近距弹最大攻击距离"/>
+			<Param name="DANmin" type="float64" display_name="我机近距弹最小攻击距离"/>
+			<Param name="DANok" type="float64" display_name="我机近距弹最佳攻击距离"/>
+			<Param name="DTNmax" type="float64" display_name="敌机近距弹最大攻击距离"/>
+			<Param name="DTNmin" type="float64" display_name="敌机近距弹最小攻击距离"/>
+			<Param name="DTNok" type="float64" display_name="敌机近距弹最佳攻击距离"/>
+            <Param name="phiANmax" type="float64" display_name="我机近距弹最大离轴发射角"/>
+        </Inputs>
+        <Outputs>
+            <Param name="tacticID" type="uint8" display_name="单机战术号"/>
+        </Outputs>
+        <Caches>
+            <Param name="Cache1" type="uint32">
+                <Value>
+                    <Expression>0</Expression>
+                </Value>
+            </Param>
+        </Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="tacticID" type="uint8" display_name="单机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;=0.5) and ((Rel_.d&gt;DANmax) or (Rel_.d&lt;DANmin)) and ((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&gt;0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;=0.5) and ((Rel_.d&gt;DANmax) or (Rel_.d&lt;DANmin)) and (((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&lt;=0) and ((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&gt;=-100))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;=0.5) and ((Rel_.d&gt;DANmax) or (Rel_.d&lt;DANmin)) and ((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&lt;-100)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;=0.5) and ((Rel_.d&lt;=DANmax) and (Rel_.d&gt;=DANok)) and ((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&gt;0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;=0.5) and ((Rel_.d&lt;=DANmax) and (Rel_.d&gt;=DANok)) and (((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&lt;=0) and ((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&gt;=-100))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;=0.5) and ((Rel_.d&lt;=DANmax) and (Rel_.d&gt;=DANok)) and ((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&lt;-100)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;=0.5) and ((Rel_.d&lt;DANok) and (Rel_.d&gt;DANmin)) and ((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&gt;0)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;=0.5) and ((Rel_.d&lt;DANok) and (Rel_.d&lt;DANmin)) and (((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&lt;=0) and ((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&gt;=-100))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;=0.5) and ((Rel_.d&lt;DANok) and (Rel_.d&gt;DANmin)) and ((T_output.Speed*cos(T_output.Pitch)*cos(T_output.Yaw)-A_output.Speed*cos(A_output.Pitch)*cos(A_output.Yaw))&lt;=-100)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>8</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;0.5) and ((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;-0.5)) and ((Rel_.d&gt;DANmax) or (Rel_.d&lt;DANmin)) and (((T_output.Altitude-A_output.Altitude)&gt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))) or ((T_output.Altitude-A_output.Altitude)&lt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;0.5) and ((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180))) and ((Rel_.d&gt;DANmax) or (Rel_.d&lt;DANmin)) and ((T_output.Altitude-A_output.Altitude)&gt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;0.5) and ((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;-0.5)) and ((Rel_.d&gt;DANmax) or (Rel_.d&lt;DANmin)) and ((T_output.Altitude-A_output.Altitude)&lt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;0.5) and ((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;-0.5)) and ((Rel_.d&lt;DANmax) and (Rel_.d&gt;DANok)) and (((T_output.Altitude-A_output.Altitude)&lt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))) and ((T_output.Altitude-A_output.Altitude)&gt;(-0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;0.5) and ((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;-0.5)) and ((Rel_.d&lt;DANmax) and (Rel_.d&gt;DANok)) and ((T_output.Altitude-A_output.Altitude)&gt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;0.5) and ((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;-0.5)) and ((Rel_.d&lt;DANmax) and (Rel_.d&gt;DANok)) and ((T_output.Altitude-A_output.Altitude)&lt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;0.5) and ((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;-0.5)) and ((Rel_.d&lt;DANok) and (Rel_.d&gt;DANmin)) and (((T_output.Altitude-A_output.Altitude)&lt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))) and ((T_output.Altitude-A_output.Altitude)&gt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;0.5) and ((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;-0.5)) and ((Rel_.d&lt;DANok) and (Rel_.d&gt;DANmin)) and ((T_output.Altitude-A_output.Altitude)&gt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;0.5) and ((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&gt;-0.5)) and ((Rel_.d&lt;DANok) and (Rel_.d&gt;DANmin)) and ((T_output.Altitude-A_output.Altitude)&lt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;=-0.5) and ((Rel_.d&gt;DTNmax) or (Rel_.d&lt;DTNmin)) and (((T_output.Altitude-A_output.Altitude)&lt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))) and ((T_output.Altitude-A_output.Altitude)&gt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;=-0.5) and ((Rel_.d&gt;DTNmax) or (Rel_.d&lt;DTNmin)) and ((T_output.Altitude-A_output.Altitude)&gt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;=-0.5) and ((Rel_.d&gt;DTNmax) or (Rel_.d&lt;DTNmin)) and ((T_output.Altitude-A_output.Altitude)&lt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;=-0.5) and ((Rel_.d&lt;DTNmax) and (Rel_.d&gt;DTNok)) and (((T_output.Altitude-A_output.Altitude)&lt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))) and ((T_output.Altitude-A_output.Altitude)&gt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;=-0.5) and ((Rel_.d&lt;DTNmax) and (Rel_.d&gt;DTNok)) and ((T_output.Altitude-A_output.Altitude)&gt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>13</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;=-0.5) and ((Rel_.d&lt;DTNmax) and (Rel_.d&gt;DTNok)) and ((T_output.Altitude-A_output.Altitude)&lt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>12</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;=-0.5) and ((Rel_.d&lt;DTNok) and (Rel_.d&gt;DTNmin)) and (((T_output.Altitude-A_output.Altitude)&lt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))) and ((T_output.Altitude-A_output.Altitude)&gt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433))))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>14</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;=-0.5) and ((Rel_.d&lt;DTNok) and (Rel_.d&gt;DTNmin)) and ((T_output.Altitude-A_output.Altitude)&gt;(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>13</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((abs(Rel_.phiA)/180-abs(Rel_.phiT)/180)&lt;=-0.5) and ((Rel_.d&lt;DTNok) and (Rel_.d&gt;DTNmin)) and ((T_output.Altitude-A_output.Altitude)&lt;-(0.3*Rel_.d*sin(phiANmax/180*3.1415926535897932384626433)))</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>12</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

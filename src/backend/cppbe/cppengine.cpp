@@ -127,11 +127,18 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
     }
     auto meta = root->first_node("MetaInfo");
+
+    std::string preprocessOriginal = "{";
+
     for (auto input = meta->first_node("Inputs")->first_node("Param"); input; input = input->next_sibling("Param")) {
         std::string name = input->first_attribute("name")->value(), type = input->first_attribute("type")->value();
         data.inputVar.push_back(name);
         data.varType[name] = type;
         context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+        if (auto p = input->first_node("Value"); p) {
+            preprocessOriginal += std::string(input->first_attribute("name")->value()) + "={" +
+                          p->first_node("Expression")->value() + "};";
+        }
     }
 
     for (auto cache = meta->first_node("Caches")->first_node("Param"); cache; cache = cache->next_sibling("Param")) {
@@ -139,6 +146,10 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         data.cacheVar.push_back(name);
         data.varType[name] = type;
         context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+        if (auto p = cache->first_node("Value"); p) {
+            preprocessOriginal += std::string(cache->first_attribute("name")->value()) + "={" +
+                          p->first_node("Expression")->value() + "};";
+        }
     }
 
     for (auto output = meta->first_node("Outputs")->first_node("Param"); output;
@@ -147,7 +158,16 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         data.outputVar.push_back(name);
         data.varType[name] = type;
         context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+        if (auto p = output->first_node("Value"); p) {
+            preprocessOriginal += std::string(output->first_attribute("name")->value()) + "={" +
+                          p->first_node("Expression")->value() + "};";
+        }
     }
+
+    preprocessOriginal += "}";
+    auto pre = std::unique_ptr<rulejit::ExprAST>(preprocessOriginal | lexer | parser) | semantic;
+    notGenerate.insert(pre);
+    std::string preprocess = context.global.realFuncDefinition[pre]->returnValue | codegen;
 
     // gen subruleset defs
     std::string subs;
@@ -180,7 +200,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         subcall += std::format(subRulesetCall, i);
         subwrite += std::format(subRulesetWrite, i);
     }
-    rulesetFile << std::format(rulesetHpp, namespaceName, prefix, subcall, subwrite, subs, "");
+    rulesetFile << std::format(rulesetHpp, namespaceName, prefix, subcall, subwrite, subs, "", preprocess);
 
     // gen typedefs
     std::string typedefs;

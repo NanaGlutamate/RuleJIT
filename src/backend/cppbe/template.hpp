@@ -156,7 +156,7 @@ inline {0} {1}({2}) {{
 }}
 )";
 
-// namespace, prefix, subrulesetcall, subrulesetwrite, subrulesetdef, inits
+// namespace, prefix, subrulesetcall, subrulesetwrite, subrulesetdef, inits, preprocess
 inline constexpr auto rulesetHpp = R"(#pragma once
 
 #include <vector>
@@ -183,6 +183,11 @@ struct RuleSet{{
         in.FromValueMap(map);
     }}
     void Tick(){{
+        auto &_in = in;
+        auto &_out = out;
+        auto _base = 0;
+        auto loadCache = [](auto x, auto y, auto z){{}};
+        {6};
 {2}
 {3}        out_map = out.ToValueMap();
     }}
@@ -198,14 +203,14 @@ inline constexpr auto subRulesetWrite = "        subRuleSet{0}.writeBack(*this);
 
 // id, func
 inline constexpr auto subRulesetDef = R"(    struct {{
-        Cache cache;
-        std::unordered_map<size_t, std::function<void(Cache*, Cache*)>> modified;
+        _Cache cache;
+        std::unordered_map<size_t, std::function<void(_Cache*, _Cache*)>> modified;
         template <typename T>
         void loadCache(RuleSet& base, T p, size_t name){{
             if(auto it = modified.find(name); it == modified.end()){{
                 auto origin = base.cache.*p;
                 cache.*p = base.cache.*p;
-                modified.emplace(name, [origin, p](Cache* src, Cache* dst){{
+                modified.emplace(name, [origin, p](_Cache* src, _Cache* dst){{
                     // only 1 write back to a same cached value valid through each subruleset,
                     // so if src->*p == tmp, there must no write back by this subruleset,
                     // or may write back same value.

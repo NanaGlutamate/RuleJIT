@@ -204,6 +204,9 @@ struct ExpressionSemantic : public ASTVisitor {
             v.type = std::make_unique<TypeInfo>(NoInstanceType);
             // disable overload of "="
             buildIn = true;
+            if (!isAssignable(v.lhs.get())) {
+                return setError("Assign to non-assignable expression");
+            }
             if (*(v.lhs->type) != *(v.rhs->type) || *(v.lhs->type) == NoInstanceType) {
                 return setError(std::format("Assign between \"{}\" and \"{}\" not allowed", v.lhs->type->toString(),
                                             v.rhs->type->toString()));
@@ -247,10 +250,11 @@ struct ExpressionSemantic : public ASTVisitor {
         if (*(v.rhs->type) == RealType && unaryOp.contains(v.op)) {
             v.type = std::make_unique<TypeInfo>(RealType);
             buildIn = true;
-        } else if (v.op == "&") {
-            v.type = std::make_unique<TypeInfo>(v.rhs->type->getPointerType());
-            buildIn = true;
-        }
+        } 
+        // else if (v.op == "&") {
+        //     v.type = std::make_unique<TypeInfo>(v.rhs->type->getPointerType());
+        //     buildIn = true;
+        // }
         if (auto it = globalInfo().symbolicFuncDef.find(v.op); it != globalInfo().symbolicFuncDef.end()) {
             if (auto it2 = it->second.find({*(v.rhs->type)}); it2 != it->second.end()) {
                 if (buildIn) {
@@ -649,6 +653,13 @@ struct ExpressionSemantic : public ASTVisitor {
             }
         }
         return (v.baseVar->type->isArrayType() && *(v.memberToken->type) == IntType);
+    }
+    bool isAssignable(ExprAST *v) {
+        // auto p = dynamic_cast<UnaryOpExprAST *>(v);
+        // if (p && p->op == "*") {
+        //     return true;
+        // }
+        return isType<IdentifierExprAST>(v) || isType<MemberAccessExprAST>(v);
     }
     ContextStack *c;
 

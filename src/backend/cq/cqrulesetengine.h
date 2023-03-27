@@ -11,9 +11,7 @@
 namespace rulejit::cq {
 
 struct SubRuleSet {
-    SubRuleSet(DataStore &data) : handler(data), interpreter(), subruleset(nullptr) {
-        interpreter.setResourceHandler(&handler);
-    }
+    SubRuleSet(DataStore &data) : handler(data), interpreter(handler), subruleset(nullptr) {}
     SubRuleSet() = delete;
     ResourceHandler handler;
     CQInterpreter interpreter;
@@ -25,6 +23,7 @@ struct RuleSet {
 };
 
 struct RuleSetEngine {
+    RuleSetEngine() : data(), ruleset(), lexer(), parser(), preProcess(data) {}
     //! build from XML file
     //! @param srcXML string of content of XML file
     //! @return none.
@@ -36,16 +35,15 @@ struct RuleSetEngine {
     void buildFromFile(const std::string &XMLFilePath) {
         using namespace std;
         std::ifstream file(XMLFilePath);
-        std::string buffer;
-        while (!(file.eof())) {
-            string tmp;
-            getline(file, tmp);
-            buffer.append(tmp);
-        }
+        std::string buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
         buildFromSource(buffer);
     }
     void init() { data.Init(); }
     void tick() {
+        preProcess.subruleset | preProcess.interpreter;
+        preProcess.handler.writeBack();
+        preProcess.interpreter.symbolStack = {{{}}};
+
         for (auto &&s : ruleset.subRuleSets) {
             s.subruleset | s.interpreter;
         }
@@ -62,6 +60,7 @@ struct RuleSetEngine {
     RuleSet ruleset;
     ExpressionLexer lexer;
     ExpressionParser parser;
+    SubRuleSet preProcess;
 };
 
 } // namespace rulejit::cq

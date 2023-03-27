@@ -98,7 +98,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseUnary() {
 //     '{' (VARDEF | TYPEDEF | ASSIGNMENT | EXPR ENDLINE)* EXPR? '}'                                  |
 //     (IDENT | COMPLEXTYPE | FUNCTYPE | SLICETYPE | ARRAYTYPE) '{' ((IDENT ':')? EXPR ENDLINE)* '}'  |
 //     'if' '(' EXPR ')' EXPR ('else' EXPR)?                                                          |
-//     'while' '(' EXPR ')' EXPR                                                                      | // return last
+//     'while' '(' EXPR ')' EXPR                                                                      |
 //     PRIMARYEXPR '.' IDENT | PRIMARYEXPR '(' EXPR ')'
 std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
     auto startIndex = lexer->beginIndex();

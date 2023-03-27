@@ -42,7 +42,7 @@ int main() {
     // printCSValueMap(*(data.GetOutput()));
 
     RuleSetEngine engine;
-    engine.buildFromFile(__PROJECT_ROOT_PATH"/doc/xml_design/example1.0.xml");
+    engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/xml_design/example1.0.xml");
 
     engine.init();
     for(int i=0; i<1000; i++){

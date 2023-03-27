@@ -66,19 +66,6 @@ struct MemberAccessExprAST : public ExprAST {
         : MemberAccessExprAST(nullptr, std::move(baseVar), std::move(memberToken)) {}
 };
 
-// // ARRAYINDEX := EXPR '[' (EXPR (',' EXPR)*)? ']'
-// // type vector{x int;y int;z int};vector["x"] shall pass?
-// struct ArrayIndexExprAST : public AssignableExprAST {
-//     ACCEPT_FUNCTION;
-//     std::unique_ptr<ExprAST> baseVar;
-//     std::unique_ptr<ExprAST> index;
-//     ArrayIndexExprAST(std::unique_ptr<TypeInfo> type, std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST>
-//     index)
-//         : AssignableExprAST(std::move(type)), baseVar(std::move(baseVar)), index(std::move(index)) {}
-//     ArrayIndexExprAST(std::unique_ptr<ExprAST> baseVar, std::unique_ptr<ExprAST> index)
-//         : ArrayIndexExprAST(nullptr, std::move(baseVar), std::move(index)) {}
-// };
-
 // LITERAL
 // "abc" | 12 | 1e3 TODO: | named literal: constexpr
 struct LiteralExprAST : public ExprAST {

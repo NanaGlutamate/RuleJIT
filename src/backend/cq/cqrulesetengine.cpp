@@ -38,21 +38,37 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
         }
     }
     auto meta = root->first_node("MetaInfo");
+
+    std::string preprocess = "{";
+
     for (auto input = meta->first_node("Inputs")->first_node("Param"); input; input = input->next_sibling("Param")) {
         data.inputVar.push_back(input->first_attribute("name")->value());
         data.varType[input->first_attribute("name")->value()] = input->first_attribute("type")->value();
+        if(auto p = input->first_node("Value"); p){
+            preprocess += std::string(input->first_attribute("name")->value()) + "={" + p->first_node("Expression")->value() + "};";
+        }
     }
 
     for (auto cache = meta->first_node("Caches")->first_node("Param"); cache; cache = cache->next_sibling("Param")) {
         data.cacheVar.push_back(cache->first_attribute("name")->value());
         data.varType[cache->first_attribute("name")->value()] = cache->first_attribute("type")->value();
+        if(auto p = cache->first_node("Value"); p){
+            preprocess += std::string(cache->first_attribute("name")->value()) + "={" + p->first_node("Expression")->value() + "};";
+        }
     }
 
     for (auto output = meta->first_node("Outputs")->first_node("Param"); output;
          output = output->next_sibling("Param")) {
         data.outputVar.push_back(output->first_attribute("name")->value());
         data.varType[output->first_attribute("name")->value()] = output->first_attribute("type")->value();
+        if(auto p = output->first_node("Value"); p){
+            preprocess += std::string(output->first_attribute("name")->value()) + "={" + p->first_node("Expression")->value() + "};";
+        }
     }
+
+    preprocess += "}";
+    preProcess.subruleset = preprocess | lexer | parser;
+
     for (auto subruleset = root->first_node("SubRuleSets")->first_node("SubRuleSet"); subruleset;
          subruleset = subruleset->next_sibling("SubRuleSet")) {
         ruleset.subRuleSets.emplace_back(data);

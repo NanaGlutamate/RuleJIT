@@ -87,7 +87,7 @@ int main() {
     engine = model_obj_;
     // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
     engine->SetLogFun([](const std::string &msg, uint32_t type) {});
-    engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/WVR1.0.xml")}});
+    engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/WVR1.0(1).xml")}});
     for (auto &&input : inputs2) {
         std::cout << std::endl;
         input.emplace("flag", (double)1);

@@ -3,6 +3,6 @@
 
 #define __RULEJIT_GC_DEBUG
 // #define __DISABLE_ASSERT
-#define __RULEJIT_INTERPRETER_DEBUG
+// #define __RULEJIT_INTERPRETER_DEBUG
 
 // #define __RULEJIT_SOA_VIRTUAL

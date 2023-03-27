@@ -25,7 +25,7 @@
         </Outputs>
         <Caches>
             <Param name="Cache1" type="uint32">
-                <InitValue>0</InitValue>
+                <Value><Expression>12</Expression></Value>
             </Param>
         </Caches>
     </MetaInfo>
