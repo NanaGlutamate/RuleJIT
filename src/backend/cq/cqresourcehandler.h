@@ -32,6 +32,10 @@ inline static std::set<std::string> baseData{
     "int64", "uint64", "float32", "float64", "float128", "string",
 };
 
+/**
+ * @brief data structure for storing real data
+ * 
+ */
 struct DataStore {
     using CSValueMap = std::unordered_map<std::string, std::any>;
     DataStore() = default;
@@ -44,6 +48,11 @@ struct DataStore {
     std::unordered_map<std::string, std::string> varType;
     // type -> member name -> member type
     std::unordered_map<std::string, std::unordered_map<std::string, std::string>> typeDefines;
+    /**
+     * @brief init function, will fill input, output and cache
+     * with legal empty instance.
+     * 
+     */
     void Init() {
         // fill input, output and cache
         for (auto &&s : inputVar) {
@@ -56,15 +65,37 @@ struct DataStore {
             cache[s] = makeTypeEmptyInstance(varType[s]);
         }
     }
+    /**
+     * @brief Set input value
+     * 
+     * @param v input value
+     */
     void SetInput(const CSValueMap &v) {
         for (auto &&[k, v] : v) {
             input[k] = v;
         }
     }
+    /**
+     * @brief Get the Outputs
+     * 
+     * @return CSValueMap* pointer to output data
+     */
     CSValueMap* GetOutput(){
         return &output;
     }
+    /**
+     * @brief check if a type is array type
+     * 
+     * @param s type string need to be checked
+     * @return bool
+     */
     bool isArray(const std::string &s) { return s.back() == ']'; }
+    /**
+     * @brief get element type of an array type
+     * 
+     * @param s array type string
+     * @return std::string 
+     */
     std::string arrayElementType(const std::string &s) {
         my_assert(isArray(s));
         std::string tmp = s;
@@ -72,6 +103,12 @@ struct DataStore {
         tmp.pop_back();
         return tmp;
     }
+    /**
+     * @brief generate an empty instance of a type
+     * 
+     * @param type type string
+     * @return std::any 
+     */
     std::any makeTypeEmptyInstance(const std::string &type) {
         if (isArray(type)) {
             return std::vector<std::any>();
@@ -110,6 +147,11 @@ struct DataStore {
     }
 };
 
+/**
+ * @brief data structure for buffering data in DataStore,
+ * and provide functions for CQInterpreter to access and modify data.
+ * 
+ */
 struct ResourceHandler {
     using CSValueMap = std::unordered_map<std::string, std::any>;
     DataStore &data;
@@ -119,6 +161,12 @@ struct ResourceHandler {
     ResourceHandler &operator=(const ResourceHandler &) = delete;
     ResourceHandler &operator=(ResourceHandler &&) = delete;
 
+    /**
+     * @brief manage a string, if the string is already in the buffer, return the index of the string,
+     * 
+     * @param s string need to be managed
+     * @return size_t 
+     */
     size_t take(const std::string &s) {
         if (managedString.contains(s)) {
             return managedString[s];
@@ -127,13 +175,41 @@ struct ResourceHandler {
         managedString[s] = buffer.size() - 1;
         return buffer.size() - 1;
     }
+    /**
+     * @brief check if a value is string
+     * 
+     * @param index token which referring to the value
+     * @return bool
+     */
     bool isString(size_t index) { return std::get<1>(buffer[index]) == "string"; }
+    /**
+     * @brief read string from buffer
+     * 
+     * @param index token which referring to the string
+     * @return std::string 
+     */
     std::string readString(size_t index){return std::any_cast<std::string>(std::get<0>(buffer[index]));}
+    /**
+     * @brief compare managed string
+     * 
+     * @param v1 token which referring to the first string
+     * @param v2 token which referring to the second string
+     * @return true 
+     * @return false 
+     */
     bool stringComp(size_t v1, size_t v2) {
         my_assert(isString(v1) && isString(v2), "string comparison only allowed on string");
         return std::any_cast<std::string>(std::get<0>(buffer[v1])) ==
                std::any_cast<std::string>(std::get<0>(buffer[v2]));
     }
+    /**
+     * @brief read input, cache or output value into the buffer;
+     * if the value already in the buffer, return the index of the value;
+     * if the value not a input, cache or output value, throw an exception
+     * 
+     * @param s variable name
+     * @return size_t token which referring to the value
+     */
     size_t readIn(const std::string &s) {
         if (auto it = bufferMap.find(s); it != bufferMap.end()) {
             return it->second;
@@ -150,6 +226,11 @@ struct ResourceHandler {
         bufferMap[s] = buffer.size() - 1;
         return buffer.size() - 1;
     }
+    /**
+     * @brief write all managed value back to cache and output
+     * @attention it will not write back input value
+     * 
+     */
     void writeBack() {
         for (auto &&[name, ind] : bufferMap) {
             if (auto it = data.output.find(name); it != data.output.end()) {
@@ -163,29 +244,61 @@ struct ResourceHandler {
         relation.clear();
         managedString.clear();
     }
+    /**
+     * @brief create a new instance of given type
+     * 
+     * @param s type name
+     * @return size_t 
+     */
     size_t makeInstance(const std::string& s){
         // TODO: make array, array push back
         buffer.emplace_back(data.makeTypeEmptyInstance(s), s);
         return buffer.size() - 1;
     }
+    /**
+     * @brief create a new instance whose type is same as the given one
+     * 
+     * @param token token which referring to the value
+     * @return size_t 
+     */
     size_t makeInstanceAs(size_t token){
         // TODO: make array, array push back
         return makeInstance(std::get<1>(buffer[token]));
     }
+    /**
+     * @brief define a new type
+     * 
+     * @param s name of new type
+     * @param t member of new type({name : type})
+     */
     void defineType(const std::string& s, const std::unordered_map<std::string, std::string>& t){
         if(data.typeDefines.contains(s))
             throw std::logic_error(std::string("type \"") + s + "\" already defined");
         data.typeDefines[s] = t;
     }
-    void assign(size_t tar, size_t dst) {
-        my_assert(std::get<1>(buffer[tar]) == std::get<1>(buffer[dst]),
+    /**
+     * @brief make assignment between two managed value
+     * 
+     * @param dst token which referring to the assign destination
+     * @param src token which referring to the assign source
+     */
+    void assign(size_t dst, size_t src) {
+        my_assert(std::get<1>(buffer[dst]) == std::get<1>(buffer[src]),
                   "assignment of different types are not allowed");
-        auto tmp = assemble(dst);
+        auto tmp = assemble(src);
+        std::get<0>(buffer[src]) = tmp;
         std::get<0>(buffer[dst]) = tmp;
-        std::get<0>(buffer[tar]) = tmp;
+        relation[src].clear();
         relation[dst].clear();
-        relation[tar].clear();
     }
+    /**
+     * @brief get the array member in index, store it in buffer and return the token
+     * reffering to it
+     * 
+     * @param base token which referring to the array
+     * @param index array index, must in range [0, base.length)
+     * @return size_t token which referring to the returned value
+     */
     size_t arrayAccess(size_t base, size_t index) {
         if (auto it = relation[base].find(std::to_string(index)); it != relation[base].end()) {
             return it->second;
@@ -203,40 +316,73 @@ struct ResourceHandler {
         relation[base].emplace(std::to_string(index), buffer.size() - 1);
         return buffer.size() - 1;
     }
-    size_t memberAccess(size_t base, const std::string &token) {
-        if (auto it = relation[base].find(token); it != relation[base].end()) {
+    /**
+     * @brief get designated member of the given value, store it in buffer and return the token
+     * reffering to it
+     * @attention specially, if the base is an array, the only member it has is "length"
+     * which is the length of the array
+     * 
+     * @param base token which referring to the value
+     * @param name member name
+     * @return size_t token which referring to the returned value
+     */
+    size_t memberAccess(size_t base, const std::string &name) {
+        if (auto it = relation[base].find(name); it != relation[base].end()) {
             return it->second;
         }
         if (data.isArray(std::get<1>(buffer[base]))) {
-            if(token == "length"){
+            if(name == "length"){
                 // the only member an array has is length
                 return arrayLength(base);
             }
             throw std::logic_error(std::format("type \"{}\" is an array", std::get<1>(buffer[base])));
         }
-        auto tmp = std::any_cast<CSValueMap>(std::get<0>(buffer[base]))[token];
+        auto tmp = std::any_cast<CSValueMap>(std::get<0>(buffer[base]))[name];
         auto baseType = std::get<1>(buffer[base]);
-        auto it = data.typeDefines[baseType].find(token);
+        auto it = data.typeDefines[baseType].find(name);
         if (it == data.typeDefines[baseType].end()) {
-            throw std::logic_error(std::format("type \"{}\" has no member {}", std::get<1>(buffer[base]), token));
+            throw std::logic_error(std::format("type \"{}\" has no member {}", std::get<1>(buffer[base]), name));
         }
         auto newType = it->second;
         buffer.emplace_back(tmp, newType);
-        relation[base].emplace(token, buffer.size() - 1);
+        relation[base].emplace(name, buffer.size() - 1);
         return buffer.size() - 1;
     }
+    /**
+     * @brief get the length of the given array
+     * 
+     * @param index token referring to the array
+     * @return size_t 
+     */
     size_t arrayLength(size_t index) {
         auto tmp = std::any_cast<std::vector<std::any>>(std::get<0>(buffer[index]));
         return tmp.size();
     }
+    /**
+     * @brief clear the given array
+     * 
+     * @param index token referring to the array
+     */
     void arrayClear(size_t index) {
         std::get<0>(buffer[index]) = std::vector<std::any>{};
     }
+    /**
+     * @brief extend the given array by one element
+     * 
+     * @param index token referring to the array
+     */
     void arrayExtend(size_t index){
         auto tmp = std::any_cast<std::vector<std::any>>(std::move(std::get<0>(buffer[index])));
         tmp.emplace_back(data.makeTypeEmptyInstance(data.arrayElementType(std::get<1>(buffer[index]))));
         std::get<0>(buffer[index]) = tmp;
     }
+    /**
+     * @brief check if the given value is a base type
+     * (which means it is not an array or a struct)
+     * 
+     * @param index token referring to the value
+     * @return bool
+     */
     bool isBaseType(size_t index) {
         try {
             readValue(index);
@@ -245,6 +391,14 @@ struct ResourceHandler {
             return false;
         }
     }
+    /**
+     * @brief get the double value of the variable that given token reffered
+     * @attention the given token must reffering to a variable
+     * with base type, that means isBaseType(index) must be true
+     * 
+     * @param index token referring to the value
+     * @return double 
+     */
     double readValue(size_t index) {
         auto &v = std::get<0>(buffer[index]);
         if (v.type() == typeid(int8_t)) {
@@ -271,6 +425,14 @@ struct ResourceHandler {
             throw std::logic_error(std::string("unknown type: ") + v.type().name());
         }
     }
+    /**
+     * @brief assign to managed variable
+     * @attention the given token must reffering to a variable
+     * with base type, that means isBaseType(index) must be true
+     * 
+     * @param index token referring to the value
+     * @param tar assigned value
+     */
     void writeValue(size_t index, double tar) {
         // TODO: string
         auto &v = std::get<0>(buffer[index]);
@@ -299,7 +461,7 @@ struct ResourceHandler {
         }
     }
 
-  //private:
+  private:
     std::any assemble(size_t index) {
         auto [v, type] = buffer[index];
         if (baseData.contains(type)) {
@@ -319,13 +481,13 @@ struct ResourceHandler {
             return tmp;
         }
     }
-    std::map<std::string, size_t> managedString;
+    std::map<std::string, size_t> managedString;/**< string managed by this context */
     // {value, type}
-    std::vector<std::tuple<std::any, std::string>> buffer;
+    std::vector<std::tuple<std::any, std::string>> buffer;/**< buffer for storing values */
     // index -> {memberName, index}
-    std::map<size_t, std::map<std::string, size_t>> relation;
+    std::map<size_t, std::map<std::string, size_t>> relation;/**< relation between values */
     // name -> index
-    std::map<std::string, size_t> bufferMap;
+    std::map<std::string, size_t> bufferMap;/**< map from input/output/cache value name to index in buffer */
 };
 
 } // namespace rulejit::cq

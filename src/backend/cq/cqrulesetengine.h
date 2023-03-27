@@ -10,7 +10,15 @@
 
 namespace rulejit::cq {
 
+/**
+ * @brief Structure for subrule set.
+ */
 struct SubRuleSet {
+    /**
+     * @brief Construct a new SubRuleSet object.
+     *
+     * @param data The DataStore object.
+     */
     SubRuleSet(DataStore &data) : handler(data), interpreter(handler), subruleset(nullptr) {}
     SubRuleSet() = delete;
     ResourceHandler handler;
@@ -18,27 +26,49 @@ struct SubRuleSet {
     std::unique_ptr<ExprAST> subruleset;
 };
 
+/**
+ * @brief Structure for rule set.
+ */
 struct RuleSet {
     std::list<SubRuleSet> subRuleSets;
 };
 
+/**
+ * @brief Structure for rule set engine.
+ */
 struct RuleSetEngine {
     RuleSetEngine() : data(), ruleset(), lexer(), parser(), preProcess(data) {}
-    //! build from XML file
-    //! @param srcXML string of content of XML file
-    //! @return none.
+    /**
+     * @brief Build the rule set engine from the XML source.
+     *
+     * @param srcXML The string content of the XML file.
+     * @return void.
+     */
     void buildFromSource(const std::string &srcXML);
 
-    //! build from XML file
-    //! @param XMLFilePath string of path of XML file
-    //! @return none.
+    /**
+     * @brief Build the rule set engine from the XML file.
+     *
+     * @param XMLFilePath The string path of the XML file.
+     * @return void.
+     */
     void buildFromFile(const std::string &XMLFilePath) {
         using namespace std;
         std::ifstream file(XMLFilePath);
         std::string buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
         buildFromSource(buffer);
     }
+    /**
+     * @brief Initialize the rule set engine.
+     *
+     * @return void.
+     */
     void init() { data.Init(); }
+    /**
+     * @brief Execute a tick of the rule set engine.
+     *
+     * @return void.
+     */
     void tick() {
         preProcess.subruleset | preProcess.interpreter;
         preProcess.handler.writeBack();
@@ -52,10 +82,21 @@ struct RuleSetEngine {
             s.interpreter.symbolStack = {{{}}};
         }
     }
+    /**
+     * @brief Set the input data for the rule set engine.
+     *
+     * @param input The unordered map of input data.
+     * @return void.
+     */
     void setInput(const std::unordered_map<std::string, std::any> &input) { data.SetInput(input); }
+    /**
+     * @brief Get the output data from the rule set engine.
+     *
+     * @return The pointer of unordered map for output data.
+     */
     std::unordered_map<std::string, std::any> *getOutput() { return data.GetOutput(); }
 
-    // private:
+  private:
     DataStore data;
     RuleSet ruleset;
     ExpressionLexer lexer;

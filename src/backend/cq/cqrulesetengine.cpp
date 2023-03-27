@@ -41,6 +41,7 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
 
     std::string preprocess = "{";
 
+    // collect inputs, caches and outputs variables and their types, store them in data.varType
     for (auto input = meta->first_node("Inputs")->first_node("Param"); input; input = input->next_sibling("Param")) {
         data.inputVar.push_back(input->first_attribute("name")->value());
         data.varType[input->first_attribute("name")->value()] = input->first_attribute("type")->value();
@@ -67,8 +68,10 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
     }
 
     preprocess += "}";
+    // generate preprocess subruleset, which will be called tick() and writeBack() before all subruleset
     preProcess.subruleset = preprocess | lexer | parser;
 
+    // for each subruleset node, generate ast and store it in ruleset
     for (auto subruleset = root->first_node("SubRuleSets")->first_node("SubRuleSet"); subruleset;
          subruleset = subruleset->next_sibling("SubRuleSet")) {
         ruleset.subRuleSets.emplace_back(data);
@@ -85,7 +88,6 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
             expr += "}else ";
         }
         expr += "{}}";
-        // std::cout<<expr;
         tmp.subruleset = expr | lexer | parser;
     }
 }
