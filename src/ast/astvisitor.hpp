@@ -18,7 +18,6 @@
  */
 #pragma once
 
-// #define VISIT_FUNCTION_DEF(c, type) void c::visit(type &v) override
 #define VISIT_FUNCTION(type) void visit(type &v) override
 #define PURE_VIRTUAL_VISIT_FUNCTION(type) virtual void visit(type &v) = 0
 

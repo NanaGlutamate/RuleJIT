@@ -402,7 +402,9 @@ struct ResourceHandler {
      */
     double readValue(size_t index) {
         auto &v = std::get<0>(buffer[index]);
-        if (v.type() == typeid(int8_t)) {
+        if (v.type() == typeid(bool)) {
+            return std::any_cast<bool>(v);
+        } else if (v.type() == typeid(int8_t)) {
             return std::any_cast<int8_t>(v);
         } else if (v.type() == typeid(uint8_t)) {
             return std::any_cast<uint8_t>(v);
@@ -437,7 +439,9 @@ struct ResourceHandler {
     void writeValue(size_t index, double tar) {
         // TODO: string
         auto &v = std::get<0>(buffer[index]);
-        if (v.type() == typeid(int8_t)) {
+        if (v.type() == typeid(bool)) {
+            v = (bool)(tar);
+        } else if (v.type() == typeid(int8_t)) {
             v = (int8_t)(tar);
         } else if (v.type() == typeid(uint8_t)) {
             v = (uint8_t)(tar);

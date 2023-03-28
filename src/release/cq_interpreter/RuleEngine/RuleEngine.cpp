@@ -4,7 +4,8 @@
  * @brief CQ/Interpreter/Rule engine
  * @date 2023-03-27
  * 
- * @details Includes platform interface function and member function defines of RuleEngine
+ * @details Includes platform interface function defines and member function defines of RuleEngine
+ * 
  * @see RuleEngine
  * 
  * @par history
@@ -22,8 +23,10 @@
 #endif
 #include <format>
 #include <string>
+#include <filesystem>
 
 #include "RuleEngine.h"
+#include "tools/seterror.hpp"
 
 namespace {
 
@@ -62,6 +65,11 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
     } else {
         auto library_dir_ = getLibDir();
         filePath = library_dir_ + "rule.xml";
+    }
+    if(!std::filesystem::exists(filePath)){
+        WriteLog(std::format("Init RuleEngine error: file {} not exists", filePath), 1);
+        error(std::format("Init RuleEngine error: file {} not exists", filePath));
+        return false;
     }
     try {
         engine.buildFromFile(filePath);

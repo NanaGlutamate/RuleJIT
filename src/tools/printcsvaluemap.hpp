@@ -37,7 +37,9 @@ void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
             cout << ", ";
         }
         cout << k << ": ";
-        if (v.type() == typeid(int8_t)) {
+        if (v.type() == typeid(bool)) {
+            cout << (bool)std::any_cast<bool>(v);
+        } else if (v.type() == typeid(int8_t)) {
             cout << (int64_t)std::any_cast<int8_t>(v);
         } else if (v.type() == typeid(uint8_t)) {
             cout << (uint64_t)std::any_cast<uint8_t>(v);

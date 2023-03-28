@@ -3,9 +3,9 @@
  * @author djw
  * @brief Test cases
  * @date 2023-03-27
- * 
+ *
  * @details CQ/Interpreter/Test cases
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -310,7 +310,7 @@ inline std::vector<CSValueMap> inputs2{
         {"DTNok", double(5000)},
         {"phiANmax", double(50)},
     },
-    
+
     CSValueMap{
         {"Rel_",
          CSValueMap{
@@ -347,3 +347,37 @@ inline std::vector<CSValueMap> inputs2{
         {"phiANmax", double(50)},
     },
 };
+
+inline std::vector<CSValueMap> inputs3{CSValueMap{
+    {"Rel_",
+     CSValueMap{
+         {"d", double(11000)},
+         {"phiA", double(140)},
+         {"phiT", double(20)},
+     }},
+    {"radar", double(0)},
+    {"missile", double(0)},
+    {"DT",
+     CSValueMap{
+         {"DRmax", double(50000)},
+         {"DMmax", double(40000)},
+         {"DMmin", double(10000)},
+         {"DMKmax", double(30000)},
+         {"DMKmin", double(20000)},
+         {"phiRmax", double(70)},
+         {"phiMmax", double(50)},
+         {"phiMK", double(30)},
+     }},
+    {"DA",
+     CSValueMap{
+         {"DRmax", double(50000)},
+         {"DMmax", double(40000)},
+         {"DMmin", double(10000)},
+         {"DMKmax", double(30000)},
+         {"DMKmin", double(20000)},
+         {"phiRmax", double(70)},
+         {"phiMmax", double(50)},
+         {"phiMK", double(30)},
+     }},
+    {"flag", double(1)},
+}};

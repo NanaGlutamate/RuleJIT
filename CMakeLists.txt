@@ -11,6 +11,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 include_directories(AFTER ${PROJECT_SOURCE_DIR}/src)
 include_directories(AFTER ${PROJECT_SOURCE_DIR}/extern)
+include_directories(AFTER ${PROJECT_SOURCE_DIR}/extern/imgui)
 include_directories(AFTER ${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
@@ -29,8 +30,8 @@ if(MSVC)
   string(APPEND CMAKE_CXX_FLAGS " /permissive- /Zc:__cplusplus")
 endif()
 
-add_subdirectory(src)
 add_subdirectory(extern)
+add_subdirectory(src)
 
 # Now build our tools
 # add_executable(simple-tool HowToUseLLJIT.cpp)

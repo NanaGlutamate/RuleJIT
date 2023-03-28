@@ -42,7 +42,7 @@ int main() {
     using namespace rulejit;
     using CSValueMap = std::unordered_map<std::string, std::any>;
     std::string lib_path_ = __PROJECT_ROOT_PATH
-                            "/bin/Debug/"
+                            "/bin/RelWithDebInfo/"
                             "cq_interpreter.dll";
 
 #ifdef _WIN32
@@ -92,6 +92,23 @@ int main() {
     //     printCSValueMap(*(engine->GetOutput()));
     // }
 
+    // model_obj_ = create_obj_();
+    // if (nullptr == model_obj_) {
+    //     std::cerr << "create model error" << std::endl;
+    //     return -1;
+    // }
+    // engine = model_obj_;
+    // // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
+    // engine->SetLogFun([](const std::string &msg, uint32_t type) {});
+    // engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/WVR1.0(1).xml")}});
+    // for (auto &&input : inputs2) {
+    //     std::cout << std::endl;
+    //     input.emplace("flag", (double)1);
+    //     engine->SetInput(input);
+    //     engine->Tick(0.02);
+    //     printCSValueMap(*(engine->GetOutput()));
+    // }
+
     model_obj_ = create_obj_();
     if (nullptr == model_obj_) {
         std::cerr << "create model error" << std::endl;
@@ -100,8 +117,8 @@ int main() {
     engine = model_obj_;
     // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
     engine->SetLogFun([](const std::string &msg, uint32_t type) {});
-    engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/WVR1.0(1).xml")}});
-    for (auto &&input : inputs2) {
+    engine->Init(CSValueMap{});
+    for (auto &&input : inputs3) {
         std::cout << std::endl;
         input.emplace("flag", (double)1);
         engine->SetInput(input);
