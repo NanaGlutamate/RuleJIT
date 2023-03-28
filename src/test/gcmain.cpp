@@ -1,3 +1,17 @@
+/**
+ * @file gcmain.cpp
+ * @author djw
+ * @brief 
+ * @date 2023-03-28
+ * 
+ * @details 
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #include <iostream>
 
 #include "tools/gc/marksweepgc.hpp"
@@ -5,6 +19,7 @@
 int main(){
     using namespace std;
     using namespace rulejit;
+    using namespace rulejit::gc;
     uint64_t* root = StaticMarkSweepGarbageCollector::alloc(10);
     uint64_t* frame = StaticMarkSweepGarbageCollector::alloc(5);
     root[0] = (uint64_t)frame;

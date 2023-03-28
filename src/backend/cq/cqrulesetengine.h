@@ -52,7 +52,7 @@ struct RuleSet {
  * @brief Structure for rule set engine.
  */
 struct RuleSetEngine {
-    RuleSetEngine() : data(), ruleset(), lexer(), parser(), preProcess(data) {}
+    RuleSetEngine() : data(), ruleset(), lexer(), parser(), preprocess(data) {}
     /**
      * @brief Build the rule set engine from the XML source.
      *
@@ -85,9 +85,9 @@ struct RuleSetEngine {
      * @return void.
      */
     void tick() {
-        preProcess.subruleset | preProcess.interpreter;
-        preProcess.handler.writeBack();
-        preProcess.interpreter.reset();
+        preprocess.subruleset | preprocess.interpreter;
+        preprocess.handler.writeBack();
+        preprocess.interpreter.reset();
 
         for (auto &&s : ruleset.subRuleSets) {
             s.subruleset | s.interpreter;
@@ -121,7 +121,7 @@ struct RuleSetEngine {
     /// @brief expression parser
     ExpressionParser parser;
     /// @brief pre-process subruleset, which will called tick() and writeBack() before all subruleset
-    SubRuleSet preProcess;
+    SubRuleSet preprocess;
 };
 
 } // namespace rulejit::cq

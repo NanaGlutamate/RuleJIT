@@ -1,3 +1,17 @@
+/**
+ * @file replmain.cpp
+ * @author djw
+ * @brief Test/Repl
+ * @date 2023-03-28
+ * 
+ * @details 
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #include <fstream>
 #include <iostream>
 
@@ -21,11 +35,10 @@ int main() {
     static ExpressionLexer lexer;
     static ExpressionParser parser;
     static ASTPrinter printer;
-    static CQInterpreter interpreter;
     static ResourceHandler handler(data);
+    static CQInterpreter interpreter(handler);
 
     data.Init();
-    interpreter.setResourceHandler(&handler);
     data.typeDefines.emplace(
         "Vector3", std::unordered_map<std::string, std::string>{{"x", "float64"}, {"y", "float64"}, {"z", "float64"}});
 

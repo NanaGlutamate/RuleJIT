@@ -5,6 +5,9 @@
  * @date 2023-03-28
  * 
  * @details Includes some definitions of member functions of TypeInfo
+ * must include defines/typedef.hpp due to TypeInfo::getReturnedType
+ * may need to return NoInstanceType, and may introduce loop dependency
+ * if put function defines in type.hpp, so put them in type.cpp
  * 
  * @par history
  * <table>

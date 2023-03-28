@@ -6,6 +6,8 @@
  *
  * @details Includes a simple example implementing the AST Visitor, the ASTPrinter.
  *
+ * @see ASTVisitor
+ * 
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>

@@ -1,3 +1,17 @@
+/**
+ * @file typedef.hpp
+ * @author djw
+ * @brief Defines/Type defines
+ * @date 2023-03-28
+ * 
+ * @details Includes some type defines.
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include <map>
@@ -10,6 +24,7 @@
 
 namespace rulejit {
 
+/// @brief NoInstanceType used for type for no returned expression
 inline const TypeInfo NoInstanceType{std::vector<std::string>{std::string(typeident::NoInstanceTypeIdent)}};
 inline const TypeInfo StringType{std::vector<std::string>{std::string(typeident::StringTypeIdent)}};
 inline const TypeInfo IntType{std::vector<std::string>{std::string(typeident::IntTypeIdent)}};
@@ -25,54 +40,5 @@ inline const std::set<TypeInfo> BuildInType{
 };
 
 inline std::unique_ptr<TypeInfo> getAuto() { return std::make_unique<TypeInfo>(AutoType); }
-
-// inline std::unique_ptr<TypeInfo> getNoInstance() { return std::make_unique<TypeInfo>(NoInstanceType); }
-
-// inline const std::map<std::string, std::map<TypeInfo, size_t>> buildInFunc{
-//     {"+",
-//      {
-//          {make_type("func(f64,f64):f64"), 0},
-//      }},
-//     {"-",
-//      {
-//          {make_type("func(f64,f64):f64"), 0},
-//      }},
-//     {"*",
-//      {
-//          {make_type("func(f64,f64):f64"), 0},
-//      }},
-//     {"/",
-//      {
-//          {make_type("func(f64,f64):f64"), 0},
-//      }},
-//     {">",
-//      {
-//          {make_type("func(f64,f64):f64"), 0},
-//      }},
-//     {"<",
-//      {
-//          {make_type("func(f64,f64):f64"), 0},
-//      }},
-//     {">=",
-//      {
-//          {make_type("func(f64,f64):f64"), 0},
-//      }},
-//     {"<=",
-//      {
-//          {make_type("func(f64,f64):f64"), 0},
-//      }},
-//     {"==",
-//      {
-//          {make_type("func(f64,f64):f64"), 0},
-//      }},
-//     {"!=",
-//      {
-//          {make_type("func(f64,f64):f64"), 0},
-//      }},
-//     {"!",
-//      {
-//          {make_type("func(f64):f64"), 0},
-//      }},
-// };
 
 } // namespace rulejit

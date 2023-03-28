@@ -38,9 +38,12 @@ namespace rulejit::cq {
 
 void RuleSetEngine::buildFromSource(const std::string &srcXML) {
     using namespace rapidxml;
+    // load XML
     xml_document<> doc;
     CStyleString s(srcXML);
     doc.parse<parse_default>(s.s);
+
+    // parse XML
     auto root = doc.first_node("RuleSet");
     if (auto it = root->first_attribute("version"); !it || it->value() != std::string("1.0")) {
         throw std::runtime_error("Unsupported version of RuleSet");
@@ -55,14 +58,15 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
     }
     auto meta = root->first_node("MetaInfo");
 
-    std::string preprocess = "{";
+    std::string preprocessOriginal = "{";
 
     // collect inputs, caches and outputs variables and their types, store them in data.varType
     for (auto input = meta->first_node("Inputs")->first_node("Param"); input; input = input->next_sibling("Param")) {
         data.inputVar.push_back(input->first_attribute("name")->value());
         data.varType[input->first_attribute("name")->value()] = input->first_attribute("type")->value();
         if(auto p = input->first_node("Value"); p){
-            preprocess += std::string(input->first_attribute("name")->value()) + "={" + p->first_node("Expression")->value() + "};";
+            // if contains <Value> node, add assignment to preprocessOriginal
+            preprocessOriginal += std::string(input->first_attribute("name")->value()) + "={" + p->first_node("Expression")->value() + "};";
         }
     }
 
@@ -70,7 +74,8 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
         data.cacheVar.push_back(cache->first_attribute("name")->value());
         data.varType[cache->first_attribute("name")->value()] = cache->first_attribute("type")->value();
         if(auto p = cache->first_node("Value"); p){
-            preprocess += std::string(cache->first_attribute("name")->value()) + "={" + p->first_node("Expression")->value() + "};";
+            // if contains <Value> node, add assignment to preprocessOriginal
+            preprocessOriginal += std::string(cache->first_attribute("name")->value()) + "={" + p->first_node("Expression")->value() + "};";
         }
     }
 
@@ -79,13 +84,14 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
         data.outputVar.push_back(output->first_attribute("name")->value());
         data.varType[output->first_attribute("name")->value()] = output->first_attribute("type")->value();
         if(auto p = output->first_node("Value"); p){
-            preprocess += std::string(output->first_attribute("name")->value()) + "={" + p->first_node("Expression")->value() + "};";
+            // if contains <Value> node, add assignment to preprocessOriginal
+            preprocessOriginal += std::string(output->first_attribute("name")->value()) + "={" + p->first_node("Expression")->value() + "};";
         }
     }
 
-    preprocess += "}";
+    preprocessOriginal += "}";
     // generate preprocess subruleset, which will be called tick() and writeBack() before all subruleset
-    preProcess.subruleset = preprocess | lexer | parser;
+    preprocess.subruleset = preprocessOriginal | lexer | parser;
 
     // for each subruleset node, generate ast and store it in ruleset
     for (auto subruleset = root->first_node("SubRuleSets")->first_node("SubRuleSet"); subruleset;

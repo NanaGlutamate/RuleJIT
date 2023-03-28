@@ -188,6 +188,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         data.varType[name] = type;
         context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
         if (auto p = input->first_node("Value"); p) {
+            // if contains <Value> node, add assignment to preprocessOriginal
             preprocessOriginal += std::string(input->first_attribute("name")->value()) + "={" +
                           p->first_node("Expression")->value() + "};";
         }
@@ -199,6 +200,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         data.varType[name] = type;
         context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
         if (auto p = cache->first_node("Value"); p) {
+            // if contains <Value> node, add assignment to preprocessOriginal
             preprocessOriginal += std::string(cache->first_attribute("name")->value()) + "={" +
                           p->first_node("Expression")->value() + "};";
         }
@@ -211,6 +213,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         data.varType[name] = type;
         context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
         if (auto p = output->first_node("Value"); p) {
+            // if contains <Value> node, add assignment to preprocessOriginal
             preprocessOriginal += std::string(output->first_attribute("name")->value()) + "={" +
                           p->first_node("Expression")->value() + "};";
         }
@@ -252,6 +255,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         subcall += std::format(subRulesetCall, i);
         subwrite += std::format(subRulesetWrite, i);
     }
+    // write to ruleset.hpp
     rulesetFile << std::format(rulesetHpp, namespaceName, prefix, subcall, subwrite, subs, "", preprocess);
 
     // generate typedefs
@@ -293,6 +297,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
+    // write to typedef.hpp
     typeDefFile << std::format(typeDefHpp, namespaceName, prefix, typedefs);
 
     // generate func def
@@ -329,17 +334,22 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
         externDefs += std::format(externFuncDef, CppStyleType(type.getReturnedType()), name, params);
     }
+    // write to funcdef.hpp
     funcDefFile << std::format(funcDefHpp, namespaceName, prefix, funcDefs, externDefs);
 
+    // generate ruleset.cpp
     std::ofstream rulesetCppFile(outputPath + prefix + "ruleset.cpp");
     rulesetCppFile << std::format(rulesetCpp, namespaceName, prefix);
 
+    // generate CMakeLists.txt
     std::ofstream cmakeTxtFile(outputPath + "CMakeLists.txt");
     cmakeTxtFile << std::format(CMakeListsTxt, namespaceName, prefix);
 
+    // generate testmain.cpp
     std::ofstream testmainCppFile(outputPath + "testmain.cpp");
     testmainCppFile << testmainCpp;
 
+    // generate cqinterface.hpp
     std::ofstream cqinterfaceHppFile(outputPath + "cqinterface.hpp");
     cqinterfaceHppFile << cqinterfaceHpp;
 }

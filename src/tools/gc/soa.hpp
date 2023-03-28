@@ -1,3 +1,17 @@
+/**
+ * @file soa.hpp
+ * @author djw
+ * @brief GC/Small Object Allocator
+ * @date 2023-03-28
+ * 
+ * @details Includes a small object allocator, which is used by GC.
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include "defines/marco.hpp"

@@ -1,3 +1,17 @@
+/**
+ * @file marco.hpp
+ * @author djw
+ * @brief Defines/Marco
+ * @date 2023-03-28
+ * 
+ * @details Includes some marco defines used in conditional compilation.
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 

@@ -1,3 +1,17 @@
+/**
+ * @file printcsvaluemap.hpp
+ * @author djw
+ * @brief Tools/CSValueMap printer
+ * @date 2023-03-28
+ * 
+ * @details Includes a tool function to print CSValueMap.
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include <unordered_map>
@@ -7,6 +21,11 @@
 
 namespace rulejit{
 
+/**
+ * @brief tool function to print CSValueMap to std::cout
+ * 
+ * @param v CSValuMap need to be printed
+ */
 void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
     using namespace std;
     cout << "{";

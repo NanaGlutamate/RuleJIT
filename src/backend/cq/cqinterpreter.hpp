@@ -35,6 +35,7 @@ namespace rulejit::cq {
  * 
  */
 struct CQInterpreter : public ASTVisitor {
+    friend int ::main();
     /**
      * @brief defined functions
      * 

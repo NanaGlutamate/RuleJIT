@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
     }
     rulejit::cppgen::CppEngine codegen;
     std::string in;
+    // process command line arguments
     for (int i = 1; i < argc; i++) {
         if (argv[i] == std::string_view("-outpath")) {
             i++;
@@ -55,6 +56,7 @@ int main(int argc, char **argv) {
             }
             codegen.setPrefix(argv[i]);
         } else if (in.empty()) {
+            // only allow 1 input file specified
             in = argv[i];
         } else {
             std::cout << "Unknown argument: " << argv[i] << std::endl;
@@ -65,10 +67,11 @@ int main(int argc, char **argv) {
         std::cout << "No input file specified." << std::endl;
         return 1;
     }
-    // check if codegen.outputPath exists, if not, create it.
     if (!std::filesystem::exists(codegen.outputPath)) {
+        // check if codegen.outputPath exists, if not, create it.
         std::filesystem::create_directories(codegen.outputPath);
     } else {
+        // if already exists, ask user if continue
         std::cout << "directory " << codegen.outputPath << " already exists, continue?[Y/n]" << std::endl;
         std::string input;
         std::cin >> input;
@@ -79,6 +82,7 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
+    // start code generation, catch exceptions while throwed, and print exception message.
     try {
         codegen.buildFromFile(in);
     } catch (std::exception &e) {

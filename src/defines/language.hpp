@@ -1,3 +1,17 @@
+/**
+ * @file language.hpp
+ * @author djw
+ * @brief Defines/Language
+ * @date 2023-03-28
+ * 
+ * @details Includes some language related defines.
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include <map>

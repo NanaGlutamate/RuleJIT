@@ -4,9 +4,9 @@
  * @brief AST/AST visitor
  * @date 2023-03-27
  * 
- * @details Includes defination of struct ASTVisitor, which a part of AST design.
+ * @details Includes defination of interface ASTVisitor, which is a part of AST design.
  * AST designed in Visitor Pattern, provides flexibility in AST operations developments.
- * also contains marcos to simplify development.
+ * also contains marcos to simplify extensiones development.
  * 
  * @see ASTVisitor
  * 

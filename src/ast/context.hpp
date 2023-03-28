@@ -3,9 +3,9 @@
  * @author djw
  * @brief AST/Context
  * @date 2023-03-28
- * 
+ *
  * @details Includes data structure to store context informations used in frontend or IR generation
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -25,45 +25,44 @@
 
 namespace rulejit {
 
-struct SymbolTable {
-    std::string getFuncOverloadSymbol() {}
-};
-
+/**
+ * @brief global symbols and defines
+ *
+ */
 struct ContextGlobal {
-    // real function dependency graph
+    /// @brief real function dependency graph
     std::map<std::string, std::set<std::string>> funcDependency;
-    // real function name
+    /// @brief real function name
     std::set<std::string> checkedFunc;
-    // real function name -> function definition
+    /// @brief real function name -> function definition
     std::map<std::string, std::unique_ptr<FunctionDefAST>> realFuncDefinition;
+    /// @brief real function name -> function definition
     std::map<std::string, TypeInfo> externFuncDef;
-    // used function name("add") -> real function name("func@0@2@add(f64,f64):f64")
+    /// @brief used function name("add") -> real function name("func@0@2@add(f64,f64):f64")
     std::map<std::string, std::string> funcDef;
-    // used function name("+") -> param type({"Vector3", "Vector3"}) -> real function
-    //     name("func@0@2@+(Vector3,Vector3):Vector3")
+    /**
+     *  @brief used function name("+") -> param type({"Vector3", "Vector3"}) -> real function
+     *  name("func@0@2@+(Vector3,Vector3):Vector3")
+     */
     std::map<std::string, std::map<std::vector<TypeInfo>, std::string>> symbolicFuncDef;
-    // used function name("add") -> param type({"Vector3", "Vector3"}) -> real function
-    //     name("func@0@2@add(Vector3,Vector3):Vector3")
+    /**
+     * @brief used function name("add") -> param type({"Vector3", "Vector3"}) -> real function
+     * name("func@0@2@add(Vector3,Vector3):Vector3")
+     *
+     */
     std::map<std::string, std::map<std::vector<TypeInfo>, std::string>> memberFuncDef;
-    // type alias name -> type name(may recursion)
+    /// @brief type alias name -> type name(may recursion)
     std::map<std::string, std::string> typeAlias;
-    // type name -> defined type
+    /// @brief type name -> defined type
     std::map<std::string, TypeInfo> typeDef;
 };
 
-// when meet var def: add {name, type} to varDef
-// when meet type def: add {type name, type} to typeDef
-// when meet type alias: 1. if alias to a unnamed type, name it and define it
-//                       2. add {type alias name, typename} to typeAlias
-// when meet func def: 1. register to "realFuncDefinition"
-//                     2. add {used function name, real function name} to funcDef
-//                     3. add {used function name, func type} to vardef
-// when meet member/infix func def: 1. register to "realFuncDefinition"
-//                                  2. add {used function name, {param type, real function name}} to
-//                                     symbolicFuncDef/memberFuncDef
-// only when all def in a scope processed can sub scope to be processed.
+/**
+ * @brief symbol stack frame
+ *
+ */
 struct ContextFrame {
-    // var name / used function name -> type
+    /// @brief var name / used function name -> type
     std::map<std::string, TypeInfo> varDef;
     // // var name -> real func closure type name list that capture this var
     // std::map<std::string, std::vector<std::string>> capturedInfo;
@@ -71,16 +70,46 @@ struct ContextFrame {
     size_t subScopeCounter = 0;
 };
 
-// stack
+/**
+ * @brief context used in semantic analysis
+ *
+ * @details when meet var def: add {name, type} to varDef
+ *
+ * when meet type def: add {type name, type} to typeDef
+ *
+ * when meet func def: 1. register to "realFuncDefinition"
+ *
+ *                     2. add {used function name, real function name} to funcDef
+ *
+ * when meet member/infix func def: 1. register to "realFuncDefinition"
+ *
+ *                                  2. add {used function name, {param type, real function name}} to
+ *
+ *                                     symbolicFuncDef/memberFuncDef
+ *
+ */
 struct ContextStack {
+    /// @brief counter for generate unique name
     size_t counter;
+    /// @brief global information
     ContextGlobal global;
+    /// @brief scope stack
     std::vector<ContextFrame> scope;
+    /**
+     * @brief Construct a new Context Stack object
+     * 
+     */
     ContextStack() : scope({{}}), counter(0) {}
     ContextStack(const ContextStack &) = delete;
     ContextStack(ContextStack &&) = delete;
     ContextStack &operator=(const ContextStack &) = delete;
     ContextStack &operator=(ContextStack &&) = delete;
+    /**
+     * @brief get real function type
+     *
+     * @param name real function name
+     * @return const TypeInfo&
+     */
     const TypeInfo &getRealFunctionType(const std::string &name) {
         if (auto it = global.realFuncDefinition.find(name); it != global.realFuncDefinition.end()) {
             return *(it->second->funcType);
@@ -88,19 +117,43 @@ struct ContextStack {
             throw std::logic_error("cannot find function definition: " + name);
         }
     }
-    size_t size() const {
-        return scope.size();
-    }
+    /**
+     * @brief get scope stack size
+     * 
+     * @return size_t 
+     */
+    size_t size() const { return scope.size(); }
+    /**
+     * @brief clear all context
+     * 
+     */
     void clear() {
         counter = 0;
         global = {};
         scope = {{}};
     }
+    /**
+     * @brief get last scope
+     * 
+     * @return ContextFrame& 
+     */
     ContextFrame &top() { return scope.back(); }
+    /**
+     * @brief generate unique name
+     * 
+     * @param prefix name prefix
+     * @param suffix name suffix
+     * @return std::string generated name
+     */
     std::string generateUniqueName(const std::string &prefix = "", const std::string &suffix = "") {
         std::string tmp = prefix + "_" + std::to_string(counter++) + "_" + suffix;
         return tmp;
     }
+    /**
+     * @brief push a scope to scope stack
+     * 
+     * @return ContextFrame& 
+     */
     ContextFrame &push() {
         auto tmp = scope.back().subScopeCounter++;
         scope.push_back({});
@@ -108,13 +161,36 @@ struct ContextStack {
         scope.back().scopeID = tmp;
         return top();
     }
+    /**
+     * @brief pop the last scope from scope stack
+     * 
+     * @return ContextFrame& last scope after pop
+     */
     ContextFrame &pop() {
         scope.pop_back();
         return top();
     }
-    template <typename Item, typename Index>
-    //! @return (find, escaped, value)
-    decltype(auto) seek(Item p, const Index &ind, size_t top = size_t(-1)) {
+
+    /**
+     * @brief function to seek var def in context stack
+     *
+     * @param s variable name
+     * @return (find, escaped, value)
+     */
+    decltype(auto) seekVarDef(const std::string &s) { return seek(&ContextFrame::varDef, s); }
+
+  private:
+    /**
+     * @brief template function to seek def in context stack
+     *
+     * @tparam Item member pointer type
+     * @tparam Index key type for map
+     * @param p memner pointer
+     * @param ind serached key
+     * @param top current stack frame index, -1 for top frame
+     * @return (find, escaped, value)
+     */
+    template <typename Item, typename Index> decltype(auto) seek(Item p, const Index &ind, size_t top = size_t(-1)) {
         if (top == size_t(-1)) {
             top = scope.size() - 1;
         }
@@ -127,18 +203,6 @@ struct ContextStack {
         }
         return seek(p, ind, top - 1);
     }
-    // //! @return (find, escaped, value)
-    // decltype(auto) seekFuncDef(const std::string &s) { return seek(&ContextFrame::funcDef, s); }
-    // //! @return (find, escaped, value)
-    // decltype(auto) seekInfixFuncDef(const std::string &s) { return seek(&ContextFrame::symbolicFuncDef, s); }
-    // //! @return (find, escaped, value)
-    // decltype(auto) seekMemberFuncDef(const std::string &s) { return seek(&ContextFrame::memberFuncDef, s); }
-    // //! @return (find, escaped, value)
-    // decltype(auto) seekTypeAlias(const std::string &s) { return seek(&ContextFrame::typeAlias, s); }
-    // //! @return (find, escaped, value)
-    // decltype(auto) seekTypeDef(const std::string s) { return seek(&ContextFrame::typeDef, s); }
-    //! @return (find, escaped, value)
-    decltype(auto) seekVarDef(const std::string &s) { return seek(&ContextFrame::varDef, s); }
 };
 
 } // namespace rulejit

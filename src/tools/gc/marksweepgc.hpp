@@ -1,3 +1,17 @@
+/**
+ * @file marksweepgc.hpp
+ * @author djw
+ * @brief GC/Mark Sweep GC
+ * @date 2023-03-28
+ * 
+ * @details Includes a mark sweep garbage collector.
+ * 
+ * @par history
+ * <table>
+ * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * </table>
+ */
 #pragma once
 
 #include "defines/marco.hpp"
@@ -17,13 +31,6 @@
 #include <vector>
 
 #include "tools/gc/soa.hpp"
-
-// struct content{
-//     uint32_t referenceCount, totalCount;
-//     size_t reference[referenceCount];
-//     size_t value[totalCount - referenceCount];
-//     content nextFram[];
-// };
 
 namespace rulejit::gc {
 
