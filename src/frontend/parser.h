@@ -22,6 +22,7 @@
 #include "ast/ast.hpp"
 #include "defines/language.hpp"
 #include "frontend/lexer.h"
+#include "tools/seterror.hpp"
 
 namespace rulejit {
 
@@ -65,7 +66,7 @@ struct ExpressionParser {
     //     context = std::addressof(c);
     //     return *this;
     // }
-    std::map<AST *, size_t> AST2place;
+    std::map<IAST *, size_t> AST2place;
 
   private:
     bool err() { return errorHandler.err; }
@@ -85,8 +86,7 @@ struct ExpressionParser {
             lexer->top(),
             modified,
         };
-        throw std::logic_error(std::format("Parse Error{}: {}", location.line(), modified));
-        // return nullptr;
+        error(std::format("Parse Error{}: {}", location.line(), modified));
     }
 
     std::unique_ptr<ExprAST> parse() {

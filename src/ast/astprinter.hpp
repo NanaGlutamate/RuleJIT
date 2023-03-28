@@ -54,7 +54,7 @@ struct ASTPrinter : public ASTVisitor {
      * @param isIndent indicate if need indent in output
      * @return std::string printed string
      */
-    std::string printAST(AST *ast, bool isIndent = false) {
+    std::string printAST(IAST *ast, bool isIndent = false) {
         buffer.clear();
         if (isIndent) {
             indent = true;

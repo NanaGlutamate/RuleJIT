@@ -22,6 +22,7 @@
 #include "ast/ast.hpp"
 #include "ast/type.hpp"
 #include "defines/language.hpp"
+#include "tools/seterror.hpp"
 
 namespace rulejit {
 
@@ -77,15 +78,15 @@ struct ContextFrame {
  *
  * when meet type def: add {type name, type} to typeDef
  *
- * when meet func def: 1. register to "realFuncDefinition"
+ * when meet func def: 
+ * 
+ * 1. register to "realFuncDefinition"
+ * 2. add {used function name, real function name} to funcDef
  *
- *                     2. add {used function name, real function name} to funcDef
- *
- * when meet member/infix func def: 1. register to "realFuncDefinition"
- *
- *                                  2. add {used function name, {param type, real function name}} to
- *
- *                                     symbolicFuncDef/memberFuncDef
+ * when meet member/infix func def: 
+ * 
+ * 1. register to "realFuncDefinition"
+ * 2. add {used function name, {param type, real function name}} to symbolicFuncDef/memberFuncDef
  *
  */
 struct ContextStack {
@@ -114,7 +115,7 @@ struct ContextStack {
         if (auto it = global.realFuncDefinition.find(name); it != global.realFuncDefinition.end()) {
             return *(it->second->funcType);
         } else {
-            throw std::logic_error("cannot find function definition: " + name);
+            error("cannot find function definition: " + name);
         }
     }
     /**

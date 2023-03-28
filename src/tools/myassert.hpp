@@ -1,11 +1,11 @@
 /**
  * @file myassert.hpp
  * @author djw
- * @brief 
+ * @brief Tools/Assert
  * @date 2023-03-28
- * 
- * @details 
- * 
+ *
+ * @details provides assertion function.
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -25,12 +25,13 @@
 #include <source_location>
 #include <string>
 
+#include "tools/seterror.hpp"
+
 inline void my_assert(bool check, const std::string &message = "[assertion failed with no info provided]",
                       const std::source_location location = std::source_location::current()) {
     using namespace std;
     if (!check) {
-        throw std::logic_error{
-            format("error: {}\nin file {}, line {}", message, location.file_name(), location.line())};
+        error(format("error: {}\nin file {}, line {}", message, location.file_name(), location.line()));
     }
 }
 
@@ -45,16 +46,18 @@ inline void my_assert(bool check, const std::string &message = "[assertion faile
 #include <iostream>
 #include <string>
 
+#include "tools/seterror.hpp"
+
 inline void my_assert(bool check, std::string message) {
     if (!check) {
         std::cout << message << std::endl;
-        throw std::logic_error(message);
+        error(message);
     }
 }
 
 #endif // #ifdef assert
 
-#endif  // #if __cplusplus >= 202002L
+#endif // #if __cplusplus >= 202002L
 
 #else // #ifdef __ACTIVE_ASSERT
 

@@ -26,6 +26,7 @@
 #include "ast/type.hpp"
 #include "backend/cq/cqresourcehandler.h"
 #include "defines/marco.hpp"
+#include "tools/seterror.hpp"
 
 /**
  * @brief front declaration of main function, used for repl_main.cpp
@@ -498,7 +499,7 @@ struct CQInterpreter : public ASTVisitor {
      * 
      * @param msg error message
      */
-    [[noreturn]] void setError(const std::string &msg) { throw std::logic_error(msg); }
+    [[noreturn]] void setError(const std::string &msg) { error(msg); }
 
     /**
      * @brief caller pop stack, stack frame is scope stack

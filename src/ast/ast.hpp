@@ -34,12 +34,12 @@ using ASTTokenType = std::string;
 namespace rulejit {
 
 /**
- * @brief base class for all AST node
+ * @brief pure virtual base class for all AST node
  * 
  */
-struct AST {
+struct IAST {
     virtual void accept(ASTVisitor *) = 0;
-    virtual ~AST() = default;
+    virtual ~IAST() = default;
 };
 
 /**
@@ -49,7 +49,7 @@ struct AST {
  * @param ast pointer to AST need checked
  * @return bool
  */
-template <typename T> bool isType(AST *ast) { return dynamic_cast<T *>(ast) != nullptr; }
+template <typename T> bool isType(IAST *ast) { return dynamic_cast<T *>(ast) != nullptr; }
 
 /**
  * @brief dynamic_cast through unique_ptr holds AST node
@@ -66,7 +66,7 @@ template <typename T, typename Src> std::unique_ptr<T> asType(Src ast) { return 
  * @brief indicates Expression AST
  * 
  */
-struct ExprAST : public AST {
+struct ExprAST : public IAST {
     std::unique_ptr<TypeInfo> type;
     ExprAST(std::unique_ptr<TypeInfo> type) : type(std::move(type)) {}
 };

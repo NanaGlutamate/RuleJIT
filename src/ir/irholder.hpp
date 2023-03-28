@@ -3,9 +3,9 @@
  * @author djw
  * @brief IR/IR holder
  * @date 2023-03-28
- * 
+ *
  * @details Includes IRHolder which holds generated function
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -14,27 +14,41 @@
  */
 #pragma once
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
-#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/IR/DataLayout.h"
+#include <memory>
+
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
-#include <memory>
 
 namespace rulejit::ir {
 
-struct IRHolder{};
+using namespace llvm;
 
-}
+struct IRHolder {
+    IRHolder() {
+        context = std::make_unique<LLVMContext>();
+        builder = std::make_unique<IRBuilder<>>(*context);
+        module = std::make_unique<Module>("rulejit", *context);
+    }
+
+    std::unique_ptr<LLVMContext> context;
+    std::unique_ptr<IRBuilder<>> builder;
+    std::unique_ptr<Module> module;
+    std::map<std::string, Value *> NamedValues;
+};
+
+} // namespace rulejit::ir

@@ -15,6 +15,7 @@
 #include <iostream>
 
 #include "rapidxml-1.13/rapidxml.hpp"
+#include "tools/seterror.hpp"
 
 namespace {
 
@@ -46,7 +47,7 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
     // parse XML
     auto root = doc.first_node("RuleSet");
     if (auto it = root->first_attribute("version"); !it || it->value() != std::string("1.0")) {
-        throw std::runtime_error("Unsupported version of RuleSet");
+        error("Unsupported version of RuleSet");
     }
     for (auto typeDef = root->first_node("TypeDefines")->first_node("TypeDefine"); typeDef;
          typeDef = typeDef->next_sibling("TypeDefine")) {

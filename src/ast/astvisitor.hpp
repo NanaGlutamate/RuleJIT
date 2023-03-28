@@ -18,10 +18,8 @@
  */
 #pragma once
 
-#define VISIT_FUNCTION_DEF(c, type) void c::visit(type &v) override
+// #define VISIT_FUNCTION_DEF(c, type) void c::visit(type &v) override
 #define VISIT_FUNCTION(type) void visit(type &v) override
-#define VIRTUAL_VISIT_FUNCTION(type)                                                                                   \
-    virtual void visit(type &v) { throw std::logic_error("not implemented"); }
 #define PURE_VIRTUAL_VISIT_FUNCTION(type) virtual void visit(type &v) = 0
 
 #define AST_FRIEND_DECLEARATION                                                                                        \
@@ -91,23 +89,64 @@ struct ASTVisitor {
     virtual ~ASTVisitor() = default;
 
   protected:
+    /// @brief visit function for IdentifierExprAST
+    /// @param v IdentifierExprAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(IdentifierExprAST);
+    
+    /// @brief visit function for MemberAccessExprAST
+    /// @param v MemberAccessExprAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(MemberAccessExprAST);
+
+    /// @brief visit function for LiteralExprAST
+    /// @param v LiteralExprAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(LiteralExprAST);
+
+    /// @brief visit function for FunctionCallExprAST
+    /// @param v FunctionCallExprAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(FunctionCallExprAST);
+
+    /// @brief visit function for BinOpExprAST
+    /// @param v BinOpExprAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(BinOpExprAST);
+
+    /// @brief visit function for UnaryOpExprAST
+    /// @param v UnaryOpExprAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(UnaryOpExprAST);
+
+    /// @brief visit function for BranchExprAST
+    /// @param v BranchExprAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(BranchExprAST);
+
+    /// @brief visit function for ComplexLiteralExprAST
+    /// @param v ComplexLiteralExprAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(ComplexLiteralExprAST);
+
+    /// @brief visit function for LoopAST
+    /// @param v LoopAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(LoopAST);
+
+    /// @brief visit function for BlockExprAST
+    /// @param v BlockExprAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(BlockExprAST);
 
+    /// @brief visit function for ControlFlowAST
+    /// @param v ControlFlowAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(ControlFlowAST);
 
+    /// @brief visit function for TypeDefAST
+    /// @param v TypeDefAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(TypeDefAST);
+
+    /// @brief visit function for VarDefAST
+    /// @param v VarDefAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(VarDefAST);
+
+    /// @brief visit function for FunctionDefAST
+    /// @param v FunctionDefAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(FunctionDefAST);
 
+    /// @brief visit function for SymbolDefAST
+    /// @param v SymbolDefAST to visit
     PURE_VIRTUAL_VISIT_FUNCTION(SymbolDefAST);
 };
 

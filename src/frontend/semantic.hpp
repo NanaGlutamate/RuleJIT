@@ -3,9 +3,9 @@
  * @author djw
  * @brief FrontEnd/Semantic
  * @date 2023-03-28
- * 
+ *
  * @details Includes ExpressionSemantic which does semantic analysis
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -27,6 +27,7 @@
 #include "defines/language.hpp"
 #include "frontend/parser.h"
 #include "tools/myassert.hpp"
+#include "tools/seterror.hpp"
 
 #define __RULEJIT_SEMANTIC_PUSH pushStack(v.get());
 #define __RULEJIT_SEMANTIC_POP popStack();
@@ -265,7 +266,7 @@ struct ExpressionSemantic : public ASTVisitor {
         if (*(v.rhs->type) == RealType && unaryOp.contains(v.op)) {
             v.type = std::make_unique<TypeInfo>(RealType);
             buildIn = true;
-        } 
+        }
         // else if (v.op == "&") {
         //     v.type = std::make_unique<TypeInfo>(v.rhs->type->getPointerType());
         //     buildIn = true;
@@ -591,7 +592,7 @@ struct ExpressionSemantic : public ASTVisitor {
     }
     [[noreturn]] void setError(const std::string &info,
                                const std::source_location location = std::source_location::current()) {
-        throw std::logic_error(std::format("Semantic Error{}: {}", location.line(), info));
+        error(std::format("Semantic Error{}: {}", location.line(), info));
         // return nullptr;
     }
     void afterAccept(std::unique_ptr<ExprAST> &p) {

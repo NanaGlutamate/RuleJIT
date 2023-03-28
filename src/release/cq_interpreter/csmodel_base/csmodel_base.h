@@ -23,8 +23,6 @@
 #include <unordered_map>
 #include <vector>
 
-// #include "model_struct.h"
-
 enum class CSInstanceState {
     IS_UNSPECIFIED = 0,
     IS_CREATED = 1,     // 实例被创建

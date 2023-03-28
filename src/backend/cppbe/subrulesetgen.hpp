@@ -299,8 +299,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     [[noreturn]] void setError(const std::string &info,
                                const std::source_location location = std::source_location::current()) {
-
-        throw std::logic_error(std::format("Code Generate Error{}: {}", location.line(), info));
+        error(std::format("Code Generate Error{}: {}", location.line(), info));
         // return nullptr;
     }
     ContextStack &c;

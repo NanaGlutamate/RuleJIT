@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "tools/myassert.hpp"
+#include "tools/seterror.hpp"
 
 namespace rulejit::cq {
 
@@ -221,7 +222,7 @@ struct ResourceHandler {
         } else if (auto it3 = data.output.find(s); it3 != data.output.end()) {
             buffer.emplace_back(it3->second, data.varType[s]);
         } else {
-            throw std::logic_error(std::string("unknown token: ") + s);
+            error(std::string("unknown token: ") + s);
         }
         bufferMap[s] = buffer.size() - 1;
         return buffer.size() - 1;
@@ -273,7 +274,7 @@ struct ResourceHandler {
      */
     void defineType(const std::string& s, const std::unordered_map<std::string, std::string>& t){
         if(data.typeDefines.contains(s))
-            throw std::logic_error(std::string("type \"") + s + "\" already defined");
+            error(std::string("type \"") + s + "\" already defined");
         data.typeDefines[s] = t;
     }
     /**
@@ -304,11 +305,11 @@ struct ResourceHandler {
             return it->second;
         }
         if (!data.isArray(std::get<1>(buffer[base]))) {
-            throw std::logic_error(std::format("type \"{}\" is not an array", std::get<1>(buffer[base])));
+            error(std::format("type \"{}\" is not an array", std::get<1>(buffer[base])));
         }
         auto array = std::any_cast<std::vector<std::any>>(std::get<0>(buffer[base]));
         if(index >= array.size()){
-            throw std::logic_error(std::format("array out of range, index: {}, size: {}", index, array.size()));
+            error(std::format("array out of range, index: {}, size: {}", index, array.size()));
         }
         auto tmp = array[index];
         auto baseType = std::get<1>(buffer[base]);
@@ -335,13 +336,13 @@ struct ResourceHandler {
                 // the only member an array has is length
                 return arrayLength(base);
             }
-            throw std::logic_error(std::format("type \"{}\" is an array", std::get<1>(buffer[base])));
+            error(std::format("type \"{}\" is an array", std::get<1>(buffer[base])));
         }
         auto tmp = std::any_cast<CSValueMap>(std::get<0>(buffer[base]))[name];
         auto baseType = std::get<1>(buffer[base]);
         auto it = data.typeDefines[baseType].find(name);
         if (it == data.typeDefines[baseType].end()) {
-            throw std::logic_error(std::format("type \"{}\" has no member {}", std::get<1>(buffer[base]), name));
+            error(std::format("type \"{}\" has no member {}", std::get<1>(buffer[base]), name));
         }
         auto newType = it->second;
         buffer.emplace_back(tmp, newType);
@@ -422,7 +423,7 @@ struct ResourceHandler {
         } else if (v.type() == typeid(double)) {
             return std::any_cast<double>(v);
         } else {
-            throw std::logic_error(std::string("unknown type: ") + v.type().name());
+            error(std::string("unknown type: ") + v.type().name());
         }
     }
     /**
@@ -457,7 +458,7 @@ struct ResourceHandler {
         } else if (v.type() == typeid(double)) {
             v = (double)(tar);
         } else {
-            throw std::logic_error(std::string("unknown type: ") + v.type().name());
+            error(std::string("unknown type: ") + v.type().name());
         }
     }
 

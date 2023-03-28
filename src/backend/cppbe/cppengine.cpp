@@ -18,6 +18,7 @@
 #include <iostream>
 
 #include "rapidxml-1.13/rapidxml.hpp"
+#include "tools/seterror.hpp"
 
 namespace {
 
@@ -44,7 +45,7 @@ std::string CppStyleType(const TypeInfo &type) {
     if (type.idents.size() == 2 && type.idents[0] == "[]") {
         return "std::vector<" + type.idents[1] + ">";
     }
-    throw std::logic_error(std::format("unsupported type: {}", type.toString()));
+    error(std::format("unsupported type: {}", type.toString()));
 }
 
 /**
@@ -68,7 +69,7 @@ std::string CppStyleParamType(const TypeInfo &type) {
     if (type.idents.size() == 2 && type.idents[0] == "[]") {
         return "const std::vector<" + type.idents[1] + ">&";
     }
-    throw std::logic_error(std::format("unsupported type: {}", type.toString()));
+    error(std::format("unsupported type: {}", type.toString()));
 }
 
 /**
@@ -82,7 +83,7 @@ std::string innerType(std::string type) {
     while (type.back() == ']') {
         type.pop_back();
         if (type.back() != '[') {
-            throw std::logic_error("Invalid type name: " + type + "]");
+            error("Invalid type name: " + type + "]");
         }
         type.pop_back();
         tmp += "[]";
@@ -163,13 +164,13 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
 
     auto root = doc.first_node("RuleSet");
     if (auto it = root->first_attribute("version"); !it || it->value() != std::string("1.0")) {
-        throw std::runtime_error("Unsupported version of RuleSet");
+        error("Unsupported version of RuleSet");
     }
     for (auto typeDef = root->first_node("TypeDefines")->first_node("TypeDefine"); typeDef;
          typeDef = typeDef->next_sibling("TypeDefine")) {
         std::string type = typeDef->first_attribute("type")->value();
         if (type == "Input" || type == "Output" || type == "Cache") {
-            throw std::logic_error("Donot support user defined type name _Input/_Output/_Cache");
+            error("Donot support user defined type name _Input/_Output/_Cache");
         }
         auto &tar = data.typeDefines[type];
         for (auto member = typeDef->first_node("Variable"); member; member = member->next_sibling("Variable")) {
@@ -288,7 +289,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     for (auto &&[name, type] : context.global.typeDef) {
         std::string member, serialize, deserialize;
         if (type.subTypes.size() + 1 != type.idents.size() || type.idents[0] != "struct") {
-            throw std::logic_error(std::format("unsupported type: {}", type.toString()));
+            error(std::format("unsupported type: {}", type.toString()));
         }
         for (size_t i = 0; i < type.subTypes.size(); ++i) {
             member += std::format(typeMember, CppStyleType(type.subTypes[i]), type.idents[i + 1]);

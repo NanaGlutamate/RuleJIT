@@ -15,11 +15,14 @@
 #pragma once
 
 #include <memory>
+#include <source_location>
+#include <format>
 
 #include "ast/ast.hpp"
 #include "ast/astvisitor.hpp"
 #include "ast/context.hpp"
 #include "ir/irholder.hpp"
+#include "tools/seterror.hpp"
 
 namespace rulejit::ir {
 
@@ -68,11 +71,11 @@ struct IRGenerator : public ASTVisitor {
     VISIT_FUNCTION(ComplexLiteralExprAST) {}
     VISIT_FUNCTION(LoopAST) {}
     VISIT_FUNCTION(BlockExprAST) {}
-    VISIT_FUNCTION(ControlFlowAST) {}
-    VISIT_FUNCTION(TypeDefAST) {}
+    VISIT_FUNCTION(ControlFlowAST) {setError("ControlFlowAST not supported for now");}
+    VISIT_FUNCTION(TypeDefAST) {setError("TypeDefAST should not be visited");}
     VISIT_FUNCTION(VarDefAST) {}
-    VISIT_FUNCTION(FunctionDefAST) {}
-    VISIT_FUNCTION(SymbolDefAST) {}
+    VISIT_FUNCTION(FunctionDefAST) {setError("FunctionDefAST should not be visited");}
+    VISIT_FUNCTION(SymbolDefAST) {setError("SymbolDefAST should not be visited");}
 
   private:
     IRHolder &h;
@@ -80,7 +83,7 @@ struct IRGenerator : public ASTVisitor {
     std::set<std::string> generatedFunc;
     std::set<std::string> generatedVar;
     void generate(const std::string &name, std::unique_ptr<FunctionDefAST> &ast) {}
-    [[noreturn]] void setError(std::string msg) { throw std::logic_error(msg); }
+    [[noreturn]] void setError(std::string msg, const std::source_location location = std::source_location::current()) { error("" + msg); }
 };
 
 } // namespace rulejit

@@ -16,6 +16,7 @@
 
 
 #define __RULEJIT_GC_DEBUG
+// #define __RULEJIT_DISABLE_EXCEPTION
 // #define __DISABLE_ASSERT
 // #define __RULEJIT_INTERPRETER_DEBUG
 

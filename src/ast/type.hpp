@@ -27,6 +27,7 @@
 #include "defines/language.hpp"
 #include "frontend/lexer.h"
 #include "tools/myassert.hpp"
+#include "tools/seterror.hpp"
 
 namespace rulejit {
 
@@ -321,9 +322,9 @@ struct TypeParser {
     friend TypeInfo operator|(ExpressionLexer &e, const TypeParser &t) { return t.parse(e); }
 
   private:
-    [[noreturn]] static TypeInfo error(const std::string &info,
+    [[noreturn]] static TypeInfo setError(const std::string &info,
                                        const std::source_location location = std::source_location::current()) {
-        throw std::logic_error(std::format("Type Parse Error{}: {}", location.line(), info));
+        error(std::format("Type Parse Error{}: {}", location.line(), info));
     }
     // ExpressionLexer::Guidence end;
     static TypeInfo parse(ExpressionLexer &e) {
@@ -338,7 +339,7 @@ struct TypeParser {
                 info.idents.push_back("[]");
                 e.pop(ignore_break);
                 if (e.pop(ignore_break) != "]") {
-                    return error("mismatch \"[\" in slice type");
+                    return setError("mismatch \"[\" in slice type");
                 }
             } else {
                 info.idents.push_back(e.topCopy());
@@ -356,7 +357,7 @@ struct TypeParser {
             // TODO: closure: {"closure", "[", (type, ",",)* "]", "(", (type, (",", type,)*)? ")", (type | "")}
             info.idents.push_back(e.popCopy(ignore_break));
             if (e.pop(ignore_break) != "(") {
-                return error("expect \"(\", found: " + e.topCopy());
+                return setError("expect \"(\", found: " + e.topCopy());
             }
             while (e.top() != ")") {
                 auto paramType = e | TypeParser();
@@ -367,7 +368,7 @@ struct TypeParser {
                 if (e.top() == ",") {
                     e.pop(ignore_break);
                 } else if (e.top() != ")") {
-                    return error("mismatch \"(\" in func type");
+                    return setError("mismatch \"(\" in func type");
                 }
             }
             e.pop();
@@ -387,21 +388,21 @@ struct TypeParser {
             // "struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"
             // complex def: {"struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"}
             if (!info.idents.empty()) {
-                return error("list of or pointer to unnamed complex structure is not allowed");
+                return setError("list of or pointer to unnamed complex structure is not allowed");
             }
             info.idents.push_back(e.popCopy(ignore_break));
             if (e.pop(ignore_break) != "{") {
-                return error("expect \"{\", found: " + e.topCopy());
+                return setError("expect \"{\", found: " + e.topCopy());
             }
             while (e.top() != "}") {
                 if (e.tokenType() != TokenType::IDENT) {
-                    return error("expect ident, found: " + e.topCopy());
+                    return setError("expect ident, found: " + e.topCopy());
                 }
                 info.idents.push_back(e.popCopy(ignore_break));
                 auto memberType = e | TypeParser();
                 info.subTypes.push_back(memberType);
                 if (e.tokenType() != TokenType::ENDLINE && e.top() != "}") {
-                    return error("expect ENDLINE or \"}\", found: " + e.topCopy());
+                    return setError("expect ENDLINE or \"}\", found: " + e.topCopy());
                 }
                 if (e.tokenType() == TokenType::ENDLINE) {
                     e.pop(ignore_break);
@@ -410,7 +411,7 @@ struct TypeParser {
             e.pop();
             return info;
         } else {
-            return error("expect type identifier, found: " + e.topCopy());
+            return setError("expect type identifier, found: " + e.topCopy());
         }
     };
 };
