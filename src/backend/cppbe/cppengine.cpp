@@ -135,14 +135,14 @@ class CStyleString {
  */
 constexpr auto preDefines = R"(
 extern func sin (i f64):f64
-type Vector3 struct {
-    x f64;
-    y f64;
-    z f64;
-}
-func addv(a Vector3, b Vector3):Vector3 {
-    Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
-}
+// type Vector3 struct {
+//     x f64;
+//     y f64;
+//     z f64;
+// }
+// func addv(a Vector3, b Vector3):Vector3 {
+//     Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
+// }
 )";
 
 } // namespace

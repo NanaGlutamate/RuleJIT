@@ -64,6 +64,8 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         e->accept(&t);
         return std::move(t.returned);
     }
+    
+  protected:
     VISIT_FUNCTION(IdentifierExprAST) {
         // only thing differs from common cppcodegen
         if (std::find(m.inputVar.begin(), m.inputVar.end(), v.name) != m.inputVar.end()) {

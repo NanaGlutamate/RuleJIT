@@ -27,6 +27,13 @@
 #include "backend/cq/cqresourcehandler.h"
 #include "defines/marco.hpp"
 
+/**
+ * @brief front declaration of main function, used for repl_main.cpp
+ * 
+ * @return int 
+ */
+int main();
+
 namespace rulejit::cq {
 
 /**
@@ -70,6 +77,7 @@ struct CQInterpreter : public ASTVisitor {
         expr->accept(&interpreter);
     }
 
+  protected:
     VISIT_FUNCTION(IdentifierExprAST) {
         auto find = seekValue(v.name);
         if (!find) {

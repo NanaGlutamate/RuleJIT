@@ -74,6 +74,7 @@ struct ExpressionSemantic : public ASTVisitor {
         checkRealFunctionSet(tmp);
     }
 
+  protected:
     VISIT_FUNCTION(IdentifierExprAST) {
         auto [find, type] = c->seekVarDef(v.name);
         if (auto it = globalInfo().funcDef.find(v.name); it != globalInfo().funcDef.end()) {

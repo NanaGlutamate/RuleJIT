@@ -177,7 +177,7 @@ struct ContextStack {
      * @param s variable name
      * @return (find, escaped, value)
      */
-    decltype(auto) seekVarDef(const std::string &s) { return seek(&ContextFrame::varDef, s); }
+    auto seekVarDef(const std::string &s) { return seek(&ContextFrame::varDef, s); }
 
   private:
     /**
@@ -190,7 +190,7 @@ struct ContextStack {
      * @param top current stack frame index, -1 for top frame
      * @return (find, escaped, value)
      */
-    template <typename Item, typename Index> decltype(auto) seek(Item p, const Index &ind, size_t top = size_t(-1)) {
+    template <typename Item, typename Index> auto seek(Item p, const Index &ind, size_t top = size_t(-1)) {
         if (top == size_t(-1)) {
             top = scope.size() - 1;
         }

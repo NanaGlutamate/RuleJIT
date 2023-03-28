@@ -4,7 +4,7 @@
  * @brief Defines/Language
  * @date 2023-03-28
  * 
- * @details Includes some language related defines.
+ * @details Includes some language-related defines.
  * 
  * @par history
  * <table>

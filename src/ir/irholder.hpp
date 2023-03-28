@@ -33,7 +33,7 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include <memory>
 
-namespace rulejit{
+namespace rulejit::ir {
 
 struct IRHolder{};
 

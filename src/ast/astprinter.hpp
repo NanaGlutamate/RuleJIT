@@ -68,6 +68,7 @@ struct ASTPrinter : public ASTVisitor {
         return out;
     }
 
+  protected:
     VISIT_FUNCTION(IdentifierExprAST) { buffer << std::format("IDENT[{}]", v.name); }
     VISIT_FUNCTION(MemberAccessExprAST) {
         buffer << "(";

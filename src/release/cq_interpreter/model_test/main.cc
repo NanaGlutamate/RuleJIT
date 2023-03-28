@@ -4,7 +4,7 @@
  * @brief CQ/Interpreter/Test main
  * @date 2023-03-28
  * 
- * @details test function for interpreter dll
+ * @details test for interpreter dll
  * 
  * @par history
  * <table>
@@ -41,8 +41,9 @@ typedef void (*DestroyMemoryFun)(void *mem, bool is_array);
 int main() {
     using namespace rulejit;
     using CSValueMap = std::unordered_map<std::string, std::any>;
-    std::string lib_path_ = "D:/Desktop/FinalProj/Code/RuleJIT/bin/Debug/"
-                            "RuleJIT_interpreter.dll";
+    std::string lib_path_ = __PROJECT_ROOT_PATH
+                            "/bin/Debug/"
+                            "cq_interpreter.dll";
 
 #ifdef _WIN32
     auto hmodule = LoadLibraryExA(lib_path_.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
@@ -51,7 +52,7 @@ int main() {
 #endif
     if (!hmodule) {
         std::cout << "load "
-                  << "RuleJIT_interpreter"
+                  << "cq_interpreter"
                   << " failed" << std::endl;
         return false;
     }
@@ -75,7 +76,6 @@ int main() {
 
     CSModelObject *model_obj_, *engine;
 
-    // // 模型实例
     // model_obj_ = create_obj_();
     // if (nullptr == model_obj_) {
     //     std::cerr << "create model error" << std::endl;
@@ -92,7 +92,6 @@ int main() {
     //     printCSValueMap(*(engine->GetOutput()));
     // }
 
-    // 模型实例
     model_obj_ = create_obj_();
     if (nullptr == model_obj_) {
         std::cerr << "create model error" << std::endl;

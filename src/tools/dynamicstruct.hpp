@@ -4,7 +4,7 @@
  * @brief 
  * @date 2023-03-28
  * 
- * @details 
+ * @details Includes DynamicStruct-related works. Not used for now.
  * 
  * @par history
  * <table>
@@ -20,6 +20,8 @@
 #include <tuple>
 
 #define ADD_BUILDIN_TYPE(type) {#type, {alignof(type), sizeof(type)}}
+
+namespace dynamicstruct {
 
 using TypeIndentifier = std::string;
 using MemberIdentifier = std::string;
@@ -60,3 +62,5 @@ private:
     std::map<TypeIndentifier, TypeLayoutInfo> structInfo;
     std::map<TypeIndentifier, ComplexType> complexType;
 };
+
+}

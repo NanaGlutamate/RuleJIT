@@ -29,6 +29,8 @@ struct EscapedVarAnalyzer : public ASTVisitor {
         ast->accept(&u);
         return std::move(u.escaped);
     }
+    
+  protected:
     VISIT_FUNCTION(IdentifierExprAST) {
         for (auto &&scope : stack) {
             if (scope.contains(v.name)) {

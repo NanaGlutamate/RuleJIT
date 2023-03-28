@@ -21,7 +21,7 @@
 #include "ast/context.hpp"
 #include "ir/irholder.hpp"
 
-namespace rulejit {
+namespace rulejit::ir {
 
 /**
  * @brief Class for generate LLVM-IR from AST
@@ -49,13 +49,15 @@ struct IRGenerator : public ASTVisitor {
      * @param irgen receiver
      */
     void friend operator|(std::string &src, IRGenerator &irgen) {
-        if (auto it = context.global.realFuncDefinition.find(src);
-            it != context.global.realFuncDefinition.end() && context.global.checkedFunc.contains(it->second)) {
+        if (auto it = irgen.c.global.realFuncDefinition.find(src);
+            it != irgen.c.global.realFuncDefinition.end() && irgen.c.global.checkedFunc.contains(it->first)) {
             irgen.generate(it->first, it->second);
         } else {
-            throw setError("No such function or maybe unchecked: " + src);
+            irgen.setError("No such function or maybe unchecked: " + src);
         }
     }
+    
+  protected:
     VISIT_FUNCTION(IdentifierExprAST) {}
     VISIT_FUNCTION(MemberAccessExprAST) {}
     VISIT_FUNCTION(LiteralExprAST) {}

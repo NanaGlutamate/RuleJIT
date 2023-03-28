@@ -3,13 +3,13 @@
  * @author djw
  * @brief AST/AST visitor
  * @date 2023-03-27
- * 
+ *
  * @details Includes defination of interface ASTVisitor, which is a part of AST design.
  * AST designed in Visitor Pattern, provides flexibility in AST operations developments.
  * also contains marcos to simplify extensiones development.
- * 
+ *
  * @see ASTVisitor
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -18,10 +18,28 @@
  */
 #pragma once
 
-#define VISIT_FUNCTION_DEF(c, type) void c::visit (type & v) override
-#define VISIT_FUNCTION(type) void visit (type & v) override
-#define VIRTUAL_VISIT_FUNCTION(type) virtual void visit (type & v){throw std::logic_error("not implemented");}
-#define PURE_VIRTUAL_VISIT_FUNCTION(type) virtual void visit (type & v) = 0
+#define VISIT_FUNCTION_DEF(c, type) void c::visit(type &v) override
+#define VISIT_FUNCTION(type) void visit(type &v) override
+#define VIRTUAL_VISIT_FUNCTION(type)                                                                                   \
+    virtual void visit(type &v) { throw std::logic_error("not implemented"); }
+#define PURE_VIRTUAL_VISIT_FUNCTION(type) virtual void visit(type &v) = 0
+
+#define AST_FRIEND_DECLEARATION                                                                                        \
+    friend struct IdentifierExprAST;                                                                                   \
+    friend struct MemberAccessExprAST;                                                                                 \
+    friend struct LiteralExprAST;                                                                                      \
+    friend struct FunctionCallExprAST;                                                                                 \
+    friend struct BinOpExprAST;                                                                                        \
+    friend struct UnaryOpExprAST;                                                                                      \
+    friend struct BranchExprAST;                                                                                       \
+    friend struct ComplexLiteralExprAST;                                                                               \
+    friend struct LoopAST;                                                                                             \
+    friend struct BlockExprAST;                                                                                        \
+    friend struct ControlFlowAST;                                                                                      \
+    friend struct TypeDefAST;                                                                                          \
+    friend struct VarDefAST;                                                                                           \
+    friend struct FunctionDefAST;                                                                                      \
+    friend struct SymbolDefAST;
 
 namespace rulejit {
 
@@ -65,13 +83,16 @@ struct SymbolDefAST;
 /**
  * @ingroup ast
  * @brief Pure virtual interface as part of Visitor Design Pattern
- * 
+ *
  */
-struct ASTVisitor{
+struct ASTVisitor {
+    AST_FRIEND_DECLEARATION
     ASTVisitor() = default;
+    virtual ~ASTVisitor() = default;
+
+  protected:
     PURE_VIRTUAL_VISIT_FUNCTION(IdentifierExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(MemberAccessExprAST);
-    // PURE_VIRTUAL_VISIT_FUNCTION(ArrayIndexExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(LiteralExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(FunctionCallExprAST);
     PURE_VIRTUAL_VISIT_FUNCTION(BinOpExprAST);
@@ -81,8 +102,6 @@ struct ASTVisitor{
     PURE_VIRTUAL_VISIT_FUNCTION(LoopAST);
     PURE_VIRTUAL_VISIT_FUNCTION(BlockExprAST);
 
-    // VIRTUAL_VISIT_FUNCTION(AssignmentAST);
-
     PURE_VIRTUAL_VISIT_FUNCTION(ControlFlowAST);
 
     PURE_VIRTUAL_VISIT_FUNCTION(TypeDefAST);
@@ -90,9 +109,6 @@ struct ASTVisitor{
     PURE_VIRTUAL_VISIT_FUNCTION(FunctionDefAST);
 
     PURE_VIRTUAL_VISIT_FUNCTION(SymbolDefAST);
-
-    // VIRTUAL_VISIT_FUNCTION(TopLevelAST);
-    virtual ~ASTVisitor() = default;
 };
 
-}
+} // namespace rulejit

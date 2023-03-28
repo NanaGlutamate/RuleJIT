@@ -369,7 +369,7 @@ struct FunctionDefAST : public DefAST {
  * 
  * @return unique pointer to Literal expression AST which type is NoInstanceType
  */
-inline decltype(auto) nop() { return std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(NoInstanceType), ""); }
+inline auto nop() { return std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(NoInstanceType), ""); }
 
 // symbol table operations
 // EXTERN := 'extern' real_extern_token/*for extern type, is underlying type in script*/ ('as' used_token

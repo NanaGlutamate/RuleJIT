@@ -27,6 +27,8 @@ struct Decompiler : public ASTVisitor {
         ast->accept(&u);
         return u.returned;
     }
+    
+  protected:
     VISIT_FUNCTION(IdentifierExprAST) { returned += v.name; }
     VISIT_FUNCTION(MemberAccessExprAST) {
         v.baseVar->accept(this);

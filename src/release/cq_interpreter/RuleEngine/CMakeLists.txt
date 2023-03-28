@@ -4,6 +4,6 @@ file(GLOB_RECURSE _SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_
 add_library(${PROJ_NAME}_interpreter SHARED ${_SRC} ${FRONTEND_SRC} ${AST_SRC} ${CQ_BACKEND_SRC})
 
 if(UNIX)
-target_link_libraries(${PROJ_NAME}_interpreter dl)
+target_link_libraries(cq_interpreter dl)
 else(UNIX)
 endif(UNIX)
