@@ -13,5 +13,6 @@
  * </table>
  */
 #include "ir/irgen.hpp"
+#include "ir/irholder.hpp"
 
 int main(){}

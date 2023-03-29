@@ -23,11 +23,11 @@
 
 #include "ast/ast.hpp"
 #include "ast/astvisitor.hpp"
+#include "ast/context.hpp"
 #include "ast/decompiler.hpp"
 #include "ast/type.hpp"
 #include "backend/cq/cqresourcehandler.h"
 #include "defines/marco.hpp"
-#include "ast/context.hpp"
 #include "tools/seterror.hpp"
 
 /**
@@ -42,6 +42,8 @@ namespace rulejit::cq {
 /**
  * @brief main class to interprete ast in cq environment
  *
+ * TODO: remove type check
+ *
  */
 struct CQInterpreter : public ASTVisitor {
     friend int ::main();
@@ -52,7 +54,7 @@ struct CQInterpreter : public ASTVisitor {
      *
      * @param h ResourceHandler which handles variable for this object
      */
-    CQInterpreter(ContextStack& c, ResourceHandler &h) : context(c), symbolStack({{{}}}), handler(h) {}
+    CQInterpreter(ContextStack &c, ResourceHandler &h) : context(c), symbolStack({{{}}}), handler(h) {}
 
     /**
      * @brief reset the interpreter(reset symbolStack, specifically)
@@ -97,23 +99,18 @@ struct CQInterpreter : public ASTVisitor {
         if (returned.type != Value::TOKEN) {
             setError("number have no members");
         }
-        if (!v.memberToken->type) {
-            // v.memberToken->type = nullptr means it need to be evaluate
-            v.memberToken->accept(this);
-            getReturnedValue();
-            returned.token = handler.arrayAccess(base.token, static_cast<size_t>(returned.value));
-            returned.type = Value::TOKEN;
-            return;
-        }
         if (*(v.memberToken->type) == StringType) {
             returned.token =
                 handler.memberAccess(base.token, dynamic_cast<LiteralExprAST *>(v.memberToken.get())->value);
         } else if (*(v.memberToken->type) == RealType) {
-            returned.token =
-                handler.arrayAccess(base.token, std::stoi(dynamic_cast<LiteralExprAST *>(v.memberToken.get())->value));
+            v.memberToken->accept(this);
+            getReturnedValue();
+            my_assert(returned.value == (double)floor(returned.value));
+            returned.token = handler.arrayAccess(base.token, (size_t)returned.value);
         } else {
             setError("member access only accept string or int");
         }
+        returned.type = Value::TOKEN;
     }
     VISIT_FUNCTION(LiteralExprAST) {
         if (*(v.type) == RealType) {
@@ -143,14 +140,11 @@ struct CQInterpreter : public ASTVisitor {
             {"atan2", [](double x, double y) { return atan2(x, y); }},
         };
         std::string funcName;
-        if (isType<IdentifierExprAST>(v.functionIdent.get())) {
-            auto p = dynamic_cast<IdentifierExprAST *>(v.functionIdent.get());
-            funcName = p->name;
-        } else if (isType<LiteralExprAST>(v.functionIdent.get())) {
+        if (isType<LiteralExprAST>(v.functionIdent.get())) {
             auto p = dynamic_cast<LiteralExprAST *>(v.functionIdent.get());
             funcName = p->value;
         } else {
-            return setError("only allow direct function(no member, no returned funciton) for now");
+            return setError("only allow direct function(no member, no function variable, no returned funciton) for now");
         }
         if (funcName == "print") {
             my_assert(v.params.size() == 1, "\"print\" only accept 1 param");
@@ -170,6 +164,7 @@ struct CQInterpreter : public ASTVisitor {
             v.params[0]->accept(this);
             getReturnedValue();
             returned.value = it->second(returned.value);
+            returned.type = Value::VALUE;
         } else if (auto it = twoParamFunc.find(funcName); it != twoParamFunc.end()) {
             my_assert(v.params.size() == 2, std::format("\"{}\" only accept 2 param", funcName));
             v.params[0]->accept(this);
@@ -178,6 +173,7 @@ struct CQInterpreter : public ASTVisitor {
             v.params[1]->accept(this);
             getReturnedValue();
             returned.value = it->second(tmp, returned.value);
+            returned.type = Value::VALUE;
         } else {
             auto f = context.global.realFuncDefinition.find(funcName);
             if (f == context.global.realFuncDefinition.end()) {
@@ -193,11 +189,7 @@ struct CQInterpreter : public ASTVisitor {
                 auto &arg = v.params[i];
                 arg->accept(this);
                 if (isSupportType(*(param->type))) {
-                    try {
-                        getReturnedValue();
-                    } catch (...) {
-                        setError("try express complex type as numerical type");
-                    }
+                    getReturnedValue();
                 }
                 frame.back()[param->name] = returned;
             }
@@ -435,6 +427,7 @@ struct CQInterpreter : public ASTVisitor {
             size_t token;
             double value;
         };
+
         /**
          * @brief type of value, for now only support VALUE(which mean Value::value is available),
          * TOKEN(which mean Value::token is available),
@@ -448,6 +441,7 @@ struct CQInterpreter : public ASTVisitor {
         } type;
     };
     ResourceHandler &handler; /**< holds CQ-related variables*/
+
     /**
      * @brief seek variable with given name in current stack frame
      * @attention if found, will modify returned
@@ -464,6 +458,7 @@ struct CQInterpreter : public ASTVisitor {
         }
         return false;
     }
+
     /**
      * @brief check if given type supported
      *
@@ -473,6 +468,7 @@ struct CQInterpreter : public ASTVisitor {
     bool isSupportType(const TypeInfo &type) {
         return type.isValid() && type.isBaseType() && (type.idents[0] == "f64" || type == AutoType);
     }
+
     /**
      * @brief make "returned" a value,
      * specifically, if returned is a token, get its value from CQResourceHandler;
@@ -489,6 +485,7 @@ struct CQInterpreter : public ASTVisitor {
             returned.type = Value::VALUE;
         }
     }
+
     /**
      * @brief set errors
      *
@@ -498,9 +495,9 @@ struct CQInterpreter : public ASTVisitor {
 
     /**
      * @brief context, includes function defines
-     * 
+     *
      */
-    ContextStack& context;
+    ContextStack &context;
 
     /**
      * @brief caller pop stack, stack frame is scope stack

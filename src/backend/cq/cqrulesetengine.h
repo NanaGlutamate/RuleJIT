@@ -80,12 +80,14 @@ struct RuleSetEngine {
         std::string buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
         buildFromSource(buffer);
     }
+
     /**
      * @brief Initialize the rule set engine.
      *
      * @return void.
      */
     void init() { dataStorage.Init(); }
+
     /**
      * @brief Execute a tick of the rule set engine.
      *
@@ -104,6 +106,7 @@ struct RuleSetEngine {
             s.interpreter.reset();
         }
     }
+
     /**
      * @brief Set the input data for the rule set engine.
      *
@@ -111,6 +114,7 @@ struct RuleSetEngine {
      * @return void.
      */
     void setInput(const std::unordered_map<std::string, std::any> &input) { dataStorage.SetInput(input); }
+
     /**
      * @brief Get the output data from the rule set engine.
      *

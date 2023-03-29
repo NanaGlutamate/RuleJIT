@@ -1,7 +1,7 @@
 /**
  * @file gcmain.cpp
  * @author djw
- * @brief 
+ * @brief Test/GC
  * @date 2023-03-28
  * 
  * @details 

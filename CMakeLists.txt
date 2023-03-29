@@ -11,6 +11,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
 include_directories(AFTER ${PROJECT_SOURCE_DIR}/src)
 include_directories(AFTER ${PROJECT_SOURCE_DIR}/extern)
+
 include_directories(AFTER ${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
@@ -26,7 +27,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 add_definitions(-D__PROJECT_ROOT_PATH="${PROJECT_SOURCE_DIR}")
 
 if(MSVC)
-  string(APPEND CMAKE_CXX_FLAGS " /permissive- /Zc:__cplusplus")
+  string(APPEND CMAKE_CXX_FLAGS " /permissive- /Zc:__cplusplus ")
 endif()
 
 add_subdirectory(extern)

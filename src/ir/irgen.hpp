@@ -31,6 +31,7 @@ namespace rulejit::ir {
  *
  */
 struct IRGenerator : public ASTVisitor {
+  
     /**
      * @brief Construct a new IRGenerator object
      *
@@ -44,6 +45,7 @@ struct IRGenerator : public ASTVisitor {
     IRGenerator &operator=(IRGenerator &&) = delete;
 
     virtual ~IRGenerator() = default;
+
     /**
      * @brief pipe operator| used to generate function def in ContextGlobal
      * @attention function must have checked

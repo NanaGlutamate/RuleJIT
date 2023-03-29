@@ -6,6 +6,8 @@
  *
  * @details Includes main logic of cpp-backend, such as
  * XML-parsering and code generate.
+ * 
+ * TODO: move to src/release
  *
  * @par history
  * <table>

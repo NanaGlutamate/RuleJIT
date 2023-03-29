@@ -41,6 +41,7 @@ struct DataStore {
     CSValueMap output;
     CSValueMap cache;
     rulesetxml::RuleSetMetaInfo metaInfo;
+
     /**
      * @brief init function, will fill input, output and cache
      * with legal empty instance.
@@ -58,6 +59,7 @@ struct DataStore {
             cache[s] = makeTypeEmptyInstance(metaInfo.varType[s]);
         }
     }
+
     /**
      * @brief Set input value
      *
@@ -68,12 +70,14 @@ struct DataStore {
             input[k] = v;
         }
     }
+
     /**
      * @brief Get the Outputs
      *
      * @return CSValueMap* pointer to output data
      */
     CSValueMap *GetOutput() { return &output; }
+
     /**
      * @brief check if a type is array type
      *
@@ -81,6 +85,7 @@ struct DataStore {
      * @return bool
      */
     bool isArray(const std::string &s) { return s.back() == ']'; }
+
     /**
      * @brief get element type of an array type
      *
@@ -94,6 +99,7 @@ struct DataStore {
         tmp.pop_back();
         return tmp;
     }
+
     /**
      * @brief generate an empty instance of a type
      *
@@ -166,6 +172,7 @@ struct ResourceHandler {
         managedString[s] = buffer.size() - 1;
         return buffer.size() - 1;
     }
+
     /**
      * @brief check if a value is string
      *
@@ -173,6 +180,7 @@ struct ResourceHandler {
      * @return bool
      */
     bool isString(size_t index) { return std::get<1>(buffer[index]) == "string"; }
+
     /**
      * @brief read string from buffer
      *
@@ -180,6 +188,7 @@ struct ResourceHandler {
      * @return std::string
      */
     std::string readString(size_t index) { return std::any_cast<std::string>(std::get<0>(buffer[index])); }
+
     /**
      * @brief compare managed string
      *
@@ -193,6 +202,7 @@ struct ResourceHandler {
         return std::any_cast<std::string>(std::get<0>(buffer[v1])) ==
                std::any_cast<std::string>(std::get<0>(buffer[v2]));
     }
+
     /**
      * @brief read input, cache or output value into the buffer;
      * if the value already in the buffer, return the index of the value;
@@ -217,6 +227,7 @@ struct ResourceHandler {
         bufferMap[s] = buffer.size() - 1;
         return buffer.size() - 1;
     }
+
     /**
      * @brief write all managed value back to cache and output
      * @attention it will not write back input value
@@ -235,6 +246,7 @@ struct ResourceHandler {
         relation.clear();
         managedString.clear();
     }
+
     /**
      * @brief create a new instance of given type
      *
@@ -246,6 +258,7 @@ struct ResourceHandler {
         buffer.emplace_back(data.makeTypeEmptyInstance(s), s);
         return buffer.size() - 1;
     }
+
     /**
      * @brief create a new instance whose type is same as the given one
      *
@@ -256,6 +269,7 @@ struct ResourceHandler {
         // TODO: make array, array push back
         return makeInstance(std::get<1>(buffer[token]));
     }
+
     /**
      * @brief define a new type
      *
@@ -268,6 +282,7 @@ struct ResourceHandler {
         // due to data stored in CSValueMap, order of member does not make sense.
         data.metaInfo.typeDefines[s] = {t.begin(), t.end()};
     }
+
     /**
      * @brief make assignment between two managed value
      *
@@ -283,6 +298,7 @@ struct ResourceHandler {
         relation[src].clear();
         relation[dst].clear();
     }
+
     /**
      * @brief get the array member in index, store it in buffer and return the token
      * reffering to it
@@ -308,6 +324,7 @@ struct ResourceHandler {
         relation[base].emplace(std::to_string(index), buffer.size() - 1);
         return buffer.size() - 1;
     }
+
     /**
      * @brief get designated member of the given value, store it in buffer and return the token
      * reffering to it
@@ -341,6 +358,7 @@ struct ResourceHandler {
         relation[base].emplace(name, buffer.size() - 1);
         return buffer.size() - 1;
     }
+
     /**
      * @brief get the length of the given array
      *
@@ -351,12 +369,14 @@ struct ResourceHandler {
         auto tmp = std::any_cast<std::vector<std::any>>(std::get<0>(buffer[index]));
         return tmp.size();
     }
+
     /**
      * @brief clear the given array
      *
      * @param index token referring to the array
      */
     void arrayClear(size_t index) { std::get<0>(buffer[index]) = std::vector<std::any>{}; }
+
     /**
      * @brief extend the given array by one element
      *
@@ -367,6 +387,7 @@ struct ResourceHandler {
         tmp.emplace_back(data.makeTypeEmptyInstance(data.arrayElementType(std::get<1>(buffer[index]))));
         std::get<0>(buffer[index]) = tmp;
     }
+
     /**
      * @brief check if the given value is a base type
      * (which means it is not an array or a struct)
@@ -382,6 +403,7 @@ struct ResourceHandler {
             return false;
         }
     }
+
     /**
      * @brief get the double value of the variable that given token reffered
      * @attention the given token must reffering to a variable
@@ -418,6 +440,7 @@ struct ResourceHandler {
             error(std::string("unknown type: ") + v.type().name());
         }
     }
+
     /**
      * @brief assign to managed variable
      * @attention the given token must reffering to a variable

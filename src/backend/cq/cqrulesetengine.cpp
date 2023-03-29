@@ -3,6 +3,10 @@
  * @author djw
  * @brief CQ/Interpreter/RuleSetEngine
  * @date 2023-03-27
+ * 
+ * @details 
+ * 
+ * TODO: move to src/release
  *
  * @par history
  * <table>
@@ -18,8 +22,6 @@
 #include "frontend/ruleset/rulesetparser.h"
 #include "rapidxml-1.13/rapidxml.hpp"
 #include "tools/seterror.hpp"
-
-namespace {} // namespace
 
 namespace rulejit::cq {
 

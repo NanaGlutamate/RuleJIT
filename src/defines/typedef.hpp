@@ -42,7 +42,19 @@ inline const std::set<TypeInfo> BuildInType{
     NoInstanceType,
     StringType,
     IntType,
+
     RealType,
+    // make_type("i64"),
+    // make_type("u64"),
+    // make_type("f32"),
+    // make_type("i32"),
+    // make_type("u32"),
+    // make_type("f16"),
+    // make_type("i16"),
+    // make_type("u16"),
+    // make_type("f8"),
+    // make_type("i8"),
+    // make_type("u8"),
 };
 
 inline std::unique_ptr<TypeInfo> getAuto() { return std::make_unique<TypeInfo>(AutoType); }

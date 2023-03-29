@@ -69,14 +69,20 @@ std::string innerType(std::string type) {
  *
  */
 const inline std::string preDefines = R"(
-// type Vector3 struct {
-//     x f64;
-//     y f64;
-//     z f64;
-// }
-// func addv(a Vector3, b Vector3):Vector3 {
-//     Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
-// }
+extern func sin(a f64):f64
+extern func cos(a f64):f64
+extern func tan(a f64):f64
+extern func cot(a f64):f64
+extern func atan(a f64):f64
+extern func asin(a f64):f64
+extern func acos(a f64):f64
+extern func fabs(a f64):f64
+extern func exp(a f64):f64
+extern func abs(a f64):f64
+extern func floor(a f64):f64
+extern func sqrt(a f64):f64
+extern func pow(a f64, b f64):f64
+extern func atan2(a f64, b f64):f64
 )";
 
 } // namespace
@@ -163,7 +169,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     initOriginal += "}";
     preprocessOriginal += "}";
     // parse initOriginal, get returned real function name
-    ret.preDefines = std::unique_ptr<rulejit::ExprAST>((preDefines + "\n" + initOriginal) | lexer | parser) | semantic;
+    ret.preDefines = (preDefines + "\n" + initOriginal) | lexer | parser | semantic;
     // parse preprocessOriginal, get returned real function name
     ret.preprocess = std::unique_ptr<rulejit::ExprAST>(preprocessOriginal | lexer | parser) | semantic;
 

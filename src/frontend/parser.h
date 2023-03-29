@@ -3,9 +3,9 @@
  * @author djw
  * @brief FrontEnd/Parser
  * @date 2023-03-28
- * 
+ *
  * @details Parser
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -28,7 +28,7 @@ namespace rulejit {
 
 /**
  * @brief main class of parser
- * 
+ *
  */
 struct ExpressionParser {
     ExpressionParser() = default;
@@ -37,6 +37,7 @@ struct ExpressionParser {
     ExpressionParser &operator=(const ExpressionParser &) = delete;
     ExpressionParser &operator=(ExpressionParser &&) = delete;
 
+    /// @brief error handler to handle error information and state when error
     struct Error {
         bool err;
         TokenType type;
@@ -45,16 +46,25 @@ struct ExpressionParser {
         operator bool() { return err; }
         void clear() { err = false; }
     } errorHandler;
-    enum class State {
 
-        END,
-    };
+    /**
+     * @brief call before parse, used to escape empty lines
+     * 
+     */
     void selectNextExpr() {
         my_assert(lexer);
         while (lexer->tokenType() == TokenType::ENDLINE) {
             lexer->pop(ExpressionLexer::Guidence::IGNORE_BREAK);
         }
     }
+
+    /**
+     * @brief pick next expression in ExpressionParser
+     * 
+     * TODO: donot use type conversion operator here
+     * 
+     * @return std::unique_ptr<ExprAST> 
+     */
     operator std::unique_ptr<ExprAST>() {
         selectNextExpr();
         if (lexer->tokenType() == TokenType::END) {
@@ -62,14 +72,23 @@ struct ExpressionParser {
         }
         return (parse());
     }
+
+    /**
+     * @brief pipe operator| for ExpressionParser to load ExpressionLexer as input stream
+     *
+     * @param src source ExpressionLexer
+     * @param e receiver ExpressionParser
+     * @return ExpressionParser& reference to receiver
+     */
     friend ExpressionParser &operator|(ExpressionLexer &src, ExpressionParser &e) {
         e.bind(src);
         return e;
     }
-    // ExpressionParser &loadContext(ContextStack &c) {
-    //     context = std::addressof(c);
-    //     return *this;
-    // }
+
+    /**
+     * @brief map from AST to place in string, used for better error message, not used for now
+     *
+     */
     std::map<IAST *, size_t> AST2place;
 
   private:
@@ -125,7 +144,6 @@ struct ExpressionParser {
         errorHandler.clear();
         return *this;
     };
-    State state;
     // ContextStack *context;
     ExpressionLexer *lexer;
     // TokenStream* stream;

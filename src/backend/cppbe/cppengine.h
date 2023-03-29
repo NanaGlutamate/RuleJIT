@@ -32,24 +32,6 @@ struct CppEngine {
     CppEngine() : context(), data(), semantic(context), codegen(context, data) {
         namespaceName = "ruleset";
         outputPath = "./src/";
-        auto &tar = context.scope.back().varDef;
-        auto &oneParamFunc = BuildInUnaryType;
-        tar.emplace("not", oneParamFunc);
-        tar.emplace("sin", oneParamFunc);
-        tar.emplace("cos", oneParamFunc);
-        tar.emplace("tan", oneParamFunc);
-        tar.emplace("cot", oneParamFunc);
-        tar.emplace("atan", oneParamFunc);
-        tar.emplace("asin", oneParamFunc);
-        tar.emplace("acos", oneParamFunc);
-        tar.emplace("fabs", oneParamFunc);
-        tar.emplace("exp", oneParamFunc);
-        tar.emplace("abs", oneParamFunc);
-        tar.emplace("floor", oneParamFunc);
-        tar.emplace("sqrt", oneParamFunc);
-        auto twoParamFunc = make_type("func(f64,f64):f64");
-        tar.emplace("pow", twoParamFunc);
-        tar.emplace("atan2", twoParamFunc);
     };
     CppEngine(const CppEngine &) = delete;
     CppEngine(CppEngine &&) = delete;

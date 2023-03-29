@@ -15,95 +15,28 @@
     </TypeDefines>
     <MetaInfo>
         <Inputs>
-            <Param name="Input1" type="uint32">
-                <!-- init value not supported -->
-                <InitValue>12</InitValue>
-            </Param>
+            <!-- init value not fully supported -->
+            <Param name="Input1" type="uint32[]" />
+            <Param name="Input2" type="uint32" />
         </Inputs>
         <Outputs>
-            <Param name="Output1" type="uint32" />
+            <Param name="Output1" type="float64" />
         </Outputs>
         <Caches>
-            <Param name="Cache1" type="uint32">
-                <Value>
-                    <Expression>12</Expression>
-                </Value>
-            </Param>
         </Caches>
     </MetaInfo>
     <SubRuleSets>
         <SubRuleSet>
-            <MetaInfo>
-                <Inputs></Inputs>
-                <Outputs>
-                    <Param name="Output1" type="uint32" />
-                </Outputs>
-                <Caches>
-                    <Param name="Cache1" type="uint32" />
-                </Caches>
-            </MetaInfo>
             <Rules>
                 <Rule>
                     <Condition>
-                        <Expression>Cache1&lt;=10</Expression>
+                        <Expression>true</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
                             <Target>Output1</Target>
                             <Value>
-                                <Expression>0</Expression>
-                            </Value>
-                        </Assignment>
-                    </Consequence>
-                </Rule>
-                <Rule>
-                    <Condition>
-                        <Expression>Cache1&gt;10</Expression>
-                    </Condition>
-                    <Consequence>
-                        <Assignment>
-                            <Target>Output1</Target>
-                            <Value>
-                                <Expression>1</Expression>
-                            </Value>
-                        </Assignment>
-                    </Consequence>
-                </Rule>
-            </Rules>
-        </SubRuleSet>
-        <SubRuleSet>
-            <MetaInfo>
-                <Inputs>
-                    <Param name="Input1" type="uint32" />
-                </Inputs>
-                <Outputs></Outputs>
-                <Caches>
-                    <Param name="Cache1" type="uint32" />
-                </Caches>
-            </MetaInfo>
-            <Rules>
-                <Rule>
-                    <Condition>
-                        <Expression>Input1!=0</Expression>
-                    </Condition>
-                    <Consequence>
-                        <Assignment>
-                            <Target>Cache1</Target>
-                            <Value>
-                                <Expression>Cache1+1</Expression>
-                            </Value>
-                        </Assignment>
-                    </Consequence>
-                </Rule>
-                <Rule>
-                    <Condition>
-                        <Expression>Input1==0</Expression>
-                    </Condition>
-                    <Consequence>
-                        <Assignment>
-                            <Target>Cache1</Target>
-                            <Value>
-                                <Expression>Cache1-1</Expression>
+                                <Expression>sin(Input1[Input2])</Expression>
                             </Value>
                         </Assignment>
                     </Consequence>

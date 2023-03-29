@@ -36,19 +36,22 @@
 
 namespace rulejit::ir {
 
-using namespace llvm;
-
 struct IRHolder {
     IRHolder() {
+        using namespace llvm;
         context = std::make_unique<LLVMContext>();
         builder = std::make_unique<IRBuilder<>>(*context);
         module = std::make_unique<Module>("rulejit", *context);
     }
+    IRHolder(const IRHolder &) = delete;
+    IRHolder(IRHolder &&) = delete;
+    IRHolder &operator=(const IRHolder &) = delete;
+    IRHolder &operator=(IRHolder &&) = delete;
 
-    std::unique_ptr<LLVMContext> context;
-    std::unique_ptr<IRBuilder<>> builder;
-    std::unique_ptr<Module> module;
-    std::map<std::string, Value *> NamedValues;
+    std::unique_ptr<llvm::LLVMContext> context;
+    std::unique_ptr<llvm::IRBuilder<>> builder;
+    std::unique_ptr<llvm::Module> module;
+    std::map<std::string, llvm::Value*> NamedValues;
 };
 
 } // namespace rulejit::ir

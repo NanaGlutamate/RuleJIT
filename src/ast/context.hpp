@@ -90,12 +90,7 @@ struct ContextFrame {
  *
  */
 struct ContextStack {
-    /// @brief counter for generate unique name
-    size_t counter;
-    /// @brief global information
-    ContextGlobal global;
-    /// @brief scope stack
-    std::vector<ContextFrame> scope;
+    
     /**
      * @brief Construct a new Context Stack object
      * 
@@ -105,6 +100,14 @@ struct ContextStack {
     ContextStack(ContextStack &&) = delete;
     ContextStack &operator=(const ContextStack &) = delete;
     ContextStack &operator=(ContextStack &&) = delete;
+    
+    /// @brief counter for generate unique name
+    size_t counter;
+    /// @brief global information
+    ContextGlobal global;
+    /// @brief scope stack
+    std::vector<ContextFrame> scope;
+
     /**
      * @brief get real function type
      *

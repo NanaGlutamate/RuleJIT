@@ -1,11 +1,11 @@
 /**
  * @file cqmain.cpp
  * @author djw
- * @brief 
+ * @brief Test/CQ
  * @date 2023-03-28
- * 
- * @details 
- * 
+ *
+ * @details
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -32,8 +32,9 @@ int main() {
     engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/xml_design/example1.0.xml");
 
     engine.init();
-    for(int i=0; i<1000; i++){
-        engine.setInput(CSValueMap{{"Input1", double(1)}});
+    for (int i = 0; i < 1000; i++) {
+        engine.setInput(CSValueMap{{"Input1", std::vector<std::any>{uint32_t(1), uint32_t(3), uint32_t(5)}},
+                                   {"Input2", uint32_t(2)}});
         engine.tick();
         printCSValueMap(*(engine.getOutput()));
         // printCSValueMap(engine.data.cache);
