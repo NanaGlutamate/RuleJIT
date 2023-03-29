@@ -108,6 +108,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     using namespace rulejit::rulesetxml;
 
     // discard statements in preDefines
+    // TODO: execute preDefines once to handle init value?
     auto [preDefines, pre, subRuleSets] = RuleSetParser::readSource(srcXML, context, data);
 
     std::set<std::string> notGenerate{preDefines, pre};
