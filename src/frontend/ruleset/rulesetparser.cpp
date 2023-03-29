@@ -17,6 +17,7 @@
 #include "frontend/parser.h"
 #include "frontend/semantic.hpp"
 #include "rapidxml-1.13/rapidxml.hpp"
+#include "tools/myassert.hpp"
 #include "tools/seterror.hpp"
 
 namespace {
@@ -67,7 +68,7 @@ std::string innerType(std::string type) {
  * can add some tool functions and types
  *
  */
-constexpr auto preDefines = R"(
+const inline std::string preDefines = R"(
 // type Vector3 struct {
 //     x f64;
 //     y f64;
@@ -80,8 +81,7 @@ constexpr auto preDefines = R"(
 
 } // namespace
 
-RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextStack &context,
-                                                                RuleSetMetaInfo &data) {
+RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextStack &context, RuleSetMetaInfo &data) {
     using namespace rapidxml;
 
     static ExpressionLexer lexer;
@@ -89,9 +89,9 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
 
     ExpressionSemantic semantic(context);
 
-    RuleSetParseInfo ret;
+    my_assert(context.size() == 1);
 
-    ret.preDefines = (preDefines | lexer | parser | semantic);
+    RuleSetParseInfo ret;
 
     // XML loading
     xml_document<> doc;
@@ -114,57 +114,56 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     auto meta = root->first_node("MetaInfo");
 
     // collect input/cache/output vars, and if element <Param> has sub element
-    // named "Value", add assignment to preprocessOriginal
+    // named "InitValue", add assignment to initOriginal
+    std::string initOriginal = "{";
+    // when has sub element named "Value", add assignment to preprocessOriginal
     std::string preprocessOriginal = "{";
 
-    for (auto input = meta->first_node("Inputs")->first_node("Param"); input; input = input->next_sibling("Param")) {
-        std::string name = input->first_attribute("name")->value(), type = input->first_attribute("type")->value();
-        if (data.varType.contains(name)) {
-            error("Input, Output and Cache variables should have different names");
+    auto load = [&](const std::string &nodeName, std::vector<std::string> &target) {
+        for (auto ele = meta->first_node(nodeName.data())->first_node("Param"); ele;
+             ele = ele->next_sibling("Param")) {
+            std::string name = ele->first_attribute("name")->value(),
+                        type = ele->first_attribute("type")->value();
+            if (data.varType.contains(name)) {
+                error("Input, Output and Cache variables should have different names");
+            }
+            target.push_back(name);
+            data.varType[name] = type;
+            context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+            if (auto p = ele->first_node("Value"); p) {
+                // if contains <Value> node, add assignment to preprocessOriginal
+                preprocessOriginal += std::string(ele->first_attribute("name")->value()) + "={" +
+                                      p->first_node("Expression")->value() + "};";
+            }
+            if (auto p = ele->first_node("InitValue"); p) {
+                // TODO: add expression support?
+                std::string tar = p->value();
+                if (tar == "true") {
+                    tar = "1.0";
+                } else if (tar == "false") {
+                    tar = "0.0";
+                } else {
+                    for (auto c : tar) {
+                        if ((c < '0' || c > '9') && c != '.') {
+                            error("InitValue should only be a number like 0, 0.0 or 3.14, no scientific notation "
+                                  "or hex/oct/binary support");
+                        }
+                    }
+                }
+                // if contains <InitValue> node, add assignment to initOriginal
+                initOriginal += std::string(ele->first_attribute("name")->value()) + "={" + tar + "};";
+            }
         }
-        data.inputVar.push_back(name);
-        data.varType[name] = type;
-        // TODO: what if innerType(type) is legal type string + symbol? add checkLegal(innerType(type))
-        context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
-        if (auto p = input->first_node("Value"); p) {
-            // if contains <Value> node, add assignment to preprocessOriginal
-            preprocessOriginal += std::string(input->first_attribute("name")->value()) + "={" +
-                                  p->first_node("Expression")->value() + "};";
-        }
-    }
+    };
 
-    for (auto cache = meta->first_node("Caches")->first_node("Param"); cache; cache = cache->next_sibling("Param")) {
-        std::string name = cache->first_attribute("name")->value(), type = cache->first_attribute("type")->value();
-        if (data.varType.contains(name)) {
-            error("Input, Output and Cache variables should have different names");
-        }
-        data.cacheVar.push_back(name);
-        data.varType[name] = type;
-        context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
-        if (auto p = cache->first_node("Value"); p) {
-            // if contains <Value> node, add assignment to preprocessOriginal
-            preprocessOriginal += std::string(cache->first_attribute("name")->value()) + "={" +
-                                  p->first_node("Expression")->value() + "};";
-        }
-    }
+    load("Inputs", data.inputVar);
+    load("Caches", data.cacheVar);
+    load("Outputs", data.outputVar);
 
-    for (auto output = meta->first_node("Outputs")->first_node("Param"); output;
-         output = output->next_sibling("Param")) {
-        std::string name = output->first_attribute("name")->value(), type = output->first_attribute("type")->value();
-        if (data.varType.contains(name)) {
-            error("Input, Output and Cache variables should have different names");
-        }
-        data.outputVar.push_back(name);
-        data.varType[name] = type;
-        context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
-        if (auto p = output->first_node("Value"); p) {
-            // if contains <Value> node, add assignment to preprocessOriginal
-            preprocessOriginal += std::string(output->first_attribute("name")->value()) + "={" +
-                                  p->first_node("Expression")->value() + "};";
-        }
-    }
-
+    initOriginal += "}";
     preprocessOriginal += "}";
+    // parse initOriginal, get returned real function name
+    ret.preDefines = std::unique_ptr<rulejit::ExprAST>((preDefines + "\n" + initOriginal) | lexer | parser) | semantic;
     // parse preprocessOriginal, get returned real function name
     ret.preprocess = std::unique_ptr<rulejit::ExprAST>(preprocessOriginal | lexer | parser) | semantic;
 
@@ -189,6 +188,14 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         expr += "{-1}}";
         auto astName = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
         ret.subRuleSets.push_back(astName);
+    }
+
+    // check all defined function
+    for (auto &&[name, _] : context.global.realFuncDefinition) {
+        if (context.global.checkedFunc.contains(name)) {
+            continue;
+        }
+        semantic.checkFunction(name);
     }
 
     return ret;

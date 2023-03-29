@@ -10,6 +10,7 @@
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * <tr><td>djw</td><td>2023-03-29</td><td>Add semantic support.</td></tr>
  * </table>
  */
 
@@ -26,6 +27,7 @@
 #include "ast/type.hpp"
 #include "backend/cq/cqresourcehandler.h"
 #include "defines/marco.hpp"
+#include "ast/context.hpp"
 #include "tools/seterror.hpp"
 
 /**
@@ -39,23 +41,19 @@ namespace rulejit::cq {
 
 /**
  * @brief main class to interprete ast in cq environment
- * @attention will change original ast
  *
  */
 struct CQInterpreter : public ASTVisitor {
     friend int ::main();
-    /**
-     * @brief defined functions
-     *
-     */
-    std::map<std::string, std::unique_ptr<FunctionDefAST>> func;
+
     /**
      * @brief Constructor, will init symbolStack with empty stack and empty scope,
      * then set handler to h
      *
      * @param h ResourceHandler which handles variable for this object
      */
-    CQInterpreter(ResourceHandler &h) : symbolStack({{{}}}), handler(h) {}
+    CQInterpreter(ContextStack& c, ResourceHandler &h) : context(c), symbolStack({{{}}}), handler(h) {}
+
     /**
      * @brief reset the interpreter(reset symbolStack, specifically)
      * @attention will not remove the function definitions
@@ -181,8 +179,8 @@ struct CQInterpreter : public ASTVisitor {
             getReturnedValue();
             returned.value = it->second(tmp, returned.value);
         } else {
-            auto f = func.find(funcName);
-            if (f == func.end()) {
+            auto f = context.global.realFuncDefinition.find(funcName);
+            if (f == context.global.realFuncDefinition.end()) {
                 setError(std::format("function \"{}\" not found", funcName));
             }
             auto &callee = f->second;
@@ -371,17 +369,8 @@ struct CQInterpreter : public ASTVisitor {
         returned.type = Value::EMPTY;
         symbolStack.back().emplace_back();
         for (auto it = v.exprs.begin(); it != v.exprs.end();) {
-            if (isType<FunctionDefAST>(it->get())) {
-                auto funcDef = std::unique_ptr<FunctionDefAST>(dynamic_cast<FunctionDefAST *>(it->release()));
-                if (func.contains(funcDef->name)) {
-                    setError("redefined function: " + funcDef->name);
-                }
-                func[funcDef->name] = std::move(funcDef);
-                it = v.exprs.erase(it, it + 1);
-            } else {
-                (*it)->accept(this);
-                it++;
-            }
+            (*it)->accept(this);
+            it++;
         }
         symbolStack.back().pop_back();
     }
@@ -508,10 +497,17 @@ struct CQInterpreter : public ASTVisitor {
     [[noreturn]] void setError(const std::string &msg) { error(msg); }
 
     /**
+     * @brief context, includes function defines
+     * 
+     */
+    ContextStack& context;
+
+    /**
      * @brief caller pop stack, stack frame is scope stack
      *
      */
     std::vector<std::vector<std::map<std::string, Value>>> symbolStack;
+
     /**
      * @brief value passed through visit functions
      *

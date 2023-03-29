@@ -8,6 +8,7 @@
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * <tr><td>djw</td><td>2023-03-29</td><td>Add semantic support.</td></tr>
  * </table>
  */
 #pragma once
@@ -15,10 +16,9 @@
 #include <fstream>
 #include <list>
 
+#include "ast/context.hpp"
 #include "backend/cq/cqinterpreter.hpp"
 #include "backend/cq/cqresourcehandler.h"
-#include "frontend/lexer.h"
-#include "frontend/parser.h"
 
 namespace rulejit::cq {
 
@@ -29,9 +29,11 @@ struct SubRuleSet {
     /**
      * @brief Construct a new SubRuleSet object.
      *
-     * @param data The DataStore object.
+     * @param context context which contains function defines.
+     * @param dataStorage The DataStore object.
      */
-    SubRuleSet(DataStore &data) : handler(data), interpreter(handler), subruleset(nullptr) {}
+    SubRuleSet(ContextStack &context, DataStore &dataStorage)
+        : handler(dataStorage), interpreter(context, handler), subruleset(nullptr) {}
     SubRuleSet() = delete;
     /// @brief resource handler
     ResourceHandler handler;
@@ -52,7 +54,12 @@ struct RuleSet {
  * @brief Structure for rule set engine.
  */
 struct RuleSetEngine {
-    RuleSetEngine() : data(), ruleset(), lexer(), parser(), preprocess(data) {}
+    RuleSetEngine() : dataStorage(), ruleset(), context(), preprocess(context, dataStorage) {}
+    RuleSetEngine(const RuleSetEngine &) = delete;
+    RuleSetEngine(RuleSetEngine &&) = delete;
+    RuleSetEngine &operator=(const RuleSetEngine &) = delete;
+    RuleSetEngine &operator=(RuleSetEngine &&) = delete;
+
     /**
      * @brief Build the rule set engine from the XML source.
      *
@@ -78,7 +85,7 @@ struct RuleSetEngine {
      *
      * @return void.
      */
-    void init() { data.Init(); }
+    void init() { dataStorage.Init(); }
     /**
      * @brief Execute a tick of the rule set engine.
      *
@@ -103,23 +110,21 @@ struct RuleSetEngine {
      * @param input The unordered map of input data.
      * @return void.
      */
-    void setInput(const std::unordered_map<std::string, std::any> &input) { data.SetInput(input); }
+    void setInput(const std::unordered_map<std::string, std::any> &input) { dataStorage.SetInput(input); }
     /**
      * @brief Get the output data from the rule set engine.
      *
      * @return The pointer of unordered map for output data.
      */
-    std::unordered_map<std::string, std::any> *getOutput() { return data.GetOutput(); }
+    std::unordered_map<std::string, std::any> *getOutput() { return dataStorage.GetOutput(); }
 
   private:
     /// @brief data storage
-    DataStore data;
+    DataStore dataStorage;
     /// @brief rule set
     RuleSet ruleset;
-    /// @brief expression lexer
-    ExpressionLexer lexer;
-    /// @brief expression parser
-    ExpressionParser parser;
+    /// @brief context
+    ContextStack context;
     /// @brief pre-process subruleset, which will called tick() and writeBack() before all subruleset
     SubRuleSet preprocess;
 };
