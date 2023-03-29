@@ -45,7 +45,7 @@ struct IRGenerator : public ASTVisitor {
 
     virtual ~IRGenerator() = default;
     /**
-     * @brief Stream operator| used to generate function def in ContextGlobal
+     * @brief pipe operator| used to generate function def in ContextGlobal
      * @attention function must have checked
      *
      * @param src function name need to be generated

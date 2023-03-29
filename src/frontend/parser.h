@@ -26,6 +26,10 @@
 
 namespace rulejit {
 
+/**
+ * @brief main class of parser
+ * 
+ */
 struct ExpressionParser {
     ExpressionParser() = default;
     ExpressionParser(const ExpressionParser &) = delete;

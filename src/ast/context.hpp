@@ -67,8 +67,8 @@ struct ContextFrame {
     std::map<std::string, TypeInfo> varDef;
     // // var name -> real func closure type name list that capture this var
     // std::map<std::string, std::vector<std::string>> capturedInfo;
-    size_t scopeID = 0;
-    size_t subScopeCounter = 0;
+    // size_t scopeID = 0;
+    // size_t subScopeCounter = 0;
 };
 
 /**
@@ -156,10 +156,10 @@ struct ContextStack {
      * @return ContextFrame& 
      */
     ContextFrame &push() {
-        auto tmp = scope.back().subScopeCounter++;
+        // auto tmp = scope.back().subScopeCounter++;
         scope.push_back({});
-        scope.back().subScopeCounter = 0;
-        scope.back().scopeID = tmp;
+        // scope.back().subScopeCounter = 0;
+        // scope.back().scopeID = tmp;
         return top();
     }
     /**

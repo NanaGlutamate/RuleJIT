@@ -343,6 +343,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         }
         return std::make_unique<VarDefAST>(indent, std::move(type), parseExpr());
     } else if (lexer->top() == "func") {
+        // TODO: fix member function definition
         // func def
         lexer->pop(IGNORE_BREAK);
         // TODO: operator.

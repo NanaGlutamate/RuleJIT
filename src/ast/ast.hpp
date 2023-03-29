@@ -218,9 +218,11 @@ struct ComplexLiteralExprAST : public ExprAST {
 
 // LOOP := 'while' '(' EXPR ')' EXPR
 // while(x!=0){x+=1;x;}
-// {init;while(condition){body})}, init and body must have same type
+// {init;while(condition){body})}
 /**
  * @brief indicates loop statement like "while(*condition*) *expr*", normally no returns
+ * 
+ * @attention if init and body have same type, this expression can return.
  * 
  */
 struct LoopAST : public ExprAST {

@@ -39,6 +39,7 @@ struct Decompiler : public ASTVisitor {
     VISIT_FUNCTION(LiteralExprAST) {
         if (*(v.type) == StringType) {
             returned += "\"";
+            // TODO: escaped char?
             returned += v.value;
             returned += "\"";
         } else {

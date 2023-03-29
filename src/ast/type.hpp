@@ -312,7 +312,7 @@ struct TypeInfo {
  */
 struct TypeParser {
     /**
-     * @brief stream operator| to parse a TypeInfo from ExpressionLexer stream
+     * @brief pipe operator| to parse a TypeInfo from ExpressionLexer stream
      * 
      * @param e ExpressionLexer which lexer the input string
      * @param t TypeParser to be exactly called parse function, normally a temporary object

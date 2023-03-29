@@ -33,29 +33,36 @@
 #define __RULEJIT_SEMANTIC_PUSH pushStack(v.get());
 #define __RULEJIT_SEMANTIC_POP popStack();
 
-// TODO: bugs
-// 1. func's unused param has undefined type will pass check
-
 namespace rulejit {
 
 /// any symbol starts with reservedPrefix is real function name
 constexpr inline auto reservedPrefix = "__buildin";
 
-// 1. type inference
-// 2. TODO: name unnamed complex type(in vardef, typedef, literal and funcdef)
-// 3. scope process
-// 4. capture analysis
-// 5. redefined symbol name(var, type and func name cannot be same)
+/**
+ * @brief main class for semantic analyzer
+ * 
+ * @details jobs:
+ * 
+ * 1. type inference
+ * 2. TODO: name unnamed complex type(in vardef, typedef, literal and funcdef)
+ * 3. scope process
+ * 4. TODO: capture analysis
+ * 
+ */
 struct ExpressionSemantic : public ASTVisitor {
     ExpressionSemantic(ContextStack &context) : c(context), needRelease(false), needChange(nullptr){};
     ExpressionSemantic(const ExpressionSemantic &) = delete;
     ExpressionSemantic(ExpressionSemantic &&) = delete;
     ExpressionSemantic &operator=(const ExpressionSemantic &) = delete;
     ExpressionSemantic &operator=(ExpressionSemantic &&) = delete;
-
-    // ContextStack cannot be destructed before last process call of this
-    // void loadContext(ContextStack *context) { c = context; }
-    // used for file parsing
+    
+    /**
+     * @brief pipe operator| used for file parsing
+     * 
+     * @param parser parser which already loaded lexer which load with file content
+     * @param semantic receiver ExpressionSemantic
+     * @return std::string real function name which contains top-level expressions and global variable assignment
+     */
     std::string friend operator|(ExpressionParser &parser, ExpressionSemantic &semantic) {
         std::vector<std::unique_ptr<ExprAST>> topLevelExprs;
         std::unique_ptr<ExprAST> tmp;
@@ -64,23 +71,31 @@ struct ExpressionSemantic : public ASTVisitor {
         }
         return semantic.addUnnamedFunction(std::move(topLevelExprs));
     }
-    // used for repl
-    std::string friend operator|(std::unique_ptr<ExprAST> i, ExpressionSemantic &t) {
+
+    /**
+     * @brief pipe operator| used for repl
+     * 
+     * @param ast AST of current input
+     * @param semantic receiver ExpressionSemantic
+     * @return std::string real function name which contains current input expression
+     */
+    std::string friend operator|(std::unique_ptr<ExprAST> ast, ExpressionSemantic &semantic) {
         std::vector<std::unique_ptr<ExprAST>> tmp;
-        tmp.push_back(std::move(i));
-        return t.addUnnamedFunction(std::move(tmp));
+        tmp.push_back(std::move(ast));
+        return semantic.addUnnamedFunction(std::move(tmp));
     }
+
+    /**
+     * @brief check function with given name. automatically check all
+     * unchecked function this function calls.
+     * 
+     * @param name real function name of given function
+     */
     void checkFunction(const std::string &name) {
         init();
         auto tmp = checkRealFunction(name);
         checkRealFunctionSet(tmp);
     }
-    /**
-     * @brief Get the Context reference related
-     *
-     * @return ContextStack&
-     */
-    ContextStack &getContext() { return c; }
 
   protected:
     VISIT_FUNCTION(IdentifierExprAST) {
@@ -682,6 +697,7 @@ struct ExpressionSemantic : public ASTVisitor {
         return (v.baseVar->type->isArrayType() && *(v.memberToken->type) == IntType);
     }
     bool isAssignable(ExprAST *v) {
+        // TODO: pointer support
         // auto p = dynamic_cast<UnaryOpExprAST *>(v);
         // if (p && p->op == "*") {
         //     return true;

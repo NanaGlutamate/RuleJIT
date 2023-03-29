@@ -64,7 +64,7 @@ struct CQInterpreter : public ASTVisitor {
     void reset() { symbolStack = {{{}}}; }
 
     /**
-     * @brief stream operator| to interprete ast
+     * @brief pipe operator| to interprete ast
      *
      * @param expr expr ast need to be interpreted
      * @param interpreter acceptor interpreter object

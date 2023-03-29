@@ -28,6 +28,7 @@ namespace rulejit {
 
 #define TOKEN(t) t
 
+/// @brief token type
 enum class TokenType {
     TOKEN(INT),
     TOKEN(REAL),
@@ -44,6 +45,9 @@ enum class TokenType {
 #define TOKEN(t)                                                                                                       \
     { TokenType::t, #t }
 
+/// @brief tool function to change TokenType to string
+/// @param t TokenType input
+/// @return string output
 inline std::string to_string(TokenType t) {
     static const std::map<TokenType, std::string> table{
         TOKEN(INT), TOKEN(REAL), TOKEN(STRING), TOKEN(IDENT), TOKEN(SYM), TOKEN(ENDLINE), TOKEN(END), TOKEN(UNKNOWN),
@@ -55,6 +59,10 @@ inline std::ostream &operator<<(std::ostream &o, TokenType type) { return o << t
 
 #undef TOKEN
 
+/**
+ * @brief main class of lexer
+ * 
+ */
 struct ExpressionLexer {    
     ExpressionLexer() = default;
     ExpressionLexer(const ExpressionLexer &e) = delete;

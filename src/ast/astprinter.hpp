@@ -34,7 +34,7 @@ namespace rulejit {
  */
 struct ASTPrinter : public ASTVisitor {
     /**
-     * @brief stream operator| provides function to print given ast
+     * @brief pipe operator| provides function to print given ast
      *
      * @param v given ast
      * @param p operator receiver
