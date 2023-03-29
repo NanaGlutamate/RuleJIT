@@ -31,7 +31,13 @@ inline constexpr auto typeDefHpp = R"(#pragma once
 
 namespace {0}{{
 
+using f32 = float;
 using f64 = double;
+using i32 = int32_t;
+using i64 = int64_t;
+using u32 = uint32_t;
+using u64 = uint64_t;
+
 using float64 = double;
 using float32 = float;
 using int8 = int8_t;
@@ -114,7 +120,6 @@ struct NoInstanceType{{
     NoInstanceType& operator=(const NoInstanceType&) = delete;
     NoInstanceType(NoInstanceType&&) = delete;
     NoInstanceType& operator=(NoInstanceType&&) = delete;
-}};
 }};
 
 {2}
@@ -505,7 +510,7 @@ int main() {
 #endif
     if (!hmodule) {
         std::cout << "load ruleset failed" << std::endl;
-        return false;
+        return -1;
     }
 
 #ifdef _WIN32
@@ -522,12 +527,12 @@ int main() {
         if (!dlclose(hmodule))
 #endif
             std::cout << "release dll error" << std::endl;
-        return false;
+        return -1;
     }
     CSModelObject *model_obj_ = create_obj_();
     if (nullptr == model_obj_) {
         std::cerr << "create model error" << std::endl;
-        return false;
+        return -1;
     }
     auto engine = model_obj_;
     // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});

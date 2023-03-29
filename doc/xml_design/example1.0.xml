@@ -3,14 +3,14 @@
 <RuleSet version="1.0">
     <TypeDefines>
         <TypeDefine type="Location">
-            <Variable name="altitude" type="float64"/>
-            <Variable name="longitude" type="float64"/>
-            <Variable name="latitude" type="float64"/>
+            <Variable name="altitude" type="float64" />
+            <Variable name="longitude" type="float64" />
+            <Variable name="latitude" type="float64" />
         </TypeDefine>
         <TypeDefine type="Vector3">
-            <Variable name="x" type="float64"/>
-            <Variable name="y" type="float64"/>
-            <Variable name="z" type="float64"/>
+            <Variable name="x" type="float64" />
+            <Variable name="y" type="float64" />
+            <Variable name="z" type="float64" />
         </TypeDefine>
     </TypeDefines>
     <MetaInfo>
@@ -21,11 +21,13 @@
             </Param>
         </Inputs>
         <Outputs>
-            <Param name="Output1" type="uint32"/>
+            <Param name="Output1" type="uint32" />
         </Outputs>
         <Caches>
             <Param name="Cache1" type="uint32">
-                <Value><Expression>12</Expression></Value>
+                <Value>
+                    <Expression>12</Expression>
+                </Value>
             </Param>
         </Caches>
     </MetaInfo>
@@ -34,10 +36,10 @@
             <MetaInfo>
                 <Inputs></Inputs>
                 <Outputs>
-                    <Param name="Output1" type="uint32"/>
+                    <Param name="Output1" type="uint32" />
                 </Outputs>
                 <Caches>
-                    <Param name="Cache1" type="uint32"/>
+                    <Param name="Cache1" type="uint32" />
                 </Caches>
             </MetaInfo>
             <Rules>
@@ -72,11 +74,11 @@
         <SubRuleSet>
             <MetaInfo>
                 <Inputs>
-                    <Param name="Input1" type="uint32"/>
+                    <Param name="Input1" type="uint32" />
                 </Inputs>
                 <Outputs></Outputs>
                 <Caches>
-                    <Param name="Cache1" type="uint32"/>
+                    <Param name="Cache1" type="uint32" />
                 </Caches>
             </MetaInfo>
             <Rules>

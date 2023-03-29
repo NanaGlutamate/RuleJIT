@@ -3,7 +3,7 @@
  * @author djw
  * @brief CQ/CPPBE/SubRuleSet code generator
  * @date 2023-03-27
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -26,12 +26,13 @@
 #include "ast/context.hpp"
 #include "backend/cppbe/metainfo.hpp"
 #include "backend/cppbe/template.hpp"
+#include "frontend/ruleset/rulesetparser.h"
 #include "tools/myassert.hpp"
 
 namespace rulejit::cppgen {
 
 struct SubRuleSetCodeGen : public ASTVisitor {
-    SubRuleSetCodeGen(ContextStack &context, MetaInfo& metaInfo):c(context), m(metaInfo) {};
+    SubRuleSetCodeGen(ContextStack &context, rulesetxml::RuleSetMetaInfo &metaInfo) : c(context), m(metaInfo){};
     std::string friend operator|(const std::pair<std::string, std::unique_ptr<FunctionDefAST>> &func,
                                  SubRuleSetCodeGen &t) {
         std::string returnedType, funcName, params, body;
@@ -64,7 +65,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         e->accept(&t);
         return std::move(t.returned);
     }
-    
+
   protected:
     VISIT_FUNCTION(IdentifierExprAST) {
         // only thing differs from common cppcodegen
@@ -303,7 +304,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         // return nullptr;
     }
     ContextStack &c;
-    MetaInfo &m;
+    rulesetxml::RuleSetMetaInfo &m;
 };
 
 } // namespace rulejit::cppgen

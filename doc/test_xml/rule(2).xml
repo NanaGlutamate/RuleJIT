@@ -1,0 +1,507 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet version="1.0">
+	<TypeDefines>
+        <TypeDefine type="output_info_">
+            <Variable name="Longitude" type="float64"/>
+            <Variable name="Latitude" type="float64"/>
+            <Variable name="Altitude" type="float64"/>
+            <Variable name="Speed" type="float64"/>
+            <Variable name="Roll" type="float64"/>
+            <Variable name="Pitch" type="float64"/>
+            <Variable name="Yaw" type="float64"/>
+        </TypeDefine>
+		<TypeDefine type="MissileRange">
+			<Variable name="DRmax" type="float64"/>
+			<Variable name="phiRmax" type="float64"/>
+			<Variable name="DMmax" type="float64"/>
+			<Variable name="DMmin" type="float64"/>
+			<Variable name="phiMmax" type="float64"/>
+			<Variable name="DMKmax" type="float64"/>
+			<Variable name="DMKmin" type="float64"/>
+			<Variable name="phiMK" type="float64"/>
+			<Variable name="DNmax" type="float64"/>
+			<Variable name="DNmin" type="float64"/>
+			<Variable name="DNok" type="float64"/>
+			<Variable name="phiNmax" type="float64"/>
+		</TypeDefine>
+    </TypeDefines>
+    <MetaInfo>
+        <Inputs>
+			<Param name="A_output" type="output_info_" display_name="我机实体信息"/>
+			<Param name="T_output" type="output_info_" display_name="敌机实体信息"/>
+            <Param name="radar" type="bool" display_name="敌机雷达探测参数"/>
+			<Param name="missile" type="bool" display_name="敌机导弹发射参数"/>
+            <Param name="DT" type="MissileRange" display_name="敌机打击参数"/>
+			<Param name="DA" type="MissileRange" display_name="我机打击参数"/>
+            <Param name="flag" type="bool" display_name="战术结束标志"/>
+        </Inputs>
+        <Outputs>
+            <Param name="tacticID" type="uint64" display_name="单机战术号"/>
+            <Param name="xT_" type="float64">
+				<Value>
+					<Expression>
+						(T_output.Longitude - A_output.Longitude) * 111000 * cos(A_output.Latitude / 180 * 3.1415926)
+					</Expression>
+				</Value>
+            </Param>
+			<Param name="yT_" type="float64">
+				<Value>
+					<Expression>
+						(T_output.Latitude - A_output.Latitude) * 111000
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="zT_" type="float64">
+				<Value>
+					<Expression>
+						T_output.Altitude - A_output.Altitude
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="xA_" type="float64">
+				<Value>
+					<Expression>
+						(A_output.Longitude - T_output.Longitude) * 111000 * cos(T_output.Latitude / 180 * 3.1415926)
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="yA_" type="float64">
+				<Value>
+					<Expression>
+						(A_output.Latitude - T_output.Latitude) * 111000
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="zA_" type="float64">
+				<Value>
+					<Expression>
+						A_output.Altitude - T_output.Altitude
+					</Expression>
+				</Value>
+			</Param>
+        </Outputs>
+        <Caches>
+            <Param name="xT" type="float64">
+				<Value>
+					<Expression>
+						(T_output.Longitude - A_output.Longitude) * 111000 * cos(A_output.Latitude / 180 * 3.1415926)
+					</Expression>
+				</Value>
+            </Param>
+			<Param name="yT" type="float64">
+				<Value>
+					<Expression>
+						(T_output.Latitude - A_output.Latitude) * 111000
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="zT" type="float64">
+				<Value>
+					<Expression>
+						T_output.Altitude - A_output.Altitude
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="xA" type="float64">
+				<Value>
+					<Expression>
+						(A_output.Longitude - T_output.Longitude) * 111000 * cos(T_output.Latitude / 180 * 3.1415926)
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="yA" type="float64">
+				<Value>
+					<Expression>
+						(A_output.Latitude - T_output.Latitude) * 111000
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="zA" type="float64">
+				<Value>
+					<Expression>
+						A_output.Altitude - T_output.Altitude
+					</Expression>
+				</Value>
+			</Param>
+        </Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="tacticID" type="uint8" display_name="单机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DRmax)or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiRmax)) and ((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DRmax)or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiRmax)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DRmax)or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiRmax)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DRmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMmax)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DRmax)or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiRmax)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))and((abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMK)and(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMmax)))) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DRmax)or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiRmax)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMK)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DRmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMmax)) and ((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DRmax)or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiRmax)) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DRmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMmax)) and ((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DRmax)or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiRmax)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DRmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMmax)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DRmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMmax)) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DRmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMmax)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DRmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMmax)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DRmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMmax)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))and((abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMK)and(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMmax)))) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DRmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMmax)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))and((abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMK)and(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMmax)))) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DRmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMmax)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMK)) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DRmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMmax)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMK)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))and((abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMK)and(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMmax)))) and ((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DRmax)or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiRmax)) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))and((abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMK)and(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMmax)))) and ((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DRmax)or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiRmax)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))and((abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMK)and(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMmax)))) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DRmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMmax)) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))and((abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMK)and(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMmax)))) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DRmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMmax)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))and((abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMK)and(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMmax)))) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))and((abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMK)and(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMmax)))) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))and((abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMK)and(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMmax)))) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))and((abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMK)and(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMmax)))) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))and((abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMK)and(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMmax)))) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMK)) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))and((abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&gt;DT.phiMK)and(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMmax)))) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMK)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMK)) and ((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DRmax)or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiRmax)) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMK)) and ((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DRmax)or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiRmax)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMK)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DRmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMmax)) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMK)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DRmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMmax)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMK)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))and((abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMK)and(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMmax)))) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMK)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmax)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMmax))or((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmin))or(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))and((abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&gt;DA.phiMK)and(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMmax)))) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMK)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMK)) and ((radar==1)or(missile==1)) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>(((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DT.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DT.DMKmax))or(abs(((A_output.Yaw - atan2(xT,yT)) / 3.1415926 * 180))&lt;DT.phiMK)) and (((pow((xA*xA + yA*yA + zA*zA),0.5)&gt;DA.DMKmin)and(pow((xA*xA + yA*yA + zA*zA),0.5)&lt;DA.DMKmax))or(abs(((T_output.Yaw - atan2(xA,yA)) / 3.1415926 * 180))&lt;DA.phiMK)) and (radar==0) and (flag==1)</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

@@ -65,13 +65,14 @@ void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
             auto tmp = std::any_cast<std::vector<std::any>>(v);
             cout << "{";
             bool start_ = false;
+            size_t cnt = 0;
             for (auto &&item : tmp) {
                 if (!start_) {
                     start_ = true;
                 } else {
                     cout << ", ";
                 }
-                printCSValueMap(std::any_cast<std::unordered_map<std::string, std::any>>(item));
+                printCSValueMap(std::unordered_map<std::string, std::any>({{to_string(cnt++), item}}));
             }
             cout << "}";
         } else {

@@ -7,7 +7,7 @@
             <xs:element name="TypeDefines">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element name="TypeDefine" type="TypeDefine" maxOccurs="unbounded"/>
+                        <xs:element name="TypeDefine" type="TypeDefine" minOccurs="0" maxOccurs="unbounded"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -15,7 +15,7 @@
             <xs:element name="SubRuleSets">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element name="SubRuleSet" type="SubRuleSet" maxOccurs="unbounded"/>
+                        <xs:element name="SubRuleSet" type="SubRuleSet" minOccurs="0" maxOccurs="unbounded"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -66,7 +66,7 @@
 
     <xs:complexType name="SubRuleSet">
         <xs:sequence>
-            <xs:element name="MetaInfo" type="MetaInfo"/>
+            <xs:element name="MetaInfo" minOccurs="0" type="MetaInfo"/>
             <xs:element name="Rules">
                 <xs:complexType>
                     <xs:sequence>

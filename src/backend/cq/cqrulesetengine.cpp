@@ -64,6 +64,10 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
     // collect inputs, caches and outputs variables and their types, store them in data.varType
     for (auto input = meta->first_node("Inputs")->first_node("Param"); input; input = input->next_sibling("Param")) {
         data.inputVar.push_back(input->first_attribute("name")->value());
+        std::string name = input->first_attribute("name")->value();
+        if(data.varType.contains(name)){
+            error("Input, Output and Cache variables should have different names");
+        }
         data.varType[input->first_attribute("name")->value()] = input->first_attribute("type")->value();
         if(auto p = input->first_node("Value"); p){
             // if contains <Value> node, add assignment to preprocessOriginal
@@ -73,6 +77,10 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
 
     for (auto cache = meta->first_node("Caches")->first_node("Param"); cache; cache = cache->next_sibling("Param")) {
         data.cacheVar.push_back(cache->first_attribute("name")->value());
+        std::string name = cache->first_attribute("name")->value();
+        if(data.varType.contains(name)){
+            error("Input, Output and Cache variables should have different names");
+        }
         data.varType[cache->first_attribute("name")->value()] = cache->first_attribute("type")->value();
         if(auto p = cache->first_node("Value"); p){
             // if contains <Value> node, add assignment to preprocessOriginal
@@ -83,6 +91,10 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
     for (auto output = meta->first_node("Outputs")->first_node("Param"); output;
          output = output->next_sibling("Param")) {
         data.outputVar.push_back(output->first_attribute("name")->value());
+        std::string name = output->first_attribute("name")->value();
+        if(data.varType.contains(name)){
+            error("Input, Output and Cache variables should have different names");
+        }
         data.varType[output->first_attribute("name")->value()] = output->first_attribute("type")->value();
         if(auto p = output->first_node("Value"); p){
             // if contains <Value> node, add assignment to preprocessOriginal

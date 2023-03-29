@@ -27,19 +27,20 @@
 
 #include "tools/seterror.hpp"
 
-inline void my_assert(bool check, const std::string &message = "[assertion failed with no info provided]",
+inline int my_assert(bool check, const std::string &message = "[assertion failed with no info provided]",
                       const std::source_location location = std::source_location::current()) {
     using namespace std;
     if (!check) {
         error(format("error: {}\nin file {}, line {}", message, location.file_name(), location.line()));
     }
+    return 0;
 }
 
 #else // #if __cplusplus >= 202002L
 
 #ifdef assert
 
-#define my_assert(check, message) assert(check)
+#define my_assert(check, message) (assert(check), 0)
 
 #else // #ifdef assert
 
@@ -48,11 +49,12 @@ inline void my_assert(bool check, const std::string &message = "[assertion faile
 
 #include "tools/seterror.hpp"
 
-inline void my_assert(bool check, std::string message) {
+inline int my_assert(bool check, std::string message) {
     if (!check) {
         std::cout << message << std::endl;
         error(message);
     }
+    return 0;
 }
 
 #endif // #ifdef assert
@@ -61,8 +63,9 @@ inline void my_assert(bool check, std::string message) {
 
 #else // #ifdef __ACTIVE_ASSERT
 
-inline void my_assert(bool check, std::string message) {
+inline int my_assert(bool check, std::string message) {
     // do nothing
+    return 0;
 }
 
 #endif // #ifdef __ACTIVE_ASSERT

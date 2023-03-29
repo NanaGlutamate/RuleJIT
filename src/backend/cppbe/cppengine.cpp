@@ -3,20 +3,21 @@
  * @author djw
  * @brief CQ/CPPBE/Cpp Engine
  * @date 2023-03-27
- * 
+ *
  * @details Includes main logic of cpp-backend, such as
  * XML-parsering and code generate.
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
+ * <tr><td>djw</td><td>2023-03-29</td><td>Move XML-Parsering to frontend/ruleset</td></tr>
  * </table>
  */
-#include "cppengine.h"
-
 #include <iostream>
 
+#include "backend/cppbe/template.hpp"
+#include "cppengine.h"
 #include "rapidxml-1.13/rapidxml.hpp"
 #include "tools/seterror.hpp"
 
@@ -27,7 +28,7 @@ using namespace rulejit::cppgen;
 
 /**
  * @brief transform inner type string to cpp style string
- * 
+ *
  * @param type inner type string
  * @return std::string cpp style string
  */
@@ -40,7 +41,12 @@ std::string CppStyleType(const TypeInfo &type) {
         return "void";
     }
     if (type.isBaseType()) {
-        return type.idents[0];
+        auto tmp = type.getBaseTypeString();
+        if (rulesetxml::baseData.contains(tmp)) {
+            return "typedReal<" + tmp + ">";
+        } else {
+            return tmp;
+        }
     }
     if (type.idents.size() == 2 && type.idents[0] == "[]") {
         return "std::vector<" + type.idents[1] + ">";
@@ -51,7 +57,7 @@ std::string CppStyleType(const TypeInfo &type) {
 /**
  * @brief transform inner param type string to cpp style string
  * @attention will use const reference type for complex type and array type
- * 
+ *
  * @param type inner type string
  * @return std::string cpp style string
  */
@@ -60,7 +66,7 @@ std::string CppStyleParamType(const TypeInfo &type) {
     if (type == NoInstanceType) {
         return "void";
     }
-    if (type.isBaseType() && baseData.contains(type.idents[0])) {
+    if (type.isBaseType() && rulesetxml::baseData.contains(type.idents[0])) {
         return type.idents[0];
     }
     if (type.isBaseType()) {
@@ -73,39 +79,16 @@ std::string CppStyleParamType(const TypeInfo &type) {
 }
 
 /**
- * @brief transform cpp style type string to inner type string
- * 
- * @param type cpp style type string
- * @return std::string inner type string
- */
-std::string innerType(std::string type) {
-    std::string tmp;
-    while (type.back() == ']') {
-        type.pop_back();
-        if (type.back() != '[') {
-            error("Invalid type name: " + type + "]");
-        }
-        type.pop_back();
-        tmp += "[]";
-    }
-    if (baseData.contains(type)) {
-        tmp += "f64";
-    } else {
-        tmp += type;
-    }
-    return tmp;
-}
-
-/**
  * @brief for each name in src, look up type defines in meta info,
  * select type string of given name, assemble them in std::pair and emplace into std::vector,
  * then return the vector. only unsed for _Input/_Output/_Cache type defines
- * 
+ *
  * @param src vector containes name of variable
  * @param m meta info which containes type defines
  * @return std::vector<std::tuple<std::string, std::string>> assembled type which can used in type defines
  */
-std::vector<std::tuple<std::string, std::string>> assembleType(const std::vector<std::string> &src, MetaInfo &m) {
+std::vector<std::tuple<std::string, std::string>> assembleType(const std::vector<std::string> &src,
+                                                               rulesetxml::RuleSetMetaInfo &m) {
     std::vector<std::tuple<std::string, std::string>> ret;
     for (auto &&name : src) {
         if (auto it = m.varType.find(name); it != m.varType.end()) {
@@ -115,140 +98,29 @@ std::vector<std::tuple<std::string, std::string>> assembleType(const std::vector
     return ret;
 }
 
-/**
- * @brief writable c style string used for rapidxml to process
- * 
- */
-class CStyleString {
-  public:
-    char *s;
-    CStyleString(size_t n) : s(new char[n]){};
-    CStyleString(const CStyleString &s) = delete;
-    void operator=(const CStyleString &s) = delete;
-    CStyleString(const std::string &str) : s(new char[str.size() + 1]) { memcpy(s, str.c_str(), str.size() + 1); };
-    ~CStyleString() { delete[] s; };
-};
-
-/**
- * @brief pre-defines which will be process before ruleset xml,
- * can add some tool functions and types
- * 
- */
-constexpr auto preDefines = R"(
-extern func sin (i f64):f64
-// type Vector3 struct {
-//     x f64;
-//     y f64;
-//     z f64;
-// }
-// func addv(a Vector3, b Vector3):Vector3 {
-//     Vector3{a.x + b.x, a.y + b.y, a.z + b.z};
-// }
-)";
-
 } // namespace
 
 namespace rulejit::cppgen {
 
 void CppEngine::buildFromSource(const std::string &srcXML) {
-    using namespace rapidxml;
-    using namespace templates;
 
-    std::set<std::string> notGenerate;
+    using namespace rulejit::cppgen::templates;
+    using namespace rulejit::rulesetxml;
 
-    notGenerate.insert(preDefines | lexer | parser | semantic);
+    // discard statements in preDefines
+    auto [preDefines, pre, subRuleSets] = RuleSetParser::readSource(srcXML, context, data);
 
-    xml_document<> doc;
-    CStyleString s(srcXML);
-    doc.parse<parse_default>(s.s);
+    std::set<std::string> notGenerate{preDefines, pre};
 
-    auto root = doc.first_node("RuleSet");
-    if (auto it = root->first_attribute("version"); !it || it->value() != std::string("1.0")) {
-        error("Unsupported version of RuleSet");
-    }
-    for (auto typeDef = root->first_node("TypeDefines")->first_node("TypeDefine"); typeDef;
-         typeDef = typeDef->next_sibling("TypeDefine")) {
-        std::string type = typeDef->first_attribute("type")->value();
-        if (type == "Input" || type == "Output" || type == "Cache") {
-            error("Donot support user defined type name _Input/_Output/_Cache");
-        }
-        auto &tar = data.typeDefines[type];
-        for (auto member = typeDef->first_node("Variable"); member; member = member->next_sibling("Variable")) {
-            tar.emplace_back(member->first_attribute("name")->value(), member->first_attribute("type")->value());
-        }
-    }
-    auto meta = root->first_node("MetaInfo");
-
-    // collect input/cache/output vars, and if element <Param> has sub element
-    // named "Value", add assignment to preprocessOriginal
-    std::string preprocessOriginal = "{";
-
-    for (auto input = meta->first_node("Inputs")->first_node("Param"); input; input = input->next_sibling("Param")) {
-        std::string name = input->first_attribute("name")->value(), type = input->first_attribute("type")->value();
-        data.inputVar.push_back(name);
-        data.varType[name] = type;
-        context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
-        if (auto p = input->first_node("Value"); p) {
-            // if contains <Value> node, add assignment to preprocessOriginal
-            preprocessOriginal += std::string(input->first_attribute("name")->value()) + "={" +
-                          p->first_node("Expression")->value() + "};";
-        }
-    }
-
-    for (auto cache = meta->first_node("Caches")->first_node("Param"); cache; cache = cache->next_sibling("Param")) {
-        std::string name = cache->first_attribute("name")->value(), type = cache->first_attribute("type")->value();
-        data.cacheVar.push_back(name);
-        data.varType[name] = type;
-        context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
-        if (auto p = cache->first_node("Value"); p) {
-            // if contains <Value> node, add assignment to preprocessOriginal
-            preprocessOriginal += std::string(cache->first_attribute("name")->value()) + "={" +
-                          p->first_node("Expression")->value() + "};";
-        }
-    }
-
-    for (auto output = meta->first_node("Outputs")->first_node("Param"); output;
-         output = output->next_sibling("Param")) {
-        std::string name = output->first_attribute("name")->value(), type = output->first_attribute("type")->value();
-        data.outputVar.push_back(name);
-        data.varType[name] = type;
-        context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
-        if (auto p = output->first_node("Value"); p) {
-            // if contains <Value> node, add assignment to preprocessOriginal
-            preprocessOriginal += std::string(output->first_attribute("name")->value()) + "={" +
-                          p->first_node("Expression")->value() + "};";
-        }
-    }
-
-    preprocessOriginal += "}";
-    // parse preprocessOriginal, add generated code to RuleSet::Tick() in front of subruleset calls
-    auto pre = std::unique_ptr<rulejit::ExprAST>(preprocessOriginal | lexer | parser) | semantic;
-    notGenerate.insert(pre);
     std::string preprocess = context.global.realFuncDefinition[pre]->returnValue | codegen;
 
     // generate subruleset defs
     std::string subs;
     size_t id = 0;
-    for (auto subruleset = root->first_node("SubRuleSets")->first_node("SubRuleSet"); subruleset;
-         subruleset = subruleset->next_sibling("SubRuleSet"), id++) {
-
-        std::string expr = "{";
-        auto rules = subruleset->first_node("Rules");
-        size_t act = 0;
-        for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule"), act++) {
-            expr += std::string("if({") + rule->first_node("Condition")->first_node("Expression")->value() + "}){";
-            for (auto assign = rule->first_node("Consequence")->first_node("Assignment"); assign;
-                 assign = assign->next_sibling("Assignment")) {
-                expr += std::string(assign->first_node("Target")->value()) + "={" +
-                        assign->first_node("Value")->first_node("Expression")->value() + "};";
-            }
-            expr += std::to_string(act) + "}else ";
-        }
-        expr += "{-1}}";
-        auto astName = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
+    for (auto astName : subRuleSets) {
         notGenerate.insert(astName);
         auto &ast = context.global.realFuncDefinition[astName]->returnValue;
-        subs += std::format(subRulesetDef, id, ast | codegen);
+        subs += std::format(subRulesetDef, id++, ast | codegen);
     }
     std::ofstream rulesetFile(outputPath + prefix + "ruleset.hpp");
     std::string subcall, subwrite;
@@ -262,16 +134,20 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     // generate typedefs
     std::string typedefs;
     std::ofstream typeDefFile(outputPath + prefix + "typedef.hpp");
+    if (data.typeDefines.contains("_Input") || data.typeDefines.contains("_Output") ||
+        data.typeDefines.contains("_Cache")) {
+        error("CPP-Backend donot support user defined type name _Input/_Output/_Cache");
+    }
     data.typeDefines.emplace("_Input", assembleType(data.inputVar, data));
     data.typeDefines.emplace("_Output", assembleType(data.outputVar, data));
     data.typeDefines.emplace("_Cache", assembleType(data.cacheVar, data));
     for (auto &&[name, members] : data.typeDefines) {
         std::string member, serialize, deserialize;
-        for (auto [token, type] : members) {
+        for (auto [token, _type] : members) {
+            auto type = _type;
             std::string pre, suf;
             while (type.back() == ']') {
-                type.pop_back();
-                type.pop_back();
+                type.erase(type.end() - 2, type.end());
                 pre += "std::vector<";
                 suf += ">";
             }
@@ -287,6 +163,9 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
     for (auto &&[name, type] : context.global.typeDef) {
+        if (data.typeDefines.contains(name)) {
+            error(std::format("type {} redefined in XML and Expression", name));
+        }
         std::string member, serialize, deserialize;
         if (type.subTypes.size() + 1 != type.idents.size() || type.idents[0] != "struct") {
             error(std::format("unsupported type: {}", type.toString()));

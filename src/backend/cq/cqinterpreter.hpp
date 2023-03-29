@@ -3,9 +3,9 @@
  * @author djw
  * @brief CQ/Interpreter/Interpreter
  * @date 2023-03-27
- * 
- * @details 
- * 
+ *
+ * @details
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -30,8 +30,8 @@
 
 /**
  * @brief front declaration of main function, used for repl_main.cpp
- * 
- * @return int 
+ *
+ * @return int
  */
 int main();
 
@@ -40,34 +40,32 @@ namespace rulejit::cq {
 /**
  * @brief main class to interprete ast in cq environment
  * @attention will change original ast
- * 
+ *
  */
 struct CQInterpreter : public ASTVisitor {
     friend int ::main();
     /**
      * @brief defined functions
-     * 
+     *
      */
     std::map<std::string, std::unique_ptr<FunctionDefAST>> func;
     /**
      * @brief Constructor, will init symbolStack with empty stack and empty scope,
      * then set handler to h
-     * 
+     *
      * @param h ResourceHandler which handles variable for this object
      */
     CQInterpreter(ResourceHandler &h) : symbolStack({{{}}}), handler(h) {}
     /**
      * @brief reset the interpreter(reset symbolStack, specifically)
      * @attention will not remove the function definitions
-     * 
+     *
      */
-    void reset(){
-        symbolStack = {{{}}};
-    }
+    void reset() { symbolStack = {{{}}}; }
 
     /**
      * @brief stream operator| to interprete ast
-     * 
+     *
      * @param expr expr ast need to be interpreted
      * @param interpreter acceptor interpreter object
      */
@@ -80,11 +78,19 @@ struct CQInterpreter : public ASTVisitor {
 
   protected:
     VISIT_FUNCTION(IdentifierExprAST) {
-        auto find = seekValue(v.name);
-        if (!find) {
-            // !find means its a variable hold by CQResourceHandler, so read it
-            returned.token = handler.readIn(v.name);
-            returned.type = Value::TOKEN;
+        if (v.name == "true") {
+            returned.value = 1.;
+            returned.type = Value::VALUE;
+        } else if (v.name == "false") {
+            returned.value = 0.;
+            returned.type = Value::VALUE;
+        } else {
+            auto find = seekValue(v.name);
+            if (!find) {
+                // !find means its a variable hold by CQResourceHandler, so read it
+                returned.token = handler.readIn(v.name);
+                returned.type = Value::TOKEN;
+            }
         }
     }
     VISIT_FUNCTION(MemberAccessExprAST) {
@@ -93,7 +99,7 @@ struct CQInterpreter : public ASTVisitor {
         if (returned.type != Value::TOKEN) {
             setError("number have no members");
         }
-        if(!v.memberToken->type){
+        if (!v.memberToken->type) {
             // v.memberToken->type = nullptr means it need to be evaluate
             v.memberToken->accept(this);
             getReturnedValue();
@@ -131,7 +137,7 @@ struct CQInterpreter : public ASTVisitor {
             {"atan", [](double x) {return atan(x); }},   {"asin", [](double x) {return asin(x); }},
             {"acos", [](double x) {return acos(x); }},   {"fabs", [](double x) {return fabs(x); }},
             {"exp", [](double x) {return exp(x); }},     {"abs", [](double x) {return fabs(x); }},
-            {"floor", [](double x) {return floor(x); }},
+            {"floor", [](double x) {return floor(x); }}, {"sqrt", [](double x) {return sqrt(x); }},
         };
         // build in function with 2 param
         static std::map<std::string, std::function<double(double, double)>> twoParamFunc{
@@ -433,7 +439,7 @@ struct CQInterpreter : public ASTVisitor {
     /**
      * @brief Value type passes through visit functions,
      * may be a double or a token which indicate a variable hold by CQResourceHandler
-     * 
+     *
      */
     struct Value {
         union {
@@ -444,7 +450,7 @@ struct CQInterpreter : public ASTVisitor {
          * @brief type of value, for now only support VALUE(which mean Value::value is available),
          * TOKEN(which mean Value::token is available),
          * and EMPTY(which mean both is not available)
-         * 
+         *
          */
         enum valueType {
             TOKEN,
@@ -452,11 +458,11 @@ struct CQInterpreter : public ASTVisitor {
             EMPTY,
         } type;
     };
-    ResourceHandler &handler;/**< holds CQ-related variables*/
+    ResourceHandler &handler; /**< holds CQ-related variables*/
     /**
      * @brief seek variable with given name in current stack frame
      * @attention if found, will modify returned
-     * 
+     *
      * @param s variable name
      * @return bool true if found
      */
@@ -471,7 +477,7 @@ struct CQInterpreter : public ASTVisitor {
     }
     /**
      * @brief check if given type supported
-     * 
+     *
      * @param type string of type name
      * @return true if is supported type
      */
@@ -483,7 +489,7 @@ struct CQInterpreter : public ASTVisitor {
      * specifically, if returned is a token, get its value from CQResourceHandler;
      * if returned is already a value, do nothing.
      * if returned is empty, throw an exception.
-     * 
+     *
      */
     void getReturnedValue() {
         if (returned.type == Value::EMPTY) {
@@ -496,19 +502,19 @@ struct CQInterpreter : public ASTVisitor {
     }
     /**
      * @brief set errors
-     * 
+     *
      * @param msg error message
      */
     [[noreturn]] void setError(const std::string &msg) { error(msg); }
 
     /**
      * @brief caller pop stack, stack frame is scope stack
-     * 
+     *
      */
     std::vector<std::vector<std::map<std::string, Value>>> symbolStack;
     /**
      * @brief value passed through visit functions
-     * 
+     *
      */
     Value returned;
 #ifdef __RULEJIT_INTERPRETER_DEBUG

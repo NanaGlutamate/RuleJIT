@@ -116,10 +116,6 @@ inline const std::set<std::string_view> keyWords{
     "or", "not",  "xor",   "continue", "import", "export", "while",  "for",   "const",   "auto",   "as",
 };
 
-// inline const std::set<std::string_view> typeIndicator{
-//     "struct", "class", "dynamic", "func", "[", "const", "*", "auto",
-// };
-
 inline const std::set<std::string_view> lambdaKeyWords{
     "func",
 };

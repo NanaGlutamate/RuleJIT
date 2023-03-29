@@ -3,7 +3,7 @@
  * @author djw
  * @brief CQ/CPPBE/Cpp Engine
  * @date 2023-03-27
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -17,19 +17,23 @@
 
 #include "backend/cppbe/metainfo.hpp"
 #include "backend/cppbe/subrulesetgen.hpp"
-#include "backend/cppbe/template.hpp"
 #include "frontend/lexer.h"
 #include "frontend/parser.h"
+#include "frontend/ruleset/rulesetparser.h"
 #include "frontend/semantic.hpp"
 
 namespace rulejit::cppgen {
 
+/**
+ * @brief main class to generate cpp code from ruleset XML
+ * 
+ */
 struct CppEngine {
     CppEngine() : context(), data(), semantic(context), codegen(context, data) {
         namespaceName = "ruleset";
         outputPath = "./src/";
         auto &tar = context.scope.back().varDef;
-        auto& oneParamFunc = BuildInUnaryType;
+        auto &oneParamFunc = BuildInUnaryType;
         tar.emplace("not", oneParamFunc);
         tar.emplace("sin", oneParamFunc);
         tar.emplace("cos", oneParamFunc);
@@ -42,7 +46,8 @@ struct CppEngine {
         tar.emplace("exp", oneParamFunc);
         tar.emplace("abs", oneParamFunc);
         tar.emplace("floor", oneParamFunc);
-        auto twoParamFunc = TypeInfo("func(f64,f64):f64");
+        tar.emplace("sqrt", oneParamFunc);
+        auto twoParamFunc = make_type("func(f64,f64):f64");
         tar.emplace("pow", twoParamFunc);
         tar.emplace("atan2", twoParamFunc);
     };
@@ -58,14 +63,21 @@ struct CppEngine {
             outputPath.push_back('/');
         }
     }
-    //! build from XML file
-    //! @param srcXML string of content of XML file
-    //! @return none.
+
+    /**
+     * @brief build from XML file
+     * 
+     * @param srcXML string of content of XML file
+     * @return none.
+     */
     void buildFromSource(const std::string &srcXML);
 
-    //! build from XML file
-    //! @param XMLFilePath string of path of XML file
-    //! @return none.
+    /**
+     * @brief build from XML file
+     * 
+     * @param srcXML XMLFilePath string of path of XML file
+     * @return none.
+     */
     void buildFromFile(const std::string &XMLFilePath) {
         using namespace std;
         std::ifstream file(XMLFilePath);
@@ -75,7 +87,7 @@ struct CppEngine {
     std::string prefix, namespaceName, outputPath;
 
   private:
-    MetaInfo data;
+    rulesetxml::RuleSetMetaInfo data;
     ContextStack context;
     ExpressionLexer lexer;
     ExpressionParser parser;

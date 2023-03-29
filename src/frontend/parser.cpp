@@ -331,6 +331,9 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             lexer->pop(IGNORE_BREAK);
             type = std::make_unique<TypeInfo>(AutoType);
         } else {
+            if(lexer->top() == "auto"){
+                return setError("donot support user-defined auto type, use \":=\" to define variables instead.");
+            }
             type = std::make_unique<TypeInfo>((*lexer) | TypeParser());
             eatBreak();
             auto tmp = lexer->pop(IGNORE_BREAK);

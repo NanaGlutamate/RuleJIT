@@ -45,7 +45,6 @@ struct TypeInfo {
     TypeInfo(const TypeInfo &t) : idents(t.idents), subTypes(t.subTypes) {}
     TypeInfo(std::vector<std::string> &&s) : idents(std::move(s)), subTypes() {}
     TypeInfo(const std::vector<std::string> &s) : idents(s), subTypes() {}
-    TypeInfo(const std::string &s);
     TypeInfo &operator=(const TypeInfo &t) {
         idents = t.idents;
         subTypes = t.subTypes;

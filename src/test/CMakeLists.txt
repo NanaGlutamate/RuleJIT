@@ -10,4 +10,4 @@ add_executable(gc_test ${TOOLS_SRC} gcmain.cpp)
 
 add_executable(cq_test ${FRONTEND_SRC} ${AST_SRC} ${CQ_BACKEND_SRC} cqmain.cpp)
 add_executable(repl_test ${FRONTEND_SRC} ${AST_SRC} ${CQ_BACKEND_SRC} replmain.cpp)
-add_executable(cppbe_test ${FRONTEND_SRC} ${AST_SRC} ${CPP_BACKEND_SRC} cppbemain.cpp)
+add_executable(cppbe_test ${FRONTEND_SRC} ${RULESET_SRC} ${AST_SRC} ${CPP_BACKEND_SRC} cppbemain.cpp)
