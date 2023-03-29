@@ -83,8 +83,8 @@ std::string CppStyleParamType(const TypeInfo &type) {
  * select type string of given name, assemble them in std::pair and emplace into std::vector,
  * then return the vector. only unsed for _Input/_Output/_Cache type defines
  *
- * @param src vector containes name of variable
- * @param m meta info which containes type defines
+ * @param src vector contains name of variable
+ * @param m meta info which contains type defines
  * @return std::vector<std::tuple<std::string, std::string>> assembled type which can used in type defines
  */
 std::vector<std::tuple<std::string, std::string>> assembleType(const std::vector<std::string> &src,
@@ -108,14 +108,12 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     using namespace rulejit::rulesetxml;
 
     // discard statements in preDefines
-    // TODO: execute preDefines once to handle init value?
+    // TODO: execute preDefines once(in RuleSet::Init()) to handle init value?
     auto [preDefines, pre, subRuleSets] = RuleSetParser::readSource(srcXML, context, data);
 
     std::set<std::string> notGenerate{preDefines, pre};
 
-    std::string preprocess = context.global.realFuncDefinition[pre]->returnValue | codegen;
-
-    // generate subruleset defs
+    // collect subruleset defs
     std::string subs;
     size_t id = 0;
     for (auto astName : subRuleSets) {
@@ -123,18 +121,15 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         auto &ast = context.global.realFuncDefinition[astName]->returnValue;
         subs += std::format(subRulesetDef, id++, ast | codegen);
     }
-    std::ofstream rulesetFile(outputPath + prefix + "ruleset.hpp");
     std::string subcall, subwrite;
     for (size_t i = 0; i < id; i++) {
         subcall += std::format(subRulesetCall, i);
         subwrite += std::format(subRulesetWrite, i);
     }
-    // write to ruleset.hpp
-    rulesetFile << std::format(rulesetHpp, namespaceName, prefix, subcall, subwrite, subs, "", preprocess);
+    std::string preprocess = context.global.realFuncDefinition[pre]->returnValue | codegen;
 
-    // generate typedefs
+    // collect typedefs
     std::string typedefs;
-    std::ofstream typeDefFile(outputPath + prefix + "typedef.hpp");
     if (data.typeDefines.contains("_Input") || data.typeDefines.contains("_Output") ||
         data.typeDefines.contains("_Cache")) {
         error("CPP-Backend donot support user defined type name _Input/_Output/_Cache");
@@ -142,6 +137,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     data.typeDefines.emplace("_Input", assembleType(data.inputVar, data));
     data.typeDefines.emplace("_Output", assembleType(data.outputVar, data));
     data.typeDefines.emplace("_Cache", assembleType(data.cacheVar, data));
+    // collect typedefs in XML
     for (auto &&[name, members] : data.typeDefines) {
         std::string member, serialize, deserialize;
         for (auto [token, _type] : members) {
@@ -163,6 +159,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
+    // collect typedefs in Expression
     for (auto &&[name, type] : context.global.typeDef) {
         if (data.typeDefines.contains(name)) {
             error(std::format("type {} redefined in XML and Expression", name));
@@ -178,11 +175,8 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
-    // write to typedef.hpp
-    typeDefFile << std::format(typeDefHpp, namespaceName, prefix, typedefs);
 
-    // generate func def
-    std::ofstream funcDefFile(outputPath + prefix + "funcdef.hpp");
+    // collect func def
     std::string funcDefs, externDefs;
     for (auto &&[name, func] : context.global.realFuncDefinition) {
         if (notGenerate.contains(name)) {
@@ -202,12 +196,13 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
             std::format(funcDef, CppStyleType(func->funcType->getReturnedType()), name, params,
                         (func->funcType->isReturnedFunctionType() ? "return" : "") + (func->returnValue | codegen));
     }
-    // generate extern func type
+    // collect extern func type
     for (auto &&[name, type] : context.global.externFuncDef) {
         std::string params;
         size_t param_cnt = type.subTypes.size() - type.isReturnedFunctionType() ? 1 : 0;
         for (size_t i = 0; i < param_cnt; ++i) {
             // TODO: array param?
+            // TODO: use CStypeType instead
             params += CppStyleType(type.subTypes[i]) + ", ";
         }
         if (!params.empty()) {
@@ -215,7 +210,17 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         }
         externDefs += std::format(externFuncDef, CppStyleType(type.getReturnedType()), name, params);
     }
-    // write to funcdef.hpp
+
+    // generate ruleset.hpp
+    std::ofstream rulesetFile(outputPath + prefix + "ruleset.hpp");
+    rulesetFile << std::format(rulesetHpp, namespaceName, prefix, subcall, subwrite, subs, "", preprocess);
+
+    // generate typedef.hpp
+    std::ofstream typeDefFile(outputPath + prefix + "typedef.hpp");
+    typeDefFile << std::format(typeDefHpp, namespaceName, prefix, typedefs);
+
+    // generate funcdef.hpp
+    std::ofstream funcDefFile(outputPath + prefix + "funcdef.hpp");
     funcDefFile << std::format(funcDefHpp, namespaceName, prefix, funcDefs, externDefs);
 
     // generate ruleset.cpp
