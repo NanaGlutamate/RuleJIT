@@ -20,7 +20,6 @@
 #include <memory>
 #include <ranges>
 #include <set>
-#include <source_location>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -469,10 +468,7 @@ struct TypeParser {
     friend TypeInfo operator|(ExpressionLexer &e, const TypeParser &t) { return t.parse(e); }
 
   private:
-    [[noreturn]] static TypeInfo setError(const std::string &info,
-                                          const std::source_location location = std::source_location::current()) {
-        error(std::format("Type Parse Error{}: {}", location.line(), info));
-    }
+    SET_ERROR_MEMBER("Type Parse", TypeInfo)
     // ExpressionLexer::Guidence end;
     static TypeInfo parse(ExpressionLexer &e) {
         TypeInfo info;

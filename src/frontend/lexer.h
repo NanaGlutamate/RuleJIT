@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "tools/myassert.hpp"
+#include "tools/seterror.hpp"
 
 namespace rulejit {
 
@@ -320,6 +321,7 @@ struct ExpressionLexer {
             return *p;
         }
     }
+
     int hex(char c) {
         if (c >= '0' && c <= '9') {
             return c - '0';
@@ -330,6 +332,7 @@ struct ExpressionLexer {
         }
         return -1;
     }
+
     void setError(const std::string &info) {
         type = TokenType::UNKNOWN;
         errorHandler = {
@@ -338,9 +341,13 @@ struct ExpressionLexer {
             end,
             info,
         };
+        error(info);
     }
+    
     bool charEqual(Ele e) { return *next == e; }
+
     void extend(Guidence guidence);
+
     const Ele *pre;
     const Ele *begin;
     const Ele *next;

@@ -19,7 +19,6 @@
 #include <map>
 #include <memory>
 #include <ranges>
-#include <source_location>
 #include <string>
 
 #include "ast/ast.hpp"
@@ -666,11 +665,7 @@ struct ExpressionSemantic : public ASTVisitor {
         }
         return tmp;
     }
-    [[noreturn]] void setError(const std::string &info,
-                               const std::source_location location = std::source_location::current()) {
-        error(std::format("Semantic Error{}: {}", location.line(), info));
-        // return nullptr;
-    }
+    SET_ERROR_MEMBER("Semantic Check", void)
 
     void afterAccept(std::unique_ptr<ExprAST> &p) {
         if (needRelease) {

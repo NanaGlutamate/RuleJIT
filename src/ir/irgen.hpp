@@ -16,7 +16,6 @@
 
 #include <format>
 #include <memory>
-#include <source_location>
 
 #include "ast/ast.hpp"
 #include "ast/astvisitor.hpp"
@@ -87,9 +86,7 @@ struct IRGenerator : public ASTVisitor {
     std::set<std::string> generatedVar;
 
     void generate(const std::string &name, std::unique_ptr<FunctionDefAST> &ast) {}
-    [[noreturn]] void setError(std::string msg, const std::source_location location = std::source_location::current()) {
-        error(std::format("IR Generate Error{}: {}", location.line(), msg));
-    }
+    SET_ERROR_MEMBER("IR Generate", void)
 };
 
 } // namespace rulejit::ir

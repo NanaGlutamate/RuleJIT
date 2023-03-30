@@ -16,7 +16,6 @@
 
 #include <format>
 #include <map>
-#include <source_location>
 #include <type_traits>
 
 #include "ast/ast.hpp"
@@ -92,9 +91,7 @@ struct ExpressionParser {
     std::map<IAST *, size_t> AST2place;
 
   private:
-    bool err() { return errorHandler.err; }
-    [[noreturn]] std::nullptr_t setError(const std::string &info,
-                                         const std::source_location location = std::source_location::current()) {
+    [[noreturn]] std::nullptr_t setError(const std::string &info) {
         std::string modified;
         for (auto c : info) {
             if (c == '\n') {
@@ -109,7 +106,7 @@ struct ExpressionParser {
             lexer->top(),
             modified,
         };
-        error(std::format("Parse Error{}: {}", location.line(), modified));
+        error(std::format("Parse Error: {}", modified));
     }
 
     std::unique_ptr<ExprAST> parse() {

@@ -17,7 +17,6 @@
 #include <map>
 #include <memory>
 #include <ranges>
-#include <source_location>
 #include <sstream>
 #include <string>
 
@@ -276,11 +275,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         }
         setError(std::format("unsupported type: {}", type.toString()));
     }
-    [[noreturn]] void setError(const std::string &info,
-                               const std::source_location location = std::source_location::current()) {
-        error(std::format("Code Generate Error{}: {}", location.line(), info));
-        // return nullptr;
-    }
+    SET_ERROR_MEMBER("CPP Code Generation", void)
     ContextStack &c;
     rulesetxml::RuleSetMetaInfo &m;
 };
