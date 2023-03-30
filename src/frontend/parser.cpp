@@ -3,13 +3,14 @@
  * @author djw
  * @brief FrontEnd/Parser
  * @date 2023-03-28
- * 
+ *
  * @details Parser
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * <tr><td>djw</td><td>2023-03-30</td><td>Rewrite func-def parsering.</td></tr>
  * </table>
  */
 #include "frontend/parser.h"
@@ -331,7 +332,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             lexer->pop(IGNORE_BREAK);
             type = std::make_unique<TypeInfo>(AutoType);
         } else {
-            if(lexer->top() == "auto"){
+            if (lexer->top() == "auto") {
                 return setError("donot support user-defined auto type, use \":=\" to define variables instead.");
             }
             type = std::make_unique<TypeInfo>((*lexer) | TypeParser());
@@ -343,70 +344,101 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         }
         return std::make_unique<VarDefAST>(indent, std::move(type), parseExpr());
     } else if (lexer->top() == "func") {
-        // TODO: fix member function definition
+        // TODO: operator.
         // func def
         lexer->pop(IGNORE_BREAK);
-        // TODO: operator.
-        auto nameType = lexer->tokenType();
-        if (nameType != TokenType::IDENT && nameType != TokenType::SYM) {
-            return setError("expected symbol or ident as function name, found: " + lexer->topCopy());
-        }
-        FunctionDefAST::FuncDefType funcType = FunctionDefAST::FuncDefType::NORMAL;
-        if (nameType == TokenType::SYM) {
-            funcType = FunctionDefAST::FuncDefType::SYMBOLIC;
-        }
-        std::string name = lexer->popCopy(IGNORE_BREAK);
-        if (lexer->top() == "infix") {
-            if (nameType == TokenType::SYM) {
-                return setError("operator overload is aotomatically infix or unary");
-            }
-            funcType = FunctionDefAST::FuncDefType::SYMBOLIC;
-            lexer->pop(IGNORE_BREAK);
-        }
-        // TODO: marco, param expr expressed as a func():Any; &&, || can and only can be defined through marco
-        TypeInfo type{"func"};
-        auto params = parseParamList();
-        eatBreak();
+
+        FunctionDefAST::FuncDefType funcDefType = FunctionDefAST::FuncDefType::NORMAL;
+        std::vector<std::unique_ptr<rulejit::IdentifierExprAST>> params;
+        TypeInfo returnType;
+        std::unique_ptr<ExprAST> returnValue;
+        std::string funcName;
+
+        // parse function definition
         if (lexer->top() == "(") {
-            // member func
-            if (funcType == FunctionDefAST::FuncDefType::SYMBOLIC) {
-                return setError("member function name must be an ident, found: " + name);
-            }
-            if (params->size() != 1) {
-                return setError("member function must have only one accepter");
-            }
-            auto param1 = parseParamList();
+            // lambda | member
+            params = parseParamList();
             eatBreak();
-            funcType = FunctionDefAST::FuncDefType::MEMBER;
-            for (auto &param : (*param1)) {
-                params->push_back(std::move(param));
+            if (lexer->tokenType() == TokenType::IDENT) {
+                // member
+                funcName = lexer->popCopy(IGNORE_BREAK);
+                if (lexer->top() != "(") {
+                    return setError("expected \"(\" after member function name in member function def, found: " +
+                                    lexer->topCopy());
+                }
+                if (params.size() != 1) {
+                    return setError("member function must contain 1 receiver param, given: " +
+                                    std::to_string(params.size()));
+                }
+                auto tmp = parseParamList();
+                eatBreak();
+                for (auto &x : tmp) {
+                    params.push_back(std::move(x));
+                }
+                funcDefType = FunctionDefAST::FuncDefType::MEMBER;
+            } else {
+                // lambda
+                funcDefType = FunctionDefAST::FuncDefType::LAMBDA;
             }
-        }
-        for (auto &param : (*params)) {
-            type.addParamType(*(param->type));
+        } else {
+            // symbolic | normal
+            if (lexer->tokenType() == TokenType::IDENT) {
+                funcName = lexer->popCopy(IGNORE_BREAK);
+                if (lexer->top() == "infix") {
+                    // symbolic (infix)
+                    lexer->pop(IGNORE_BREAK);
+                    funcDefType = FunctionDefAST::FuncDefType::SYMBOLIC;
+                }
+                // normal
+                // do nothing
+            } else if (lexer->tokenType() == TokenType::SYM) {
+                // symbolic (operator overload)
+                funcName = lexer->popCopy(IGNORE_BREAK);
+                funcDefType = FunctionDefAST::FuncDefType::SYMBOLIC;
+                if (!reloadableBuildInInfix.contains(funcName) && !reloadableBuildInUnary.contains(funcName)) {
+                    return setError("unknown operator overload: " + funcName);
+                }
+            } else {
+                return setError("expected ident or symbol as function name, found: " + lexer->topCopy());
+            }
+            params = parseParamList();
+            eatBreak();
         }
 
+        // parse returned type
         if (lexer->top() == ":") {
-            // return type
-            // TODO: return value func(i i32):(i i32){}
+            // returned function
+            // TODO: remove ":"? donot, 
+            //                   1. hard to parse user-defined infix operator
+            //                   2. hard to distinguish lambda from member function
             lexer->pop(IGNORE_BREAK);
-            auto returnType = (*lexer) | TypeParser();
-            if (!returnType.isValid()) {
-                return setError("expected return type in function definition after \":\", found: " + lexer->topCopy());
-            }
-            type.addParamType(returnType);
-        }else{
-            type.addParamType(NoInstanceType);
+            returnType = *lexer | TypeParser();
+            eatBreak();
+        } else {
+            // no return function
+            returnType = NoInstanceType;
         }
-        // no return type
-        eatBreak();
-        if (lexer->top() != "{" && lexer->pop(IGNORE_BREAK) != "->") {
-            return setError("expected \"->\" if returned value not a Block expression in function definition, found: " +
-                            lexer->topCopy());
+
+        // parse returned value
+        // TODO: named constructor 'func getStr():(ret string := ""){}'? maybe need default construct var def
+        if (lexer->top() == "->") {
+            lexer->pop(IGNORE_BREAK);
+        } else if (lexer->top() == "{") {
+            // do nothing
+        } else {
+            return setError("expect \"->\" or \"{\" to indicate return value, found: " + lexer->topCopy());
         }
-        auto expr = parseExpr();
-        return std::make_unique<FunctionDefAST>(std::move(name), std::make_unique<TypeInfo>(type), std::move(*params),
-                                                std::move(expr), funcType);
+
+        returnValue = parseExpr();
+
+        TypeInfo funcType("func");
+        for(auto&& p : params){
+            funcType.addParamType(*(p->type));
+        }
+        funcType.addParamType(returnType);
+
+        return std::make_unique<FunctionDefAST>(std::move(funcName), std::make_unique<TypeInfo>(funcType), std::move(params),
+                                                std::move(returnValue), funcDefType);
     } else if (lexer->top() == "type") {
         // type def
         lexer->pop(IGNORE_BREAK);
@@ -429,26 +461,25 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
     }
 }
 
-std::unique_ptr<std::vector<std::unique_ptr<IdentifierExprAST>>> ExpressionParser::parseParamList() {
-    std::unique_ptr<std::vector<std::unique_ptr<IdentifierExprAST>>> ret =
-        std::make_unique<std::vector<std::unique_ptr<IdentifierExprAST>>>();
+std::vector<std::unique_ptr<IdentifierExprAST>> ExpressionParser::parseParamList() {
+    std::vector<std::unique_ptr<IdentifierExprAST>> ret;
     lexer->pop(IGNORE_BREAK);
     while (lexer->top() != ")") {
         // TODO: unnamed param
         if (lexer->tokenType() != TokenType::IDENT) {
-            return setError("except identifier in param list, found: " + lexer->topCopy());
+            setError("except identifier in param list, found: " + lexer->topCopy());
         }
         auto ident = lexer->pop(IGNORE_BREAK);
-        ret->push_back(
+        ret.push_back(
             std::make_unique<IdentifierExprAST>(std::make_unique<TypeInfo>((*lexer) | TypeParser()), std::move(ident)));
         eatBreak();
         if (lexer->top() != "," && lexer->top() != ")") {
-            return setError("expect \",\" after single param, found: " + lexer->topCopy());
+            setError("expect \",\" after single param, found: " + lexer->topCopy());
         }
         if (lexer->top() == ",") {
             lexer->pop(IGNORE_BREAK);
             if (lexer->top() == ")") {
-                return setError("param list should not end with \",\"");
+                setError("param list should not end with \",\"");
             }
         }
     }
@@ -468,7 +499,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseCommand() {
             std::string name = lexer->popCopy(IGNORE_BREAK);
             TypeInfo type{"func"};
             auto params = parseParamList();
-            for (auto &param : (*params)) {
+            for (auto &param : params) {
                 type.addParamType(*(param->type));
             }
             if (lexer->top() == ":") {
@@ -481,11 +512,11 @@ std::unique_ptr<ExprAST> ExpressionParser::parseCommand() {
                                     lexer->topCopy());
                 }
                 type.addParamType(returnType);
-            }else{
+            } else {
                 type.addParamType(NoInstanceType);
             }
             return std::make_unique<SymbolDefAST>(name, SymbolDefAST::SymbolCommandType::EXTERN,
-                                                      std::make_unique<TypeInfo>(type));
+                                                  std::make_unique<TypeInfo>(type));
         } else {
             return setError("only support extern func command");
         }

@@ -78,6 +78,7 @@ int main() {
     // printAST("(a+b;+c)", true);
     // printAST("a-12=a+b+c*123-12=c+d", true);
     printAST(R"({
+        extern func len(a []i32):i64
         var a []i32 = []i32{1,2,3,4,5,6,7,8,9,10}
         func isPrime(n i32): i32 -> {
             var i i32 = 2
@@ -87,7 +88,7 @@ int main() {
             }
             isP
         }
-        func len(a []i32)(): i32->{
+        func (a []i32)len(): i32->{
             len(a)
         }
         {

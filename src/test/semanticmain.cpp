@@ -159,7 +159,7 @@ int main() {
     // )");
     testCase(R"(
         type Tmp struct {x func()}
-        func __buildin__0_a(a Tmp)(){
+        func (a Tmp)__buildin__0_a(){
             a.x()
         }
         var tmp := Tmp{}

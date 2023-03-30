@@ -7,7 +7,7 @@
  * @details Includes a simple example implementing the AST Visitor, the ASTPrinter.
  *
  * @see ASTVisitor
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -63,8 +63,7 @@ struct ASTPrinter : public ASTVisitor {
             indent = false;
         }
         ast->accept(this);
-        std::string out;
-        std::string tmp((std::istreambuf_iterator<char>(buffer)), std::istreambuf_iterator<char>());
+        std::string out(std::istreambuf_iterator<char>{buffer}, std::istreambuf_iterator<char>{});
         return out;
     }
 
@@ -142,7 +141,11 @@ struct ASTPrinter : public ASTVisitor {
             buffer << ", ";
             printIndent();
             buffer << "(\"";
-            key->accept(this);
+            if (key) {
+                key->accept(this);
+            } else {
+                buffer << "[UNSPECIFIED]";
+            }
             buffer << "\", ";
             value->accept(this);
             buffer << ")";

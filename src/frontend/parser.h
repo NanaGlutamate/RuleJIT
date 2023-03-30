@@ -121,7 +121,7 @@ struct ExpressionParser {
     std::unique_ptr<ExprAST> parsePrimary();
     std::unique_ptr<ExprAST> parseBlock();
     std::unique_ptr<ExprAST> parseDef();
-    std::unique_ptr<std::vector<std::unique_ptr<IdentifierExprAST>>> parseParamList();
+    std::vector<std::unique_ptr<IdentifierExprAST>> parseParamList();
 
     std::unique_ptr<ExprAST> parseCommand();
     std::unique_ptr<ExprAST> parseTopLevel();
