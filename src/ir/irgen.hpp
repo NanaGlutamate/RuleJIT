@@ -14,9 +14,9 @@
  */
 #pragma once
 
+#include <format>
 #include <memory>
 #include <source_location>
-#include <format>
 
 #include "ast/ast.hpp"
 #include "ast/astvisitor.hpp"
@@ -31,7 +31,7 @@ namespace rulejit::ir {
  *
  */
 struct IRGenerator : public ASTVisitor {
-  
+
     /**
      * @brief Construct a new IRGenerator object
      *
@@ -50,18 +50,19 @@ struct IRGenerator : public ASTVisitor {
      * @brief pipe operator| used to generate function def in ContextGlobal
      * @attention function must have checked
      *
-     * @param src function name need to be generated
+     * @param src real function name need to be generated
      * @param irgen receiver
      */
     void friend operator|(std::string &src, IRGenerator &irgen) {
-        if (auto it = irgen.c.global.realFuncDefinition.find(src);
-            it != irgen.c.global.realFuncDefinition.end() && irgen.c.global.checkedFunc.contains(it->first)) {
+        auto &global = irgen.c.global;
+        if (auto it = global.realFuncDefinition.find(src);
+            it != global.realFuncDefinition.end() && global.checkedFunc.contains(it->first)) {
             irgen.generate(it->first, it->second);
         } else {
             irgen.setError("No such function or maybe unchecked: " + src);
         }
     }
-    
+
   protected:
     VISIT_FUNCTION(IdentifierExprAST) {}
     VISIT_FUNCTION(MemberAccessExprAST) {}
@@ -73,19 +74,22 @@ struct IRGenerator : public ASTVisitor {
     VISIT_FUNCTION(ComplexLiteralExprAST) {}
     VISIT_FUNCTION(LoopAST) {}
     VISIT_FUNCTION(BlockExprAST) {}
-    VISIT_FUNCTION(ControlFlowAST) {setError("ControlFlowAST not supported for now");}
-    VISIT_FUNCTION(TypeDefAST) {setError("TypeDefAST should not be visited");}
+    VISIT_FUNCTION(ControlFlowAST) { setError("ControlFlowAST not supported for now"); }
+    VISIT_FUNCTION(TypeDefAST) { setError("TypeDefAST should not be visited"); }
     VISIT_FUNCTION(VarDefAST) {}
-    VISIT_FUNCTION(FunctionDefAST) {setError("FunctionDefAST should not be visited");}
-    VISIT_FUNCTION(SymbolDefAST) {setError("SymbolDefAST should not be visited");}
+    VISIT_FUNCTION(FunctionDefAST) { setError("FunctionDefAST should not be visited"); }
+    VISIT_FUNCTION(SymbolDefAST) { setError("SymbolDefAST should not be visited"); }
 
   private:
     IRHolder &h;
     ContextStack &c;
     std::set<std::string> generatedFunc;
     std::set<std::string> generatedVar;
+
     void generate(const std::string &name, std::unique_ptr<FunctionDefAST> &ast) {}
-    [[noreturn]] void setError(std::string msg, const std::source_location location = std::source_location::current()) { error("" + msg); }
+    [[noreturn]] void setError(std::string msg, const std::source_location location = std::source_location::current()) {
+        error(std::format("IR Generate Error{}: {}", location.line(), msg));
+    }
 };
 
-} // namespace rulejit
+} // namespace rulejit::ir

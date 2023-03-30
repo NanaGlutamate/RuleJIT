@@ -109,13 +109,20 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     if (auto it = root->first_attribute("version"); !it || it->value() != std::string("1.0")) {
         error("Unsupported version of RuleSet");
     }
+    std::string typeOriginal = "";
+    // collect typedefine, add to typeOriginal amd RuleSetMetaInfo
     for (auto typeDef = root->first_node("TypeDefines")->first_node("TypeDefine"); typeDef;
          typeDef = typeDef->next_sibling("TypeDefine")) {
         std::string type = typeDef->first_attribute("type")->value();
+        typeOriginal += "type " + type + " struct{";
         auto &tar = data.typeDefines[type];
         for (auto member = typeDef->first_node("Variable"); member; member = member->next_sibling("Variable")) {
-            tar.emplace_back(member->first_attribute("name")->value(), member->first_attribute("type")->value());
+            auto memberName = member->first_attribute("name")->value();
+            auto memberType = member->first_attribute("type")->value();
+            tar.emplace_back(memberName, memberType);
+            typeOriginal += std::format("{} {};", memberName, innerType(memberType));
         }
+        typeOriginal += "}\n";
     }
     auto meta = root->first_node("MetaInfo");
 
@@ -126,10 +133,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     std::string preprocessOriginal = "{";
 
     auto load = [&](const std::string &nodeName, std::vector<std::string> &target) {
-        for (auto ele = meta->first_node(nodeName.data())->first_node("Param"); ele;
-             ele = ele->next_sibling("Param")) {
-            std::string name = ele->first_attribute("name")->value(),
-                        type = ele->first_attribute("type")->value();
+        for (auto ele = meta->first_node(nodeName.data())->first_node("Param"); ele; ele = ele->next_sibling("Param")) {
+            std::string name = ele->first_attribute("name")->value(), type = ele->first_attribute("type")->value();
             if (data.varType.contains(name)) {
                 error("Input, Output and Cache variables should have different names");
             }
@@ -169,9 +174,9 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     initOriginal += "}";
     preprocessOriginal += "}";
     // parse initOriginal, get returned real function name
-    ret.preDefines = (preDefines + "\n" + initOriginal) | lexer | parser | semantic;
+    ret.preDefines = (typeOriginal + "\n" + preDefines + "\n" + initOriginal) | lexer | parser | semantic;
     // parse preprocessOriginal, get returned real function name
-    ret.preprocess = std::unique_ptr<rulejit::ExprAST>(preprocessOriginal | lexer | parser) | semantic;
+    ret.preprocess = preprocessOriginal | lexer | parser | semantic;
 
     // generate subruleset defs
     size_t id = 0;

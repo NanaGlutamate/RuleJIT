@@ -50,8 +50,12 @@ std::string CppStyleType(const TypeInfo &type) {
             return tmp;
         }
     }
-    if (type.idents.size() == 2 && type.idents[0] == "[]") {
-        return "std::vector<" + type.idents[1] + ">";
+    if (type.isArrayType()) {
+        auto tmp = type.getElementType();
+        if(!tmp.isBaseType()){
+            error("Donot support nested array");
+        }
+        return "std::vector<" + tmp.getBaseTypeString() + ">";
     }
     error(std::format("unsupported type: {}", type.toString()));
 }
@@ -68,14 +72,21 @@ std::string CppStyleParamType(const TypeInfo &type) {
     if (type == NoInstanceType) {
         return "void";
     }
-    if (type.isBaseType() && rulesetxml::baseData.contains(type.idents[0])) {
-        return type.idents[0];
-    }
+    
     if (type.isBaseType()) {
-        return "const " + type.idents[0] + "&";
+        auto tmp = type.getBaseTypeString();
+        if (rulesetxml::baseData.contains(tmp)) {
+            return "typedReal<" + tmp + ">";
+        } else {
+            return "const " + tmp + "&";
+        }
     }
-    if (type.idents.size() == 2 && type.idents[0] == "[]") {
-        return "const std::vector<" + type.idents[1] + ">&";
+    if (type.isArrayType()) {
+        auto tmp = type.getElementType();
+        if(!tmp.isBaseType()){
+            error("Donot support nested array");
+        }
+        return "const std::vector<" + tmp.getBaseTypeString() + ">&";
     }
     error(std::format("unsupported type: {}", type.toString()));
 }
@@ -164,16 +175,19 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     // collect typedefs in Expression
     for (auto &&[name, type] : context.global.typeDef) {
         if (data.typeDefines.contains(name)) {
-            error(std::format("type {} redefined in XML and Expression", name));
+            // means type is defined in XML and add to context, so skip
+            continue;
         }
         std::string member, serialize, deserialize;
-        if (type.subTypes.size() + 1 != type.idents.size() || type.idents[0] != "struct") {
+        if (type.getIdent() != "struct") {
             error(std::format("unsupported type: {}", type.toString()));
         }
-        for (size_t i = 0; i < type.subTypes.size(); ++i) {
-            member += std::format(typeMember, CppStyleType(type.subTypes[i]), type.idents[i + 1]);
-            serialize += std::format(typeSerialize, CppStyleType(type.subTypes[i]), type.idents[i + 1]);
-            deserialize += std::format(typeDeserialize, CppStyleType(type.subTypes[i]), type.idents[i + 1]);
+        auto& subTypes = type.getSubTypes();
+        auto& tokens = type.getTokens();
+        for (size_t i = 0; i < subTypes.size(); ++i) {
+            member += std::format(typeMember, CppStyleType(subTypes[i]), tokens[i + 1]);
+            serialize += std::format(typeSerialize, CppStyleType(subTypes[i]), tokens[i + 1]);
+            deserialize += std::format(typeDeserialize, CppStyleType(subTypes[i]), tokens[i + 1]);
         }
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
@@ -201,11 +215,12 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     // collect extern func type
     for (auto &&[name, type] : context.global.externFuncDef) {
         std::string params;
-        size_t param_cnt = type.subTypes.size() - type.isReturnedFunctionType() ? 1 : 0;
+        size_t param_cnt = type.getParamCount();
+        auto& subTypes = type.getSubTypes();
         for (size_t i = 0; i < param_cnt; ++i) {
             // TODO: array param?
             // TODO: use CStypeType instead
-            params += CppStyleType(type.subTypes[i]) + ", ";
+            params += CppStyleType(subTypes[i]) + ", ";
         }
         if (!params.empty()) {
             params.erase(params.size() - 2, 2);

@@ -127,7 +127,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
             if (!typeInfo.isBaseType()) {
                 return setError("type can not act as Expression along: " + typeInfo.toString());
             }
-            lhs = std::make_unique<IdentifierExprAST>(typeInfo.idents[0]);
+            lhs = std::make_unique<IdentifierExprAST>(typeInfo.getBaseTypeString());
         } else {
             // ComplexLiteral
             lexer->pop(IGNORE_BREAK);
@@ -364,7 +364,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             lexer->pop(IGNORE_BREAK);
         }
         // TODO: marco, param expr expressed as a func():Any; &&, || can and only can be defined through marco
-        TypeInfo type{std::vector<std::string>{"func"}};
+        TypeInfo type{"func"};
         auto params = parseParamList();
         eatBreak();
         if (lexer->top() == "(") {
@@ -383,19 +383,20 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
             }
         }
         for (auto &param : (*params)) {
-            type.subTypes.push_back(*(param->type));
+            type.addParamType(*(param->type));
         }
 
         if (lexer->top() == ":") {
             // return type
             // TODO: return value func(i i32):(i i32){}
-            type.idents.push_back(":");
             lexer->pop(IGNORE_BREAK);
             auto returnType = (*lexer) | TypeParser();
             if (!returnType.isValid()) {
                 return setError("expected return type in function definition after \":\", found: " + lexer->topCopy());
             }
-            type.subTypes.push_back(returnType);
+            type.addParamType(returnType);
+        }else{
+            type.addParamType(NoInstanceType);
         }
         // no return type
         eatBreak();
@@ -465,22 +466,23 @@ std::unique_ptr<ExprAST> ExpressionParser::parseCommand() {
                 return setError("expected ident as extern function name, found: " + lexer->topCopy());
             }
             std::string name = lexer->popCopy(IGNORE_BREAK);
-            TypeInfo type{std::vector<std::string>{"func"}};
+            TypeInfo type{"func"};
             auto params = parseParamList();
             for (auto &param : (*params)) {
-                type.subTypes.push_back(*(param->type));
+                type.addParamType(*(param->type));
             }
             if (lexer->top() == ":") {
                 // return type
                 // TODO: return value func(i i32):(i i32){}
-                type.idents.push_back(":");
                 lexer->pop(IGNORE_BREAK);
                 auto returnType = (*lexer) | TypeParser();
                 if (!returnType.isValid()) {
                     return setError("expected return type in function definition after \":\", found: " +
                                     lexer->topCopy());
                 }
-                type.subTypes.push_back(returnType);
+                type.addParamType(returnType);
+            }else{
+                type.addParamType(NoInstanceType);
             }
             return std::make_unique<SymbolDefAST>(name, SymbolDefAST::SymbolCommandType::EXTERN,
                                                       std::make_unique<TypeInfo>(type));

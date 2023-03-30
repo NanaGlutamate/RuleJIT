@@ -9,24 +9,28 @@
  * may need to return NoInstanceType, and may introduce loop dependency
  * if put function defines in type.hpp, so put them in type.cpp
  * 
+ * deprecated
+ * 
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * <tr><td>djw</td><td>2023-03-28</td><td>Move to hpp.</td></tr>
  * </table>
  */
-#include "type.hpp"
-#include "defines/typedef.hpp"
 
-namespace rulejit {
+// #include "type.hpp"
+// #include "defines/typedef.hpp"
 
-const TypeInfo &TypeInfo::getReturnedType() const {
-    if (isNoReturnFunctionType()) {
-        return NoInstanceType;
-    } else {
-        my_assert(isReturnedFunctionType(), "only function type has return type");
-        return subTypes.back();
-    }
-}
+// namespace rulejit {
 
-} // namespace rulejit
+// const TypeInfo &TypeInfo::getReturnedType() const {
+//     if (isNoReturnFunctionType()) {
+//         return NoInstanceType;
+//     } else {
+//         my_assert(isReturnedFunctionType(), "only function type has return type");
+//         return subTypes.back();
+//     }
+// }
+
+// } // namespace rulejit

@@ -71,12 +71,12 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
         error(std::format("Init RuleEngine error: file {} not exists", filePath));
         return false;
     }
-    try {
+    // try {
         engine.buildFromFile(filePath);
-    } catch (std::exception &e) {
-        WriteLog(std::string("Init RuleEngine error: ") + e.what(), 1);
-        return false;
-    }
+    // } catch (std::exception &e) {
+    //     WriteLog(std::string("Init RuleEngine error: ") + e.what(), 1);
+    //     return false;
+    // }
     if(!log_){
         SetLogFun([](const std::string &msg, int level) {});
     }

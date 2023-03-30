@@ -50,6 +50,14 @@ int testCase(const std::string &s, bool expectError = false) {
         for (auto &f : stack.global.realFuncDefinition) {
             cout << "    " << f.first << ": " << f.second->funcType->toString() << endl;
         }
+        cout << endl;
+        for (auto &d : stack.global.funcDependency) {
+            cout << "    " << d.first << ": {";
+            for(auto&& dep : d.second){
+                cout << dep << ", ";
+            }
+            cout << "}" << endl;
+        }
 #ifdef CATCH_EXCEPTION
     } catch (std::logic_error &e) {
         if (expectError) {
@@ -156,6 +164,8 @@ int main() {
         }
         var tmp := Tmp{}
         tmp.__buildin__0_a()
+        var a := []f64{1, 2, 3}
+        a.length()
     )");
 
     return 0;

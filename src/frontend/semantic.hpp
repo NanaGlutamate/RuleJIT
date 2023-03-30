@@ -10,6 +10,7 @@
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * <tr><td>djw</td><td>2023-03-30</td><td>Change function check logic.</td></tr>
  * </table>
  */
 #pragma once
@@ -40,14 +41,14 @@ constexpr inline auto reservedPrefix = "__buildin";
 
 /**
  * @brief main class for semantic analyzer
- * 
+ *
  * @details jobs:
- * 
+ *
  * 1. type inference
  * 2. TODO: name unnamed complex type(in vardef, typedef, literal and funcdef)
  * 3. scope process
  * 4. TODO: capture analysis
- * 
+ *
  */
 struct ExpressionSemantic : public ASTVisitor {
     ExpressionSemantic(ContextStack &context) : c(context), needRelease(false), needChange(nullptr){};
@@ -55,10 +56,10 @@ struct ExpressionSemantic : public ASTVisitor {
     ExpressionSemantic(ExpressionSemantic &&) = delete;
     ExpressionSemantic &operator=(const ExpressionSemantic &) = delete;
     ExpressionSemantic &operator=(ExpressionSemantic &&) = delete;
-    
+
     /**
      * @brief pipe operator| used for file parsing
-     * 
+     *
      * @param parser parser which already loaded lexer which load with file content
      * @param semantic receiver ExpressionSemantic
      * @return std::string real function name which contains top-level expressions and global variable assignment
@@ -74,7 +75,7 @@ struct ExpressionSemantic : public ASTVisitor {
 
     /**
      * @brief pipe operator| used for repl
-     * 
+     *
      * @param ast AST of current input
      * @param semantic receiver ExpressionSemantic
      * @return std::string real function name which contains current input expression
@@ -88,13 +89,16 @@ struct ExpressionSemantic : public ASTVisitor {
     /**
      * @brief check function with given name. automatically check all
      * unchecked function this function calls.
-     * 
+     *
+     * @attention a function is marked checked if and only if itself checked, discard it's dependencies
+     *
      * @param name real function name of given function
      */
     void checkFunction(const std::string &name) {
         init();
-        auto tmp = checkRealFunction(name);
-        checkRealFunctionSet(tmp);
+        std::set<std::string> checkedTemp;
+        auto tmp = checkSingleRealFunction(name, checkedTemp);
+        checkRealFunctionDependencySet(tmp, checkedTemp);
     }
 
   protected:
@@ -163,6 +167,20 @@ struct ExpressionSemantic : public ASTVisitor {
     }
     VISIT_FUNCTION(LiteralExprAST) {
         my_assert(bool(v.type));
+        if (v.type->isFunctionType()) {
+            if (auto it = globalInfo().realFuncDefinition.find(v.value); it != globalInfo().realFuncDefinition.end()) {
+                auto realName = it->first;
+                funcDependencyRealName.insert(realName);
+            } else if (auto it = globalInfo().externFuncDef.find(v.value); it != globalInfo().externFuncDef.end()) {
+                // do nothing
+            } else {
+                // build in template function for array
+                // TODO: must match array function provided in VISIT_FUNCTION(FunctionCallExprAST)
+                if (v.value != "length" && v.value != "resize" && v.value != "push") {
+                    return setError(std::format("Real function name \"{}\" not found", v.value));
+                }
+            }
+        }
         processType(*v.type);
     }
     VISIT_FUNCTION(FunctionCallExprAST) {
@@ -170,39 +188,64 @@ struct ExpressionSemantic : public ASTVisitor {
             arg->accept(this);
             afterAccept(arg);
         }
-        if (auto p = isType<MemberAccessExprAST>(v.functionIdent); p) {
-            if (auto p1 = isType<LiteralExprAST>(p->memberToken); p1 && *(p1->type) == StringType) {
-                p->baseVar->accept(this);
-                afterAccept(p->baseVar);
-                bool isMember = canAccess(*p);
-                auto memberFuncIt = globalInfo().memberFuncDef.find(p1->value);
-                bool isMemberFunc = memberFuncIt != globalInfo().memberFuncDef.end();
-                if (!isMember && isMemberFunc) {
-                    std::vector<TypeInfo> paramType{*(p->baseVar->type)};
-                    for (auto &arg : v.params) {
-                        paramType.push_back(*(arg->type));
+        if (auto [p, p1] = getConstStringMemberAccessInfo(v.functionIdent.get()); p && p1) {
+            // maybe a member function call
+            p->baseVar->accept(this);
+            afterAccept(p->baseVar);
+            bool isMember = canAccess(*p);
+            auto memberFuncIt = globalInfo().memberFuncDef.find(p1->value);
+            bool isMemberFunc = memberFuncIt != globalInfo().memberFuncDef.end();
+            if (!isMember && isMemberFunc) {
+                std::vector<TypeInfo> paramType{*(p->baseVar->type)};
+                for (auto &arg : v.params) {
+                    paramType.push_back(*(arg->type));
+                }
+                auto funcNameIt = memberFuncIt->second.find(paramType);
+                if (funcNameIt != memberFuncIt->second.end()) {
+                    // exactly member func, transform
+                    v.params.insert(v.params.begin(), std::unique_ptr<ExprAST>(p->baseVar.release()));
+                    auto realName = funcNameIt->second;
+                    funcDependencyRealName.insert(realName);
+                    v.functionIdent = std::make_unique<LiteralExprAST>(
+                        std::make_unique<TypeInfo>(c.getRealFunctionType(realName)), realName);
+                    // after change, continue to process v, not return
+                } else {
+                    std::string paramTypeString;
+                    for (auto &&type : paramType) {
+                        paramTypeString += type.toString() + ", ";
                     }
-                    auto funcNameIt = memberFuncIt->second.find(paramType);
-                    if (funcNameIt != memberFuncIt->second.end()) {
-                        // exactly member func
-                        v.params.insert(v.params.begin(), std::unique_ptr<ExprAST>(p->baseVar.release()));
-                        auto realName = funcNameIt->second;
-                        funcDependencyRealName.insert(realName);
-                        v.functionIdent = std::make_unique<LiteralExprAST>(
-                            std::make_unique<TypeInfo>(c.getRealFunctionType(realName)), realName);
-                    } else {
-                        std::string paramTypeString;
-                        for (auto &&type : paramType) {
-                            paramTypeString += type.toString() + ", ";
-                        }
-                        if (!paramTypeString.empty()) {
-                            paramTypeString.erase(paramTypeString.size() - 2, 2);
-                        }
-                        return setError(std::format("No Member function with param type: ({})", paramTypeString));
+                    if (!paramTypeString.empty()) {
+                        paramTypeString.erase(paramTypeString.size() - 2, 2);
                     }
-                } else if (isMember && isMemberFunc) {
-                    return setError(std::format("Member and member function have same name: {}::{}",
-                                                p->baseVar->type->toString(), p1->value));
+                    return setError(std::format("No Member function with param type: ({})", paramTypeString));
+                }
+            } else if (isMember && isMemberFunc) {
+                return setError(std::format("Member and member function have same name: {}::{}",
+                                            p->baseVar->type->toString(), p1->value));
+            } else if (!isMember && !isMemberFunc) {
+                if (p->baseVar->type->isArrayType()) {
+                    // member functions every array has
+                    static const std::map<std::set<std::string>, TypeInfo> arrayMemberFunc{
+                        {{"length"}, make_type("func([]T):f64")},
+                        {{"resize"}, make_type("func([]T, f64)")},
+                        {{"push"}, make_type("func([]T, T)")},
+                    };
+                    std::map<std::string, TypeInfo> spec{{"T", p->baseVar->type->getElementType()}};
+                    bool find = false;
+                    for (auto &&[name, type] : arrayMemberFunc) {
+                        auto specType = type | spec;
+                        if (name.contains(p1->value)) {
+                            v.params.insert(v.params.begin(), std::unique_ptr<ExprAST>(p->baseVar.release()));
+                            v.functionIdent =
+                                std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(specType), p1->value);
+                            find = true;
+                            break;
+                        }
+                    }
+                    if (!find) {
+                        return setError(
+                            std::format("No Member function: {}::{}", p->baseVar->type->toString(), p1->value));
+                    }
                 }
             }
         }
@@ -213,17 +256,16 @@ struct ExpressionSemantic : public ASTVisitor {
         if (!v.functionIdent->type->isFunctionType()) {
             return setError(std::format("Cannot call to non-function type \"{}\"", v.functionIdent->type->toString()));
         }
-        auto needParamNum =
-            v.functionIdent->type->subTypes.size() - (v.functionIdent->type->isReturnedFunctionType() ? 1 : 0);
+        auto needParamNum = v.functionIdent->type->getParamCount();
         if (needParamNum != v.params.size()) {
             return setError(std::format("Function need {} params, {} given", needParamNum, v.params.size()));
         }
         for (size_t i = 0; i < v.params.size(); i++) {
-            if (*(v.params[i]->type) != v.functionIdent->type->getArgType(i)) {
+            if (*(v.params[i]->type) != v.functionIdent->type->getParamType(i)) {
                 return setError(std::format(
                     "Arg number {} type mismatch in call to function type \"{}\", \"{}\" required, \"{}\" given", i,
                     v.functionIdent->type->toString(), v.params[i]->type->toString(),
-                    v.functionIdent->type->getArgType(i).toString()));
+                    v.functionIdent->type->getParamType(i).toString()));
             }
         }
         v.type = std::make_unique<TypeInfo>(v.functionIdent->type->getReturnedType());
@@ -355,7 +397,7 @@ struct ExpressionSemantic : public ASTVisitor {
             if (!designate) {
                 if (v.members.size() != def.getMemberCount()) {
                     return setError(std::format("Type \"{}\" need {} members, {} given", v.type->toString(),
-                                                def.subTypes.size(), v.members.size()));
+                                                def.getMemberCount(), v.members.size()));
                 }
                 size_t cnt = 0;
                 for (auto &&[index, _] : v.members) {
@@ -447,13 +489,14 @@ struct ExpressionSemantic : public ASTVisitor {
         if (v.typeDefType != TypeDefAST::TypeDefType::NORMAL) {
             return setError("Only support normal type def for now");
         }
-        if (!v.definedType->isComplexType() || v.definedType->idents[0] != "struct") {
+        if (!v.definedType->isComplexType() || v.definedType->getIdent() != "struct") {
             return setError("only allow struct type define");
         }
-        for (auto &&t : v.definedType->subTypes) {
+        for (auto &&t : v.definedType->getSubTypes()) {
             if (t.isComplexType()) {
                 return setError(std::format("unnamed type \"{}\" is not allowed", t.toString()));
             }
+            processType(t);
             if (t != RealType && t != IntType && t.isBaseType() && !globalInfo().typeDef.contains(t.toString())) {
                 // TODO: process each type
                 // TODO: array member/func member/pointer member?
@@ -461,7 +504,7 @@ struct ExpressionSemantic : public ASTVisitor {
             }
         }
         if (globalInfo().typeDef.contains(v.name)) {
-            return setError(std::format("Type \"{}\" already defined", v.name));
+            return setError(std::format("Type \"{}\" redefined", v.name));
         }
         globalInfo().typeDef[v.name] = *(v.definedType);
         needChange = nop();
@@ -554,13 +597,21 @@ struct ExpressionSemantic : public ASTVisitor {
     }
 
   private:
+    std::tuple<MemberAccessExprAST *, LiteralExprAST *> getConstStringMemberAccessInfo(ExprAST *v) {
+        if (auto p = dynamic_cast<MemberAccessExprAST *>(v); p) {
+            if (auto p1 = dynamic_cast<LiteralExprAST *>(p->memberToken.get()); p1 && *(p1->type) == StringType) {
+                return {p, p1};
+            }
+        }
+        return {nullptr, nullptr};
+    }
     std::string addUnnamedFunction(std::vector<std::unique_ptr<ExprAST>> topLevelExpr) {
         init();
         std::unique_ptr<ExprAST> tmp;
         for (auto it = topLevelExpr.begin(); it != topLevelExpr.end();) {
             (*it)->accept(this);
             afterAccept(*it);
-            if (it + 1 != topLevelExpr.end() && isType<LiteralExprAST>(*it) &&
+            if (it != topLevelExpr.end() && it + 1 != topLevelExpr.end() && isType<LiteralExprAST>(*it) &&
                 *(isType<LiteralExprAST>(*it)->type) == NoInstanceType) {
                 it = topLevelExpr.erase(it);
             } else {
@@ -576,12 +627,11 @@ struct ExpressionSemantic : public ASTVisitor {
             tmp = std::make_unique<BlockExprAST>(std::make_unique<TypeInfo>(*(topLevelExpr.back()->type)),
                                                  std::move(topLevelExpr));
         }
-        auto type = std::make_unique<TypeInfo>();
+        auto type = std::make_unique<TypeInfo>("func");
         if (*(tmp->type) != NoInstanceType) {
-            type->idents = {"func", ":"};
-            type->subTypes.push_back(*(tmp->type));
+            type->addParamType(*(tmp->type));
         } else {
-            type->idents = {"func"};
+            type->addParamType(NoInstanceType);
         }
         auto name = c.generateUniqueName(reservedPrefix, "unnamed");
         globalInfo().funcDependency.emplace(name, std::move(funcDependencyRealName));
@@ -621,6 +671,7 @@ struct ExpressionSemantic : public ASTVisitor {
         error(std::format("Semantic Error{}: {}", location.line(), info));
         // return nullptr;
     }
+
     void afterAccept(std::unique_ptr<ExprAST> &p) {
         if (needRelease) {
             needRelease = false;
@@ -631,28 +682,44 @@ struct ExpressionSemantic : public ASTVisitor {
             needChange = nullptr;
         }
     }
+
     void processType(const TypeInfo &type) {
         if (!type.isValid() || type == NoInstanceType) {
             return;
         }
-        if (type.isComplexType()) {
+        if (type.isBaseType()) {
+            if (!globalInfo().typeDef.contains(type.getBaseTypeString()) && !BuildInType.contains(type)) {
+                return setError(std::format("type \"{}\" is not defined", type.toString()));
+            }
+        } else if (type.isPointerType()) {
+            return setError(std::format("pointer type \"{}\" is not support for now", type.toString()));
+        } else if (type.isComplexType()) {
             return setError(std::format("unnamed type \"{}\" is not allowed", type.toString()));
-        }
-        if (type.isArrayType()) {
+        } else if (type.isArrayType()) {
             return processType(type.getElementType());
-        }
-        if (type.isBaseType() && !globalInfo().typeDef.contains(type.getBaseTypeString()) &&
-            !BuildInType.contains(type)) {
+        } else if (type.isFunctionType()) {
+            for (auto &&sub : type.getSubTypes()) {
+                processType(sub);
+            }
+        } else {
             return setError(std::format("type \"{}\" is not defined", type.toString()));
         }
-        if (type.isPointerType()) {
-        }
     }
-    // TODO: change
-    std::set<std::string> checkRealFunction(const std::string &name) {
+
+    /**
+     * @brief check one real function and return all dependency of it.
+     *
+     * @details name in checked means the function itself is checked, and its dependencies are waiting for check
+     *
+     * @param name real function name need to check
+     * @param checked temporary set to avoid infinite loop
+     * @return const std::set<std::string>& to avoid unexpected copy
+     */
+    const std::set<std::string> &checkSingleRealFunction(const std::string &name, std::set<std::string> &checked) {
         my_assert(c.size() == 1);
-        if (globalInfo().checkedFunc.contains(name)) {
-            return {};
+        if (globalInfo().checkedFunc.contains(name) || checked.contains(name)) {
+            my_assert(globalInfo().funcDependency.contains(name));
+            return globalInfo().funcDependency[name];
         }
         auto &func = globalInfo().realFuncDefinition.find(name)->second;
         my_assert(funcDependencyRealName.empty());
@@ -674,15 +741,31 @@ struct ExpressionSemantic : public ASTVisitor {
         }
         globalInfo().funcDependency[name] = std::move(funcDependencyRealName);
         funcDependencyRealName.clear();
+        checked.insert(name);
         return globalInfo().funcDependency[name];
     }
-    void checkRealFunctionSet(std::set<std::string> &needCheck) {
+
+    /**
+     * @brief check set of dependency real function name generated by ExpressionSemantic::checkSingleRealFunction
+     *
+     * @details name in checked means the function itself is checked, and its dependencies are waiting for check
+     *
+     * @param needCheck set of dependency real function name
+     * @param checked temporary set to avoid infinite loop
+     */
+    void checkRealFunctionDependencySet(std::set<std::string> &needCheck, std::set<std::string> &checked) {
         while (!needCheck.empty()) {
             auto name = *needCheck.begin();
             needCheck.erase(needCheck.begin());
-            needCheck.merge(checkRealFunction(name));
+            for (auto &&name : checkSingleRealFunction(name, checked)) {
+                if (!checked.contains(name) && !globalInfo().checkedFunc.contains(name)) {
+                    needCheck.insert(name);
+                }
+            }
         }
+        globalInfo().checkedFunc.merge(checked);
     }
+
     bool canAccess(MemberAccessExprAST &v) {
         if (isType<LiteralExprAST>(v.memberToken.get())) {
             auto p = dynamic_cast<LiteralExprAST *>(v.memberToken.get());
@@ -694,7 +777,8 @@ struct ExpressionSemantic : public ASTVisitor {
                 return definedType->second.hasMember(p->value);
             }
         }
-        return (v.baseVar->type->isArrayType() && *(v.memberToken->type) == IntType);
+        return (v.baseVar->type->isArrayType() &&
+                (*(v.memberToken->type) == IntType || *(v.memberToken->type) == RealType));
     }
     bool isAssignable(ExprAST *v) {
         // TODO: pointer support

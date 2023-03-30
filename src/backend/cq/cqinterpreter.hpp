@@ -139,6 +139,7 @@ struct CQInterpreter : public ASTVisitor {
             {"pow", [](double x, double y) { return pow(x, y); }},
             {"atan2", [](double x, double y) { return atan2(x, y); }},
         };
+        // should provide all function defined in initprocess in frontend/ruleset/rulesetparser.cpp
         std::string funcName;
         if (isType<LiteralExprAST>(v.functionIdent.get())) {
             auto p = dynamic_cast<LiteralExprAST *>(v.functionIdent.get());
@@ -188,7 +189,7 @@ struct CQInterpreter : public ASTVisitor {
                 auto &param = callee->params[i];
                 auto &arg = v.params[i];
                 arg->accept(this);
-                if (isSupportType(*(param->type))) {
+                if (isNumericalType(*(param->type))) {
                     getReturnedValue();
                 }
                 frame.back()[param->name] = returned;
@@ -372,20 +373,20 @@ struct CQInterpreter : public ASTVisitor {
             setError("only allow complex type define for now");
         }
         auto name = v.name;
-        if (!v.definedType->isComplexType() || v.definedType->idents[0] != "struct") {
+        if (!v.definedType->isComplexType() || v.definedType->getIdent() != "struct") {
             setError("only allow struct type (no reference type support) define for now");
         }
         std::unordered_map<std::string, std::string> t;
-        for (int i = 0; i < v.definedType->subTypes.size(); ++i) {
+        for (int i = 0; i < v.definedType->getSubTypes().size(); ++i) {
             static std::unordered_map<std::string, std::string> typeAlias{
                 {"i8", "int8"},    {"u8", "uint8"},  {"i16", "int16"},  {"u16", "uint16"},  {"i32", "int32"},
                 {"u32", "uint32"}, {"i64", "int64"}, {"u64", "uint64"}, {"f32", "float32"}, {"f64", "float64"},
             };
-            auto tmp = v.definedType->subTypes[i].toString();
+            auto tmp = v.definedType->getSubTypes()[i].toString();
             if (typeAlias.contains(tmp)) {
                 tmp = typeAlias[tmp];
             }
-            t[v.definedType->idents[i + 1]] = tmp;
+            t[v.definedType->getTokens()[i]] = tmp;
         }
         handler.defineType(name, t);
         returned.type = Value::EMPTY;
@@ -395,9 +396,6 @@ struct CQInterpreter : public ASTVisitor {
         if (auto it = symbolStack.back().back().find(v.name); it != symbolStack.back().back().end()) {
             setError("redefine variable: " + v.name);
         }
-        // if (!isSupportType(*(v.valueType))) {
-        //     setError("unsupported type: " + v.valueType->toString());
-        // }
         v.definedValue->accept(this);
         if (returned.type == Value::TOKEN) {
             auto tmp = handler.makeInstanceAs(returned.token);
@@ -460,13 +458,13 @@ struct CQInterpreter : public ASTVisitor {
     }
 
     /**
-     * @brief check if given type supported
+     * @brief check if given type is numerical type
      *
      * @param type string of type name
-     * @return true if is supported type
+     * @return true if is numerical type
      */
-    bool isSupportType(const TypeInfo &type) {
-        return type.isValid() && type.isBaseType() && (type.idents[0] == "f64" || type == AutoType);
+    bool isNumericalType(const TypeInfo &type) {
+        return type == RealType || type == IntType;
     }
 
     /**

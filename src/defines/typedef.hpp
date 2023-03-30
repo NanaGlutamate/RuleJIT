@@ -25,15 +25,15 @@
 namespace rulejit {
 
 /// @brief Used for type for no returned expression
-inline const TypeInfo NoInstanceType{std::vector<std::string>{std::string(typeident::NoInstanceTypeIdent)}};
+inline const TypeInfo NoInstanceType{std::string(typeident::NoInstanceTypeIdent)};
 /// @brief Type for string
-inline const TypeInfo StringType{std::vector<std::string>{std::string(typeident::StringTypeIdent)}};
+inline const TypeInfo StringType{std::string(typeident::StringTypeIdent)};
 /// @brief type for integer, same as RealType for now
-inline const TypeInfo IntType{std::vector<std::string>{std::string(typeident::IntTypeIdent)}};
+inline const TypeInfo IntType{std::string(typeident::IntTypeIdent)};
 /// @brief type for real number
-inline const TypeInfo RealType{std::vector<std::string>{std::string(typeident::RealTypeIdent)}};
+inline const TypeInfo RealType{std::string(typeident::RealTypeIdent)};
 /// @brief auto type for type inference in var-def expression, auto generate only and cannot use by user
-inline const TypeInfo AutoType{std::vector<std::string>{std::string(typeident::AutoTypeIdent)}};
+inline const TypeInfo AutoType{std::string(typeident::AutoTypeIdent)};
 /// @brief type for unary function and operator
 inline const TypeInfo BuildInUnaryType = make_type("func(f64):f64");
 

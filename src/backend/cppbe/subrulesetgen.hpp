@@ -33,30 +33,6 @@ namespace rulejit::cppgen {
 
 struct SubRuleSetCodeGen : public ASTVisitor {
     SubRuleSetCodeGen(ContextStack &context, rulesetxml::RuleSetMetaInfo &metaInfo) : c(context), m(metaInfo){};
-    std::string friend operator|(const std::pair<std::string, std::unique_ptr<FunctionDefAST>> &func,
-                                 SubRuleSetCodeGen &t) {
-        std::string returnedType, funcName, params, body;
-        if (func.second->funcType->isReturnedFunctionType()) {
-            returnedType = t.CppStyleType(func.second->funcType->getReturnedType());
-        } else {
-            t.setError("pure function must return something");
-        }
-        funcName = func.first;
-        for (auto &&arg : func.second->params) {
-            if (arg->type->isBaseType() && "f64" == arg->type->idents[0]) {
-                params += "f64 ";
-            } else {
-                params += "const " + t.CppStyleType(*(arg->type)) + "& ";
-            }
-            params += arg->name + ", ";
-        }
-        if (!params.empty()) {
-            params.pop_back();
-            params.pop_back();
-        }
-        return std::format(templates::funcDef, returnedType, funcName, params,
-                           "return " + (func.second->returnValue | t) + ";");
-    }
     std::string friend operator|(std::unique_ptr<ExprAST> &e, SubRuleSetCodeGen &t) {
         // t.isSubRuleSet = true;
         t.loadedVar.clear();
@@ -204,8 +180,9 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             for (auto &[ident, value] : v.members) {
                 tmp.emplace(dynamic_cast<LiteralExprAST *>(ident.get())->value, value.get());
             }
-            for (size_t i = 1; i < def.idents.size(); ++i) {
-                auto it = tmp.find(def.idents[i]);
+            auto tokens = def.getTokens();
+            for (size_t i = 0; i < tokens.size(); ++i) {
+                auto it = tmp.find(tokens[i]);
                 if (it == tmp.end()) {
                     returned += "{}";
                 } else {
@@ -291,10 +268,11 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     std::string CppStyleType(const TypeInfo &type) {
         // only support vector and base type
         if (type.isBaseType()) {
-            return type.idents[0];
+            // TODO: typedReal?
+            return type.getBaseTypeString();
         }
-        if (type.idents.size() == 2 && type.idents[0] == "[]") {
-            return "std::vector<" + type.idents[1] + ">";
+        if (type.isArrayType()) {
+            return "std::vector<" + CppStyleType(type.getElementType()) + ">";
         }
         setError(std::format("unsupported type: {}", type.toString()));
     }
