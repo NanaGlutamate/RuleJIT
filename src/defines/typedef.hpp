@@ -42,7 +42,6 @@ inline const std::set<TypeInfo> BuildInType{
     NoInstanceType,
     StringType,
     IntType,
-
     RealType,
     // make_type("i64"),
     // make_type("u64"),

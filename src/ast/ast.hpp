@@ -212,8 +212,9 @@ struct ComplexLiteralExprAST : public ExprAST {
     template <typename V>
     ComplexLiteralExprAST(std::unique_ptr<TypeInfo> type, V &&members)
         : ExprAST(std::move(type)), members(std::forward<V>(members)) {}
-    template <typename V>
-    ComplexLiteralExprAST(V &&members) : ComplexLiteralExprAST(nullptr, std::forward<V>(members)) {}
+    // Complex Literal must have type
+    // template <typename V>
+    // ComplexLiteralExprAST(V &&members) : ComplexLiteralExprAST(nullptr, std::forward<V>(members)) {}
 };
 
 // LOOP := 'while' '(' EXPR ')' EXPR
@@ -308,6 +309,7 @@ struct TypeDefAST : public DefAST {
         NORMAL,
         ALIAS,
     } typeDefType;
+    // TODO: typeclass support? or interface like go?
     template <typename S>
     TypeDefAST(S &&name, std::unique_ptr<TypeInfo> definedType, TypeDefType typeDefType = TypeDefType::NORMAL)
         : DefAST(std::forward<S>(name)), definedType(std::move(definedType)), typeDefType(typeDefType) {}
@@ -318,7 +320,6 @@ struct TypeDefAST : public DefAST {
 // TODO: var x []i64 = {1, 3, 4};
 // TODO: var x [4]f64;
 // TODO: var x [-]i64 {1, 3, 4};
-// TODO: var x []i64 {1, 3, 4};
 /**
  * @brief indicates variable defines
  * 
@@ -356,6 +357,7 @@ struct FunctionDefAST : public DefAST {
         MEMBER,
         SYMBOLIC,
         LAMBDA,
+        TEMPLATE,
     } funcDefType;
     template <typename S, typename V1>
     FunctionDefAST(S &&name, std::unique_ptr<TypeInfo> funcType, V1 &&params, std::unique_ptr<ExprAST> returnValue,

@@ -162,9 +162,9 @@ int main() {
         func (a Tmp)__buildin__0_a(){
             a.x()
         }
-        var tmp := Tmp{}
+        var tmp = Tmp{}
         tmp.__buildin__0_a()
-        var a := []f64{1, 2, 3}
+        var a = []f64{1, 2, 3}
         a.length()
     )");
 

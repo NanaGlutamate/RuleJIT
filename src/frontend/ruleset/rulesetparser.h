@@ -57,7 +57,6 @@ struct RuleSetParser {
     /**
      * @brief collect informations in ruleset XML, and load functiondef and input/output/cache
      * variable name to context
-     * 
      * @attention will add type defines in XML to ContextStack given
      *
      * @param srcXML source of ruleset XML

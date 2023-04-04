@@ -19,11 +19,13 @@
 #include "../csmodel_base/csmodel_base.h"
 #include "backend/cq/cqrulesetengine.h"
 
+
 /**
  * @brief interface function regulated by CQ platform
  * 
  */
 extern "C" __declspec(dllexport) CSModelObject *__stdcall CreateModelObject();
+
 /**
  * @brief interface function regulated by CQ platform
  * 
@@ -31,12 +33,12 @@ extern "C" __declspec(dllexport) CSModelObject *__stdcall CreateModelObject();
 extern "C" __declspec(dllexport) void __stdcall DestroyMemory(void *mem, bool is_array);
 
 /**
- * @ingroup interpreter
  * @brief main class to interact with CQ platform
  *
  */
 class RuleEngine : public CSModelObject {
   public:
+
     /**
      * @brief init the rule engin model, if "filePath" is set in value, load the rule file;
      * else load the rule file from the same directory of the dll named "rule.xml"

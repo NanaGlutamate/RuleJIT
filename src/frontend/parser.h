@@ -48,7 +48,7 @@ struct ExpressionParser {
 
     /**
      * @brief call before parse, used to escape empty lines
-     * 
+     *
      */
     void selectNextExpr() {
         my_assert(lexer);
@@ -59,10 +59,10 @@ struct ExpressionParser {
 
     /**
      * @brief pick next expression in ExpressionParser
-     * 
+     *
      * TODO: donot use type conversion operator here
-     * 
-     * @return std::unique_ptr<ExprAST> 
+     *
+     * @return std::unique_ptr<ExprAST>
      */
     operator std::unique_ptr<ExprAST>() {
         selectNextExpr();
@@ -121,6 +121,9 @@ struct ExpressionParser {
     std::unique_ptr<ExprAST> parsePrimary();
     std::unique_ptr<ExprAST> parseBlock();
     std::unique_ptr<ExprAST> parseDef();
+
+    void parseFuncDef(std::vector<std::unique_ptr<rulejit::IdentifierExprAST>> &params, TypeInfo &returnType,
+                      std::string &funcName, FunctionDefAST::FuncDefType &funcDefType);
     std::vector<std::unique_ptr<IdentifierExprAST>> parseParamList();
 
     std::unique_ptr<ExprAST> parseCommand();

@@ -35,9 +35,6 @@
 #include "testcase.hpp"
 #include "tools/printcsvaluemap.hpp"
 
-typedef CSModelObject *(*CreateModelObjectFun)();
-typedef void (*DestroyMemoryFun)(void *mem, bool is_array);
-
 int main() {
     using namespace rulejit;
     using CSValueMap = std::unordered_map<std::string, std::any>;
@@ -45,9 +42,9 @@ int main() {
 
 #ifdef _WIN32
     auto hmodule = LoadLibraryExA(lib_path_.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-#else
+#else // _WIN32
     void *hmodule = dlopen(lib_path_.c_str(), RTLD_LAZY | RTLD_GLOBAL);
-#endif
+#endif // _WIN32
     if (!hmodule) {
         std::cout << "load "
                   << "cq_interpreter"
@@ -56,18 +53,18 @@ int main() {
     }
 
 #ifdef _WIN32
-    auto create_obj_ = (CreateModelObjectFun)GetProcAddress(hmodule, "CreateModelObject");
-    auto destroy_obj_ = (DestroyMemoryFun)GetProcAddress(hmodule, "DestroyMemory");
-#else
+    auto create_obj_ = (auto(*)()->CSModelObject*)GetProcAddress(hmodule, "CreateModelObject");
+    auto destroy_obj_ = (auto(*)(void*, bool)->void)GetProcAddress(hmodule, "DestroyMemory");
+#else // _WIN32
     auto create_obj_ = (CreateModelObjectFun)dlsym(hmodule, "CreateModelObject");
     auto destroy_obj_ = (DestroyMemoryFun)dlsym(hmodule, "DestroyMemory");
-#endif
+#endif // _WIN32
     if (!create_obj_ || !destroy_obj_) {
 #ifdef _WIN32
         if (!FreeLibrary(hmodule))
-#else
+#else // _WIN32
         if (!dlclose(hmodule))
-#endif
+#endif // _WIN32
             std::cout << "release dll error" << std::endl;
         return false;
     }

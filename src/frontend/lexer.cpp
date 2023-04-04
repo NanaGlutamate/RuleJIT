@@ -23,7 +23,7 @@
 
 // extern "C" const int yy_accept[];
 
-extern "C" int yylex(int guidence, char *start_ptr);
+// extern "C" int yylex(int guidence, char *start_ptr);
 
 namespace {
 
@@ -62,7 +62,7 @@ void ExpressionLexer::extend(Guidence guidence) {
             next++;
         } while (charEqual('_') || isalpha(*next) || isdigit(*next) || *next < 0);
         auto indent = top();
-        if (keyWords.find(indent) != keyWords.end()) {
+        if (KEYWORDS.find(indent) != KEYWORDS.end()) {
             // keywords
             type = TokenType::SYM;
         } else {
@@ -134,11 +134,12 @@ void ExpressionLexer::extend(Guidence guidence) {
         }
         if (charEqual('`')){
             // TODO: tokenized symbol? like `+(a, b) // return a+b
+            // TODO: symbolized identifier?
         }
         // symbol
         type = TokenType::SYM;
         next++;
-        while (buildInMultiCharSymbol.contains(std::string_view(begin, next - begin + 1))) {
+        while (BUILD_IN_MULTICHAR_SYMBOL.contains(std::string_view(begin, next - begin + 1))) {
             next++;
         }
         // eat ENDLINE

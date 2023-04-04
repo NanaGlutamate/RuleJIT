@@ -381,6 +381,31 @@ struct ExpressionSemantic : public ASTVisitor {
     VISIT_FUNCTION(ComplexLiteralExprAST) {
         processType(*v.type);
         if (v.type->isBaseType()) {
+            if (BuildInType.contains(*v.type)) {
+                if (*v.type == NoInstanceType) {
+                    return setError("Cannot create a NoInstanceType");
+                }
+                if (*v.type == RealType || *v.type == IntType || *v.type == StringType) {
+                    if (v.members.size() == 1) {
+                        auto &[ind, val] = v.members[0];
+                        if (ind) {
+                            return setError("Cannot create a \"" + v.type->toString() + "\" with index");
+                        }
+                        val->accept(this);
+                        if (*val->type == *v.type) {
+                            needChange = std::move(val);
+                            return;
+                        }
+                        return setError("Cannot create a \"" + v.type->toString() + "\" with a \"" +
+                                        val->type->toString() + "\"");
+                    } else if (v.members.size() > 1) {
+                        return setError("Cannot create a \"" + v.type->toString() + "\" with more than one member");
+                    }
+                    std::string value = (*v.type == StringType) ? "" : "0";
+                    needChange = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(*v.type), value);
+                }
+                return setError("Unknown base type \"" + v.type->toString() + "\"");
+            }
             auto it = globalInfo().typeDef.find(v.type->getBaseTypeString());
             if (it == globalInfo().typeDef.end()) {
                 return setError(std::format("Type \"{}\" not defined", v.type->toString()));
@@ -491,6 +516,9 @@ struct ExpressionSemantic : public ASTVisitor {
         if (!v.definedType->isComplexType() || v.definedType->getIdent() != "struct") {
             return setError("only allow struct type define");
         }
+        if (auto type = TypeInfo(v.name); BuildInType.contains(type)) {
+            return setError(std::format("Type \"{}\" is a build-in type", v.name));
+        }
         for (auto &&t : v.definedType->getSubTypes()) {
             if (t.isComplexType()) {
                 return setError(std::format("unnamed type \"{}\" is not allowed", t.toString()));
@@ -541,7 +569,7 @@ struct ExpressionSemantic : public ASTVisitor {
         }
         std::string realFuncName = c.generateUniqueName(std::string(reservedPrefix), toLegalName(v.name));
         if (v.funcDefType == FunctionDefAST::FuncDefType::SYMBOLIC) {
-            if (v.params.size() != 2 && (v.params.size() != 1 || !reloadableBuildInUnary.contains(v.name))) {
+            if (v.params.size() != 2 && (v.params.size() != 1 || !BUILDIN_UNARY.contains(v.name))) {
                 return setError("Infix function must have 2 params, "
                                 "and operator overload must match the number of params");
             }
@@ -761,6 +789,12 @@ struct ExpressionSemantic : public ASTVisitor {
         globalInfo().checkedFunc.merge(checked);
     }
 
+    /**
+     * @brief check if member access is valid
+     *
+     * @param v AST of member access
+     * @return bool
+     */
     bool canAccess(MemberAccessExprAST &v) {
         if (isType<LiteralExprAST>(v.memberToken.get())) {
             auto p = dynamic_cast<LiteralExprAST *>(v.memberToken.get());
@@ -775,13 +809,31 @@ struct ExpressionSemantic : public ASTVisitor {
         return (v.baseVar->type->isArrayType() &&
                 (*(v.memberToken->type) == IntType || *(v.memberToken->type) == RealType));
     }
+
+    /**
+     * @brief check if expression a assignable l-value
+     *
+     * @param v
+     * @return true
+     * @return false
+     */
     bool isAssignable(ExprAST *v) {
-        // TODO: pointer support
-        // auto p = dynamic_cast<UnaryOpExprAST *>(v);
-        // if (p && p->op == "*") {
-        //     return true;
-        // }
-        return isType<IdentifierExprAST>(v) || isType<MemberAccessExprAST>(v);
+        if (isType<IdentifierExprAST>(v)) {
+            return true;
+        }
+        if (auto p = dynamic_cast<UnaryOpExprAST *>(v); p) {
+            if (p->op == "*") {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        if (auto p = dynamic_cast<MemberAccessExprAST *>(v); p) {
+            // must not be member function
+            my_assert(canAccess(*p));
+            return isAssignable(p->baseVar.get());
+        }
+        return false;
     }
 
     ContextStack &c;

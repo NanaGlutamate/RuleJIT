@@ -15,11 +15,13 @@
  */
 #include "frontend/parser.h"
 #include "ast/type.hpp"
+#include "parser.h"
 
 // DONE: check if poped token is as expected
 // DONE: check assign to assignment
-// TODO: lambda // meet fun() -> gen {func unnamedFa581(); unnamedFa581}
+// TODO: lambda // meet fun() -> generate {func unnamedxxx(); unnamedxxx}
 // TODO: directly-called lambda
+// TODO: type guide to overload return type
 
 namespace {
 
@@ -34,10 +36,10 @@ std::unique_ptr<ExprAST> ExpressionParser::parseExpr(bool ignoreBreak, bool allo
     std::unique_ptr<ExprAST> ret;
     auto start = lexer->beginIndex();
     if (lexer->tokenType() == TokenType::SYM) {
-        if (defKeyWords.contains(lexer->top())) {
+        if (DEF_KEYWORDS.contains(lexer->top())) {
             // move function def to primary(may have overload `func not (fun func():bool):bool->!func()`)
             ret = parseDef();
-        } else if (commandKeyWords.contains(lexer->top())) {
+        } else if (COMMAND_KEYWORDS.contains(lexer->top())) {
             ret = parseCommand();
         } else {
             auto tmp = parseUnary();
@@ -63,10 +65,10 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBinOpRHS(Priority priority, std:
     while (true) {
         Priority prec;
         auto op = lexer->topCopy();
-        if (auto it = reloadableBuildInInfix.find(op); it == reloadableBuildInInfix.end()) {
+        if (auto it = BUILDIN_INFIX.find(op); it == BUILDIN_INFIX.end()) {
             if (lexer->tokenType() == TokenType::IDENT) {
                 // regard as user defined infix
-                prec = UserDefinedPriority;
+                prec = USER_DEFINED_PRIORITY;
             } else {
                 return lhs;
             }
@@ -82,12 +84,12 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBinOpRHS(Priority priority, std:
             lexer->pop(IGNORE_BREAK);
         }
         std::string nextOp = lexer->topCopy();
-        if (auto it = reloadableBuildInInfix.find(nextOp);
-            (it != reloadableBuildInInfix.end() && prec < it->second) ||
-            (lexer->tokenType() == TokenType::IDENT && prec < UserDefinedPriority)) {
+        if (auto it = BUILDIN_INFIX.find(nextOp);
+            (it != BUILDIN_INFIX.end() && prec < it->second) ||
+            (lexer->tokenType() == TokenType::IDENT && prec < USER_DEFINED_PRIORITY)) {
             rhs = parseBinOpRHS(prec + 1, std::move(rhs));
-        } else if (priority == AssignPriority + 1) {
-            if (it != reloadableBuildInInfix.end() && it->second == AssignPriority) {
+        } else if (priority == ASSIGN_PRIORITY + 1) {
+            if (it != BUILDIN_INFIX.end() && it->second == ASSIGN_PRIORITY) {
                 return setError("assign to a assignment is not allowed");
             }
         }
@@ -98,7 +100,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBinOpRHS(Priority priority, std:
 // cannot return unary function; returned unary function act as normal function
 // UNARYEXPR := unary UNARYEXPR | MEMBERACCESS
 std::unique_ptr<ExprAST> ExpressionParser::parseUnary() {
-    if (!reloadableBuildInUnary.contains(lexer->topCopy())) {
+    if (!BUILDIN_UNARY.contains(lexer->topCopy())) {
         return parsePrimary();
     }
     auto op = lexer->popCopy(IGNORE_BREAK);
@@ -107,18 +109,17 @@ std::unique_ptr<ExprAST> ExpressionParser::parseUnary() {
 }
 
 // PRIMARYEXPR :=
-//     IDENT                                                                                          |
-//     literal                                                                                        |
-//     '(' EXPR ')'                                                                                   |
-//     '{' (VARDEF | TYPEDEF | ASSIGNMENT | EXPR ENDLINE)* EXPR? '}'                                  |
-//     (IDENT | COMPLEXTYPE | FUNCTYPE | SLICETYPE | ARRAYTYPE) '{' ((IDENT ':')? EXPR ENDLINE)* '}'  |
-//     'if' '(' EXPR ')' EXPR ('else' EXPR)?                                                          |
-//     'while' '(' EXPR ')' EXPR                                                                      |
+//     IDENT                                                                                                  |
+//     literal                                                                                                |
+//     '(' EXPR ')'                                                                                           |
+//     '{' (VARDEF | TYPEDEF | ASSIGNMENT | EXPR ENDLINE)* EXPR? '}'                                          |
+//     (IDENT | COMPLEXTYPE | FUNCTYPE | SLICETYPE | ARRAYTYPE) '{' ((IDENT (':' | '='))? EXPR ENDLINE)* '}'  |
+//     'if' '(' EXPR ')' EXPR ('else' EXPR)?                                                                  |
+//     'while' '(' EXPR ')' EXPR                                                                              |
 //     PRIMARYEXPR '.' IDENT | PRIMARYEXPR '(' EXPR ')'
 std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
     auto startIndex = lexer->beginIndex();
     std::unique_ptr<ExprAST> lhs;
-    // TODO: move to language.hpp
     if (lexer->tokenType() == TokenType::IDENT || lexer->top() == "[") {
         // ComplexLiteral | Ident
         // TODO: lambda, closure
@@ -128,6 +129,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
             if (!typeInfo.isBaseType()) {
                 return setError("type can not act as Expression along: " + typeInfo.toString());
             }
+            // TODO: template function
             lhs = std::make_unique<IdentifierExprAST>(typeInfo.getBaseTypeString());
         } else {
             // ComplexLiteral
@@ -322,21 +324,29 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBlock() {
 std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
     if (lexer->top() == "var") {
         // var def
+        // TODO: un-init var like "var a int;"
         lexer->pop(IGNORE_BREAK);
         if (lexer->tokenType() != TokenType::IDENT) {
             return setError("expected ident as var name, found: " + lexer->topCopy());
         }
         auto indent = lexer->popCopy(IGNORE_BREAK);
         std::unique_ptr<TypeInfo> type;
-        if (lexer->top() == ":=") {
+        if (lexer->top() == "=") {
             lexer->pop(IGNORE_BREAK);
             type = std::make_unique<TypeInfo>(AutoType);
         } else {
             if (lexer->top() == "auto") {
-                return setError("donot support user-defined auto type, use \":=\" to define variables instead.");
+                return setError(
+                    "donot support user-defined auto type, use \"=\" directly to define variables instead.");
             }
             type = std::make_unique<TypeInfo>((*lexer) | TypeParser());
-            eatBreak();
+            // un-initialized var
+            if (lexer->tokenType() == TokenType::ENDLINE) {
+                auto defined = std::make_unique<ComplexLiteralExprAST>(
+                    std::make_unique<TypeInfo>(*type),
+                    std::vector<std::tuple<std::unique_ptr<ExprAST>, std::unique_ptr<ExprAST>>>{});
+                return std::make_unique<VarDefAST>(indent, std::move(type), std::move(defined));
+            }
             auto tmp = lexer->pop(IGNORE_BREAK);
             if (tmp != "=") {
                 return setError("expected \"=\" in var definition, found: " + std::string(tmp));
@@ -344,83 +354,21 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         }
         return std::make_unique<VarDefAST>(indent, std::move(type), parseExpr());
     } else if (lexer->top() == "func") {
-        // TODO: operator.
         // func def
+        // TODO: operator.
         lexer->pop(IGNORE_BREAK);
 
-        FunctionDefAST::FuncDefType funcDefType = FunctionDefAST::FuncDefType::NORMAL;
         std::vector<std::unique_ptr<rulejit::IdentifierExprAST>> params;
-        TypeInfo returnType;
-        std::unique_ptr<ExprAST> returnValue;
         std::string funcName;
+        TypeInfo funcType;
+        FunctionDefAST::FuncDefType funcDefType;
 
-        // parse function definition
-        if (lexer->top() == "(") {
-            // lambda | member
-            params = parseParamList();
-            eatBreak();
-            if (lexer->tokenType() == TokenType::IDENT) {
-                // member
-                funcName = lexer->popCopy(IGNORE_BREAK);
-                if (lexer->top() != "(") {
-                    return setError("expected \"(\" after member function name in member function def, found: " +
-                                    lexer->topCopy());
-                }
-                if (params.size() != 1) {
-                    return setError("member function must contain 1 receiver param, given: " +
-                                    std::to_string(params.size()));
-                }
-                auto tmp = parseParamList();
-                eatBreak();
-                for (auto &x : tmp) {
-                    params.push_back(std::move(x));
-                }
-                funcDefType = FunctionDefAST::FuncDefType::MEMBER;
-            } else {
-                // lambda
-                funcDefType = FunctionDefAST::FuncDefType::LAMBDA;
-            }
-        } else {
-            // symbolic | normal
-            if (lexer->tokenType() == TokenType::IDENT) {
-                funcName = lexer->popCopy(IGNORE_BREAK);
-                if (lexer->top() == "infix") {
-                    // symbolic (infix)
-                    lexer->pop(IGNORE_BREAK);
-                    funcDefType = FunctionDefAST::FuncDefType::SYMBOLIC;
-                }
-                // normal
-                // do nothing
-            } else if (lexer->tokenType() == TokenType::SYM) {
-                // symbolic (operator overload)
-                funcName = lexer->popCopy(IGNORE_BREAK);
-                funcDefType = FunctionDefAST::FuncDefType::SYMBOLIC;
-                if (!reloadableBuildInInfix.contains(funcName) && !reloadableBuildInUnary.contains(funcName)) {
-                    return setError("unknown operator overload: " + funcName);
-                }
-            } else {
-                return setError("expected ident or symbol as function name, found: " + lexer->topCopy());
-            }
-            params = parseParamList();
-            eatBreak();
-        }
+        parseFuncDef(params, funcType, funcName, funcDefType);
 
-        // parse returned type
-        if (lexer->top() == ":") {
-            // returned function
-            // TODO: remove ":"? donot, 
-            //                   1. hard to parse user-defined infix operator
-            //                   2. hard to distinguish lambda from member function
-            lexer->pop(IGNORE_BREAK);
-            returnType = *lexer | TypeParser();
-            eatBreak();
-        } else {
-            // no return function
-            returnType = NoInstanceType;
-        }
+        std::unique_ptr<ExprAST> returnValue;
 
         // parse returned value
-        // TODO: named constructor 'func getStr():(ret string := ""){}'? maybe need default construct var def
+        // TODO: named constructor 'func getStr():(ret string){}'? maybe need default construct var def
         if (lexer->top() == "->") {
             lexer->pop(IGNORE_BREAK);
         } else if (lexer->top() == "{") {
@@ -431,14 +379,8 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
 
         returnValue = parseExpr();
 
-        TypeInfo funcType("func");
-        for(auto&& p : params){
-            funcType.addParamType(*(p->type));
-        }
-        funcType.addParamType(returnType);
-
-        return std::make_unique<FunctionDefAST>(std::move(funcName), std::make_unique<TypeInfo>(funcType), std::move(params),
-                                                std::move(returnValue), funcDefType);
+        return std::make_unique<FunctionDefAST>(std::move(funcName), std::make_unique<TypeInfo>(funcType),
+                                                std::move(params), std::move(returnValue), funcDefType);
     } else if (lexer->top() == "type") {
         // type def
         lexer->pop(IGNORE_BREAK);
@@ -459,6 +401,99 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
     } else {
         return setError("expect definition keywords like \"var\", \"func\" or \"type\", found: " + lexer->topCopy());
     }
+}
+
+void rulejit::ExpressionParser::parseFuncDef(std::vector<std::unique_ptr<rulejit::IdentifierExprAST>> &params,
+                                             TypeInfo &funcType, std::string &funcName,
+                                             FunctionDefAST::FuncDefType &funcDefType) {
+    funcDefType = FunctionDefAST::FuncDefType::NORMAL;
+    TypeInfo returnType;
+
+    // parse function definition
+    // TODO: extinguish reload of "<" and template function
+    if (lexer->top() == "(") {
+        // lambda | member
+        params = parseParamList();
+        eatBreak();
+        if (lexer->tokenType() == TokenType::IDENT) {
+            // member
+            funcName = lexer->popCopy(IGNORE_BREAK);
+            if (lexer->top() != "(") {
+                setError("expected \"(\" after member function name in member function def, found: " +
+                         lexer->topCopy());
+            }
+            if (params.size() != 1) {
+                setError("member function must contain 1 receiver param, given: " + std::to_string(params.size()));
+            }
+            auto tmp = parseParamList();
+            eatBreak();
+            for (auto &x : tmp) {
+                params.push_back(std::move(x));
+            }
+            funcDefType = FunctionDefAST::FuncDefType::MEMBER;
+        } else {
+            // lambda
+            funcDefType = FunctionDefAST::FuncDefType::LAMBDA;
+        }
+    } else {
+        // symbolic | normal
+        if (lexer->tokenType() == TokenType::IDENT) {
+            funcName = lexer->popCopy(IGNORE_BREAK);
+            if (lexer->top() == "infix") {
+                // symbolic (infix)
+                lexer->pop(IGNORE_BREAK);
+                funcDefType = FunctionDefAST::FuncDefType::SYMBOLIC;
+            }
+            // normal
+            // do nothing
+        } else if (lexer->tokenType() == TokenType::SYM) {
+            // symbolic (operator overload)
+            funcName = lexer->popCopy(IGNORE_BREAK);
+            funcDefType = FunctionDefAST::FuncDefType::SYMBOLIC;
+            if (RESERVED_NOT_RELOADABLE_SYMBOL.contains(funcName)) {
+                setError("unsupport operator overload: " + funcName);
+            }
+            if (lexer->top() == "infix") {
+                setError("operator overload is automatically infix or unary, donot use \"infix\" keyword");
+            }
+        } else {
+            setError("expected ident or symbol as function name, found: " + lexer->topCopy());
+        }
+        params = parseParamList();
+        eatBreak();
+    }
+
+    // parse returned type
+    if (lexer->top() == ":") {
+        // returned function
+        // TODO: remove ":"? donot,
+        //                   1. hard to parse user-defined infix operator
+        //                   2. hard to distinguish lambda from member function
+        lexer->pop(IGNORE_BREAK);
+        returnType = *lexer | TypeParser();
+        eatBreak();
+    } else {
+        // no return function
+        returnType = NoInstanceType;
+    }
+
+    if (funcDefType == FunctionDefAST::FuncDefType::SYMBOLIC) {
+        if (params.size() == 2) {
+            // infix
+        } else if (params.size() == 1) {
+            if (!BUILDIN_UNARY.contains(funcName)) {
+                setError("unsupport unary operator overload: " + funcName);
+            }
+        } else {
+            setError("only allow unary or infix operator overload");
+        }
+    }
+
+    funcType = TypeInfo("func");
+    for (auto &&param : params) {
+        funcType.addParamType(*(param->type));
+    }
+    funcType.addParamType(returnType);
 }
 
 std::vector<std::unique_ptr<IdentifierExprAST>> ExpressionParser::parseParamList() {
@@ -492,31 +527,20 @@ std::unique_ptr<ExprAST> ExpressionParser::parseCommand() {
         lexer->pop(IGNORE_BREAK);
         if (lexer->top() == "func") {
             lexer->pop(IGNORE_BREAK);
-            auto nameType = lexer->tokenType();
-            if (nameType != TokenType::IDENT) {
-                return setError("expected ident as extern function name, found: " + lexer->topCopy());
+
+            std::vector<std::unique_ptr<rulejit::IdentifierExprAST>> params;
+            std::string funcName;
+            TypeInfo funcType;
+            FunctionDefAST::FuncDefType funcDefType;
+
+            parseFuncDef(params, funcType, funcName, funcDefType);
+
+            if (funcDefType != FunctionDefAST::FuncDefType::NORMAL) {
+                return setError("only support extern normal func command");
             }
-            std::string name = lexer->popCopy(IGNORE_BREAK);
-            TypeInfo type{"func"};
-            auto params = parseParamList();
-            for (auto &param : params) {
-                type.addParamType(*(param->type));
-            }
-            if (lexer->top() == ":") {
-                // return type
-                // TODO: return value func(i i32):(i i32){}
-                lexer->pop(IGNORE_BREAK);
-                auto returnType = (*lexer) | TypeParser();
-                if (!returnType.isValid()) {
-                    return setError("expected return type in function definition after \":\", found: " +
-                                    lexer->topCopy());
-                }
-                type.addParamType(returnType);
-            } else {
-                type.addParamType(NoInstanceType);
-            }
-            return std::make_unique<SymbolDefAST>(name, SymbolDefAST::SymbolCommandType::EXTERN,
-                                                  std::make_unique<TypeInfo>(type));
+
+            return std::make_unique<SymbolDefAST>(funcName, SymbolDefAST::SymbolCommandType::EXTERN,
+                                                  std::make_unique<TypeInfo>(funcType));
         } else {
             return setError("only support extern func command");
         }

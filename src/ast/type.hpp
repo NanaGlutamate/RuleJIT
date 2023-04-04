@@ -74,8 +74,8 @@ struct TypeInfo {
         }
     }
 
-    // type | when({"T", "int"}, ...);
-    // friend std::map<std::string, TypeInfo> when(){}
+    // type | where({"T", "int"}, ...);
+    // friend std::map<std::string, TypeInfo> where(){}
 
     /**
      * @brief operator| used in template specialization
@@ -142,6 +142,46 @@ struct TypeInfo {
     }
 
     /**
+     * @brief template match without templateParam constraint
+     *
+     * @param tar TypeInfo need match
+     * @param[out] matched empty map to receice match result. 
+     * 
+     * @return bool, true if matched
+     */
+    bool freeMatch(const TypeInfo &tar, std::map<std::string, TypeInfo>& matched) const {
+        // ATTENTION: complex type match are not allowed
+        my_assert(ident != "struct" && ident != "class" && ident != "dynamic" && tokens.size() == 0);
+        if (isBaseType()) {
+            if (!tar.isBaseType() || ident != tar.ident) {
+                // regards every base type a template param
+                if (auto it2 = matched.find(ident); it2 != matched.end()) {
+                    // template param already matched, check if constistent
+                    if (it2->second != tar) {
+                        return false;
+                    }
+                } else {
+                    matched.emplace(ident, tar);
+                }
+                return true;
+            }
+        }
+        // this is not template param, try to completely match tar.
+        if(ident != tar.ident || subTypes.size() != tar.subTypes.size()){
+            return false;
+        }
+        // match subTypes
+        for(auto ind : std::views::iota(size_t(0), subTypes.size())){
+            auto& sub = subTypes[ind];
+            auto& tarSub = tar.subTypes[ind];
+            if(!sub.freeMatch(tarSub, matched)){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * @brief default comparision operator
      *
      * @return bool
@@ -151,8 +191,7 @@ struct TypeInfo {
     /**
      * @brief check if this is a valid type
      *
-     * @return true
-     * @return false
+     * @return bool
      */
     bool isValid() const { return ident != typeident::NoInstanceTypeIdent; }
 
@@ -492,6 +531,11 @@ struct TypeParser {
             return info;
         }
         if (e.tokenType() == TokenType::IDENT) {
+            // TODO: template
+            //     hard, when a & b is var, a<b>(0) is expression;
+            //           when a & b is type, it is template function call.
+            //     introduce context to parser?
+            //     no, use <b>a instead. no contradiction now(no unary operator <)
             info.ident = e.popCopy();
             return info;
         } else if (e.top() == "func") {

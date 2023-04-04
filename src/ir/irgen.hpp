@@ -43,8 +43,6 @@ struct IRGenerator : public ASTVisitor {
     IRGenerator &operator=(const IRGenerator &) = delete;
     IRGenerator &operator=(IRGenerator &&) = delete;
 
-    virtual ~IRGenerator() = default;
-
     /**
      * @brief pipe operator| used to generate function def in ContextGlobal
      * @attention function must have checked
@@ -53,6 +51,9 @@ struct IRGenerator : public ASTVisitor {
      * @param irgen receiver
      */
     void friend operator|(std::string &src, IRGenerator &irgen) {
+        if (irgen.generatedFunc.contains(src)) {
+            return;
+        }
         auto &global = irgen.c.global;
         if (auto it = global.realFuncDefinition.find(src);
             it != global.realFuncDefinition.end() && global.checkedFunc.contains(it->first)) {
@@ -85,7 +86,9 @@ struct IRGenerator : public ASTVisitor {
     std::set<std::string> generatedFunc;
     std::set<std::string> generatedVar;
 
-    void generate(const std::string &name, std::unique_ptr<FunctionDefAST> &ast) {}
+    void generate(const std::string &name, std::unique_ptr<FunctionDefAST> &ast) {
+    }
+    void allocateVar(){}
     SET_ERROR_MEMBER("IR Generate", void)
 };
 

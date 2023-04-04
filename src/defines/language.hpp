@@ -3,9 +3,9 @@
  * @author djw
  * @brief Defines/Language
  * @date 2023-03-28
- * 
+ *
  * @details Includes some language-related defines.
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -46,26 +46,24 @@ static_assert(canCallBeforeDefine + allowUserDefinedInfix + allowUserDefinedUnar
 
 } // namespace config
 
-inline const std::set<std::string_view> buildInType{
-    typeident::StringTypeIdent,
-    typeident::IntTypeIdent,
-    typeident::RealTypeIdent,
-};
-
-inline const std::set<std::string> reloadableBuildInUnary{
+inline const std::set<std::string> BUILDIN_UNARY{
     "-", "not", "!", "&", "*", "~", "||", "&&", "*", "&", "<-", "->",
 };
 
 using Priority = int;
 
 // A "<-" B := (*A) = B TODO: A < -B? use <<-
-inline const std::set<std::string_view> buildInMultiCharSymbol{
-    "==", "!=", ">=", "<=", "&&", "||", "->", "..", ">>", "<<", "<<-", ":=",
+inline const std::set<std::string_view> BUILD_IN_MULTICHAR_SYMBOL{
+    "==", "!=", ">=", "<=", "&&", "||", "->", "-<", "..", ">>", "<<", "<<-", ":=", "=>",
 };
 
-constexpr Priority UserDefinedPriority = 5;
-constexpr Priority AssignPriority = 1;
-inline const std::map<std::string, Priority> reloadableBuildInInfix{
+// inline const std::set<std::string_view> unaryOnlyMultiCharSymbol{
+//     "<-",
+// };
+
+constexpr Priority USER_DEFINED_PRIORITY = 5;
+constexpr Priority ASSIGN_PRIORITY = 1;
+inline const std::map<std::string, Priority> BUILDIN_INFIX{
     {"*", 100},
     {"/", 100},
     {"%", 100},
@@ -88,36 +86,30 @@ inline const std::map<std::string, Priority> reloadableBuildInInfix{
     {"||", 10},
     {"or", 10},
 
-    {":", UserDefinedPriority},
-    {"`", UserDefinedPriority},
-    {"~", UserDefinedPriority},
-    {"?", UserDefinedPriority},
-    {"->", UserDefinedPriority},
-    {"..", UserDefinedPriority},
-
-    {"=", AssignPriority},
-    {"<<-", AssignPriority},
+    {"=", ASSIGN_PRIORITY},
+    // {":=", ASSIGN_PRIORITY},
 };
 
-inline const std::set<std::string_view> defKeyWords{
+inline const std::set<std::string_view> RESERVED_NOT_RELOADABLE_SYMBOL{
+    "=", "(", ")", "[", "]", "{", "}", ",", ";",
+};
+
+inline const std::set<std::string_view> DEF_KEYWORDS{
     "func",
     "var",
     "type",
 };
 
-inline const std::set<std::string_view> commandKeyWords{
+inline const std::set<std::string_view> COMMAND_KEYWORDS{
     "import",
     "export",
     "extern",
 };
 
-inline const std::set<std::string_view> keyWords{
+// "infix", "as" are not keywords
+inline const std::set<std::string_view> KEYWORDS{
     "if", "else", "until", "func",     "var",    "type",   "struct", "class", "dynamic", "extern", "return", "and",
-    "or", "not",  "xor",   "continue", "import", "export", "while",  "for",   "const",   "auto",   "as",
-};
-
-inline const std::set<std::string_view> lambdaKeyWords{
-    "func",
+    "or", "not",  "xor",   "continue", "import", "export", "while",  "for",   "const",   "auto",   "match",
 };
 
 } // namespace rulejit

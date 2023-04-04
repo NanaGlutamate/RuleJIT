@@ -26,7 +26,7 @@ namespace rulejit{
  * 
  * @param v CSValuMap need to be printed
  */
-void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
+inline void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
     using namespace std;
     cout << "{";
     bool start = false;
