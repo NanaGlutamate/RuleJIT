@@ -15,6 +15,10 @@
 
 #include <fstream>
 #include <list>
+#ifdef __RULEJIT_PARALLEL_ENGINE
+#include <algorithm>
+#include <execution>
+#endif // __RULEJIT_PARALLEL_ENGINE
 
 #include "ast/context.hpp"
 #include "backend/cq/cqinterpreter.hpp"
@@ -98,9 +102,19 @@ struct RuleSetEngine {
         preprocess.handler.writeBack();
         preprocess.interpreter.reset();
 
+#ifdef __RULEJIT_PARALLEL_ENGINE
+        std::foreach(
+            std::execution::par_unseq, 
+            ruleset.subRuleSets.begin(), 
+            ruleset.subRuleSets.end(), 
+            [](auto& s){s.subruleset | s.interpreter;}
+        );
+#else // __RULEJIT_PARALLEL_ENGINE
         for (auto &&s : ruleset.subRuleSets) {
             s.subruleset | s.interpreter;
         }
+#endif // __RULEJIT_PARALLEL_ENGINE
+
         for (auto &&s : ruleset.subRuleSets) {
             s.handler.writeBack();
             s.interpreter.reset();

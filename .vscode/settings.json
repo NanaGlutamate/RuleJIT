@@ -186,6 +186,7 @@
         "unordered_set": "cpp",
         "codecvt": "cpp",
         "filesystem": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "execution": "cpp"
     }
 }

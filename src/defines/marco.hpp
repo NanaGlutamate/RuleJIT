@@ -20,5 +20,6 @@
 // #define __RULEJIT_INTERPRETER_DEBUG
 
 // #define __RULEJIT_SOA_VIRTUAL
+// #define __RULEJIT_PARALLEL_ENGINE
 
 // #define __DISABLE_ASSERT
