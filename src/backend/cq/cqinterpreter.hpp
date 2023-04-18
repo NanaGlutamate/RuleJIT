@@ -182,9 +182,6 @@ struct CQInterpreter : public ASTVisitor {
             }
             auto &callee = f->second;
             std::vector<std::map<std::string, rulejit::cq::CQInterpreter::Value>> frame{{}};
-            my_assert(callee->params.size() == v.params.size(),
-                      std::format("\"{}\" only accept {} params, but {} was given", funcName, callee->params.size(),
-                                  v.params.size()));
             for (size_t i = 0; i < callee->params.size(); i++) {
                 auto &param = callee->params[i];
                 auto &arg = v.params[i];
@@ -250,6 +247,7 @@ struct CQInterpreter : public ASTVisitor {
             returned.type = Value::EMPTY;
         } else if (auto it = normalBinOp.find(v.op); it != normalBinOp.end()) {
             v.lhs->accept(this);
+            // TODO: compare between complex object
             if (v.op == "==" && returned.type == Value::TOKEN && handler.isString(returned.token)) {
                 auto tmp = returned.token;
                 v.rhs->accept(this);
@@ -257,8 +255,7 @@ struct CQInterpreter : public ASTVisitor {
                     setError("can't compare string with non-string");
                 }
                 returned.type = Value::VALUE;
-                // TODO: compare between taked string and normal input string
-                returned.value = tmp == returned.token;
+                returned.value = handler.stringComp(tmp, returned.token);
                 return;
             }
             getReturnedValue();

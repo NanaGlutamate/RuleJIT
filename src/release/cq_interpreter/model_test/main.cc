@@ -56,8 +56,8 @@ int main() {
     auto create_obj_ = (auto(*)()->CSModelObject*)GetProcAddress(hmodule, "CreateModelObject");
     auto destroy_obj_ = (auto(*)(void*, bool)->void)GetProcAddress(hmodule, "DestroyMemory");
 #else // _WIN32
-    auto create_obj_ = (CreateModelObjectFun)dlsym(hmodule, "CreateModelObject");
-    auto destroy_obj_ = (DestroyMemoryFun)dlsym(hmodule, "DestroyMemory");
+    auto create_obj_ = (auto(*)()->CSModelObject*)dlsym(hmodule, "CreateModelObject");
+    auto destroy_obj_ = (auto(*)(void*, bool)->void)dlsym(hmodule, "DestroyMemory");
 #endif // _WIN32
     if (!create_obj_ || !destroy_obj_) {
 #ifdef _WIN32
@@ -124,23 +124,23 @@ int main() {
     auto tmp = CSValueMap{
         {"A_output",
          CSValueMap{
-             {"Longitude", double(0)},
-             {"Latitude", double(10)},
-             {"Altitude", double(500)},
-             {"Speed", double(300)},
-             {"Roll", double(0)},
-             {"Pitch", double(0)},
-             {"Yaw", double(0)},
+             {"Longitude", double(246.12477477168511)},
+             {"Latitude", double(84.044066498026964)},
+             {"Altitude", double(9999.8603515625000)},
+             {"Speed", double(240)},
+             {"Roll", double(0-0.00052141430312255992)},
+             {"Pitch", double(0.40654809018419047)},
+             {"Yaw", double(8.7693997795885350e-6)},
          }},
         {"T_output",
          CSValueMap{
-             {"Longitude", double(0)},
-             {"Latitude", double(12)},
-             {"Altitude", double(450)},
-             {"Speed", double(350)},
-             {"Roll", double(0)},
-             {"Pitch", double(0)},
-             {"Yaw", double(0)},
+             {"Longitude", double(246.12477477168511)},
+             {"Latitude", double(84.044066498026964)},
+             {"Altitude", double(9999.8603515625000)},
+             {"Speed", double(240)},
+             {"Roll", double(-0.00052141430312255992)},
+             {"Pitch", double(0.40654809018419047)},
+             {"Yaw", double(8.7693997795885350e-06)},
          }},
         {"radar", bool(false)},
         {"missile", bool(false)},

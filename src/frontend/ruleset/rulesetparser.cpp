@@ -129,8 +129,9 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     // collect input/cache/output vars, and if element <Param> has sub element
     // named "InitValue", add assignment to initOriginal
     std::string initOriginal = "{";
-    // when has sub element named "Value", add assignment to preprocessOriginal
-    std::string preprocessOriginal = "{";
+    // when has sub element <Value>, add assignment to preprocessOriginal
+    // for each <Value>, create a single subruleset to execute to avoid data-race
+    std::vector<std::string> preprocessOriginal;
 
     auto load = [&](const std::string &nodeName, std::vector<std::string> &target) {
         for (auto ele = meta->first_node(nodeName.data())->first_node("Param"); ele; ele = ele->next_sibling("Param")) {
@@ -143,8 +144,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
             if (auto p = ele->first_node("Value"); p) {
                 // if contains <Value> node, add assignment to preprocessOriginal
-                preprocessOriginal += std::string(ele->first_attribute("name")->value()) + "={" +
-                                      p->first_node("Expression")->value() + "};";
+                preprocessOriginal.emplace_back(std::string(ele->first_attribute("name")->value()) + "={" +
+                                                p->first_node("Expression")->value() + "};");
             }
             if (auto p = ele->first_node("InitValue"); p) {
                 // TODO: add expression support?
@@ -172,11 +173,12 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     load("Outputs", data.outputVar);
 
     initOriginal += "}";
-    preprocessOriginal += "}";
     // parse initOriginal, get returned real function name
     ret.preDefines = (typeOriginal + "\n" + preDefines + "\n" + initOriginal) | lexer | parser | semantic;
     // parse preprocessOriginal, get returned real function name
-    ret.preprocess = preprocessOriginal | lexer | parser | semantic;
+    for (auto &&o : preprocessOriginal) {
+        ret.preprocess.emplace_back(o | lexer | parser | semantic);
+    }
 
     // generate subruleset defs
     size_t id = 0;

@@ -36,9 +36,6 @@ using namespace rulejit::cppgen;
  */
 std::string CppStyleType(const TypeInfo &type) {
     // only support vector and base type
-    if (type == RealType) {
-        return "double";
-    }
     if (type == NoInstanceType) {
         return "void";
     }
@@ -122,24 +119,34 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
 
     // discard statements in preDefines
     // TODO: execute preDefines once(in RuleSet::Init()) to handle init value?
-    auto [preDefines, pre, subRuleSets] = RuleSetParser::readSource(srcXML, context, data);
+    auto [preDefines, preProcess, subRuleSets] = RuleSetParser::readSource(srcXML, context, data);
 
-    std::set<std::string> notGenerate{preDefines, pre};
+    std::set<std::string> notGenerate{preProcess.begin(), preProcess.end()};
+    notGenerate.emplace(preDefines);
 
     // collect subruleset defs
     std::string subs;
     size_t id = 0;
+    for (auto astName : preProcess) {
+        notGenerate.insert(astName);
+        auto &ast = context.global.realFuncDefinition[astName]->returnValue;
+        subs += std::format(subRulesetDef, id++, ast | codegen);
+    }
+    size_t preID = id;
     for (auto astName : subRuleSets) {
         notGenerate.insert(astName);
         auto &ast = context.global.realFuncDefinition[astName]->returnValue;
         subs += std::format(subRulesetDef, id++, ast | codegen);
     }
-    std::string subcall, subwrite;
-    for (size_t i = 0; i < id; i++) {
+    std::string precall, prewrite, subcall, subwrite;
+    for (size_t i = 0; i < preID; i++) {
+        precall += std::format(subRulesetCall, i);
+        prewrite += std::format(subRulesetWrite, i);
+    }
+    for (size_t i = preID; i < id; i++) {
         subcall += std::format(subRulesetCall, i);
         subwrite += std::format(subRulesetWrite, i);
     }
-    std::string preprocess = context.global.realFuncDefinition[pre]->returnValue | codegen;
 
     // collect typedefs
     std::string typedefs;
@@ -230,7 +237,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
 
     // generate ruleset.hpp
     std::ofstream rulesetFile(outputPath + prefix + "ruleset.hpp");
-    rulesetFile << std::format(rulesetHpp, namespaceName, prefix, subcall, subwrite, subs, "", preprocess);
+    rulesetFile << std::format(rulesetHpp, namespaceName, prefix, subcall, subwrite, subs, "", precall, prewrite);
 
     // generate typedef.hpp
     std::ofstream typeDefFile(outputPath + prefix + "typedef.hpp");

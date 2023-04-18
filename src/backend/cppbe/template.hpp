@@ -177,7 +177,7 @@ inline {0} {1}({2}) {{
 }}
 )";
 
-// namespace, prefix, subrulesetcall, subrulesetwrite, subrulesetdef, inits, preprocess
+// namespace, prefix, subrulesetcall, subrulesetwrite, subrulesetdef, inits, precall, prewrite
 inline constexpr auto rulesetHpp = R"(#pragma once
 
 #include <vector>
@@ -208,7 +208,8 @@ struct RuleSet{{
         auto &_out = out;
         auto _base = 0;
         auto loadCache = [](auto x, auto y, auto z){{}};
-        {6};
+{6}
+{7}
 {2}
 {3}        out_map = out.ToValueMap();
     }}

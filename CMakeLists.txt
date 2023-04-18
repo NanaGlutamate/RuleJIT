@@ -31,6 +31,12 @@ if(MSVC)
   string(APPEND CMAKE_CXX_FLAGS " /permissive- /Zc:__cplusplus ")
 endif()
 
+if(MSVC)
+  string(APPEND CMAKE_CXX_FLAGS " /MT ")
+else()
+  message(FATAL_ERROR "Only MSVC is supported")
+endif()
+
 add_subdirectory(extern)
 add_subdirectory(src)
 

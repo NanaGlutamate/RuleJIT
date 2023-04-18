@@ -58,7 +58,7 @@ struct RuleSet {
  * @brief Structure for rule set engine.
  */
 struct RuleSetEngine {
-    RuleSetEngine() : dataStorage(), ruleset(), context(), preprocess(context, dataStorage) {}
+    RuleSetEngine() : dataStorage(), ruleset(), context(), preprocess() {}
     RuleSetEngine(const RuleSetEngine &) = delete;
     RuleSetEngine(RuleSetEngine &&) = delete;
     RuleSetEngine &operator=(const RuleSetEngine &) = delete;
@@ -98,9 +98,22 @@ struct RuleSetEngine {
      * @return void.
      */
     void tick() {
-        preprocess.subruleset | preprocess.interpreter;
-        preprocess.handler.writeBack();
-        preprocess.interpreter.reset();
+#ifdef __RULEJIT_PARALLEL_ENGINE
+        std::foreach(
+            std::execution::par_unseq, 
+            preprocess.subRuleSets.begin(), 
+            preprocess.subRuleSets.end(), 
+            [](auto& s){s.subruleset | s.interpreter;}
+        );
+#else // __RULEJIT_PARALLEL_ENGINE
+        for (auto &&s : preprocess.subRuleSets) {
+            s.subruleset | s.interpreter;
+        }
+#endif // __RULEJIT_PARALLEL_ENGINE
+        for (auto &&s : preprocess.subRuleSets) {
+            s.handler.writeBack();
+            s.interpreter.reset();
+        }
 
 #ifdef __RULEJIT_PARALLEL_ENGINE
         std::foreach(
@@ -114,7 +127,6 @@ struct RuleSetEngine {
             s.subruleset | s.interpreter;
         }
 #endif // __RULEJIT_PARALLEL_ENGINE
-
         for (auto &&s : ruleset.subRuleSets) {
             s.handler.writeBack();
             s.interpreter.reset();
@@ -144,7 +156,7 @@ struct RuleSetEngine {
     /// @brief context
     ContextStack context;
     /// @brief pre-process subruleset, which will called tick() and writeBack() before all subruleset
-    SubRuleSet preprocess;
+    RuleSet preprocess;
 };
 
 } // namespace rulejit::cq

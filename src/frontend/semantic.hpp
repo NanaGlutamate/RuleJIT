@@ -129,6 +129,8 @@ struct ExpressionSemantic : public ASTVisitor {
             v.type = std::make_unique<TypeInfo>(type);
             processType(*v.type);
         } else if (!needChange) {
+            // find -> defined in scope
+            // needChange -> is function
             return setError(std::format("Variable \"{}\" not defined", v.name));
         }
     }

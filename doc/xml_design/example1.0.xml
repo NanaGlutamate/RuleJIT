@@ -23,6 +23,9 @@
             <Param name="Output1" type="float64" />
         </Outputs>
         <Caches>
+            <Param name="Cache1" type="float64">
+                <Value><Expression>Input1[0]+Input2</Expression></Value>
+            </Param>
         </Caches>
     </MetaInfo>
     <SubRuleSets>
@@ -36,7 +39,7 @@
                         <Assignment>
                             <Target>Output1</Target>
                             <Value>
-                                <Expression>sin(Input1[Input2])</Expression>
+                                <Expression>sin(Input1[Input2])+Cache1</Expression>
                             </Value>
                         </Assignment>
                     </Consequence>

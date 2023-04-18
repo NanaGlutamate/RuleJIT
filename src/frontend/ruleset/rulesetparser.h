@@ -47,7 +47,7 @@ struct RuleSetParseInfo {
     /// @brief real function name of predefines
     std::string preDefines;
     /// @brief real function name of preprocess
-    std::string preprocess;
+    std::vector<std::string> preprocess;
     /// @brief real function names of subrulesets
     std::vector<std::string> subRuleSets;
 };
