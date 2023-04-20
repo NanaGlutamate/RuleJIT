@@ -254,6 +254,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
     } else {
         return setError("unexcepted token: \"" + lexer->topCopy() + "\" in expression");
     }
+    
     while (lexer->tokenType() == TokenType::SYM) {
         // FuncCall | MemberAccess
         if (lexer->top() == ".") {

@@ -108,6 +108,8 @@ struct ContextStack {
     /// @brief scope stack
     std::vector<ContextFrame> scope;
 
+    std::string getRealFunctionNameOfNormalFunctionWithHint(const std::string &name, const TypeInfo &hint){}
+
     /**
      * @brief get real function type
      *
@@ -121,12 +123,14 @@ struct ContextStack {
             error("cannot find function definition: " + name);
         }
     }
+
     /**
      * @brief get scope stack size
      * 
      * @return size_t 
      */
     size_t size() const { return scope.size(); }
+
     /**
      * @brief clear all context
      * 
@@ -136,12 +140,14 @@ struct ContextStack {
         global = {};
         scope = {{}};
     }
+
     /**
      * @brief get last scope
      * 
      * @return ContextFrame& 
      */
     ContextFrame &top() { return scope.back(); }
+
     /**
      * @brief generate unique name
      * 
@@ -153,6 +159,7 @@ struct ContextStack {
         std::string tmp = prefix + "_" + std::to_string(counter++) + "_" + suffix;
         return tmp;
     }
+
     /**
      * @brief push a scope to scope stack
      * 
@@ -165,6 +172,7 @@ struct ContextStack {
         // scope.back().scopeID = tmp;
         return top();
     }
+
     /**
      * @brief pop the last scope from scope stack
      * 

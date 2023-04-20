@@ -339,8 +339,7 @@ struct VarDefAST : public DefAST {
           varDefType(varDefType) {}
 };
 
-// FUNCDEF := 'func' IDENT '(' (IDENT? TYPE (',' IDENT? TYPE)*)? ')' ('->' TYPE)? ':' EXPR | 'extern' IDENT '(' (IDENT?
-// TYPE (',' IDENT? TYPE)*)? ')' ('->' TYPE)?
+// FUNCDEF := 'func' IDENT '(' (IDENT TYPE (',' IDENT TYPE)*)? ')' ('->' TYPE)? EXPR
 // TODO: return lambda
 /**
  * @brief indicates function defines
@@ -397,6 +396,12 @@ struct SymbolDefAST : public DefAST {
     template <typename S>
     SymbolDefAST(S &&name, SymbolCommandType symbolCommandType, std::unique_ptr<TypeInfo> definedType)
         : DefAST(std::forward<S>(name)), symbolCommandType(symbolCommandType), definedType(std::move(definedType)) {}
+};
+
+// TODO: template support, will not execute or generate code
+// TEMPLATE := 'func' '<' IDENT (',' IDENT)* '>' 
+struct TemplateFunctionDefAST : public FunctionDefAST {
+    // ACCEPT_FUNCTION;
 };
 
 } // namespace rulejit

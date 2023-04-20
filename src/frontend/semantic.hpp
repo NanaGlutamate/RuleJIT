@@ -47,6 +47,7 @@ constexpr inline auto reservedPrefix = "__buildin";
  * 2. TODO: name unnamed complex type(in vardef, typedef, literal and funcdef)
  * 3. scope process
  * 4. TODO: capture analysis
+ * 5. TODO: make extern func consistent with normal func def(add real_func_name directly?)
  *
  */
 struct ExpressionSemantic : public ASTVisitor {

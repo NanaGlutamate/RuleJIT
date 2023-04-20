@@ -41,7 +41,7 @@
             <xs:element name="Value" minOccurs="0" maxOccurs="1">
                 <xs:complexType>
                     <xs:sequence>
-                        <xs:element name="Expression" type="Expression" maxOccurs="unbounded"/>
+                        <xs:element name="Expression" type="Expression"/>
                     </xs:sequence>
                 </xs:complexType>
             </xs:element>
@@ -96,7 +96,7 @@
                                     <xs:element name="Value">
                                         <xs:complexType>
                                             <xs:sequence>
-                                                <xs:element name="Expression" type="Expression" maxOccurs="unbounded"/>
+                                                <xs:element name="Expression" type="Expression"/>
                                             </xs:sequence>
                                         </xs:complexType>
                                     </xs:element>
