@@ -308,25 +308,22 @@ struct ExpressionSemantic : public ASTVisitor {
                                             v.rhs->type->toString()));
             }
         }
-        if (auto overLoad = globalInfo().symbolicFuncDef.find(v.op); overLoad != globalInfo().symbolicFuncDef.end()) {
-            auto varType = std::vector<TypeInfo>{*(v.lhs->type), *(v.rhs->type)};
-            if (auto it = overLoad->second.find(varType); it != overLoad->second.end()) {
-                if (buildIn) {
-                    return setError(std::format("Cannot overload operator \"{}\" bwtween \"{}\" and \"{}\"", v.op,
-                                                v.lhs->type->toString(), v.rhs->type->toString()));
-                }
-                std::vector<std::unique_ptr<ExprAST>> tmp;
-                tmp.push_back(std::move(v.lhs));
-                tmp.push_back(std::move(v.rhs));
-                auto RealName = it->second;
-                funcDependencyRealName.insert(RealName);
-                auto &funcType = c.getRealFunctionType(RealName);
-                needChange = std::make_unique<FunctionCallExprAST>(
-                    std::make_unique<TypeInfo>(funcType.getReturnedType()),
-                    std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(funcType), RealName), std::move(tmp));
-                processType(*needChange->type);
-                return;
+        
+        auto varType = std::vector<TypeInfo>{*(v.lhs->type), *(v.rhs->type)};
+        if (auto [find, realName] = seekSymbolicFunc(v.op, varType); find) {
+            if (buildIn) {
+                return setError(std::format("Cannot overload operator \"{}\" bwtween \"{}\" and \"{}\"", v.op,
+                                            v.lhs->type->toString(), v.rhs->type->toString()));
             }
+            std::vector<std::unique_ptr<ExprAST>> tmp;
+            tmp.push_back(std::move(v.lhs));
+            tmp.push_back(std::move(v.rhs));
+            auto &funcType = c.getRealFunctionType(realName);
+            needChange = std::make_unique<FunctionCallExprAST>(
+                std::make_unique<TypeInfo>(funcType.getReturnedType()),
+                std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(funcType), realName), std::move(tmp));
+            processType(*needChange->type);
+            return;
         }
         if (!buildIn) {
             return setError(std::format("Operator \"{}\" between \"{}\" and \"{}\" not defined", v.op,
@@ -656,6 +653,10 @@ struct ExpressionSemantic : public ASTVisitor {
             globalInfo().templateMemberFuncDef[name].push_back(
                 {{}, std::move(v.tparams), unique_cast<FunctionDefAST>(v.def)});
             break;
+        case FunctionDefAST::FuncDefType::SYMBOLIC:
+            globalInfo().templateSymbolicFuncDef[name].push_back(
+                {{}, std::move(v.tparams), unique_cast<FunctionDefAST>(v.def)});
+            break;
         default:
             setError("Template not supported");
         }
@@ -868,8 +869,6 @@ struct ExpressionSemantic : public ASTVisitor {
         return false;
     }
 
-    // TODO: seek reloadable func
-
     /**
      * @brief seek member function with given name and param type
      *
@@ -877,12 +876,43 @@ struct ExpressionSemantic : public ASTVisitor {
      * and add real function name to funcDependencyRealName
      *
      * @param name name of member function
-     * @param paramType
-     * @return std::tuple<bool, std::string>
+     * @param paramType parameter types
+     * @return std::tuple<bool, std::string> (is_find, realname)
      */
     std::tuple<bool, std::string> seekMemberFunc(const std::string &name, const std::vector<TypeInfo> &paramType) {
-        if (auto memberFuncIt = globalInfo().memberFuncDef.find(name);
-            memberFuncIt != globalInfo().memberFuncDef.end()) {
+        return seekReloadableFunc(name, paramType, &ContextGlobal::memberFuncDef, &ContextGlobal::templateMemberFuncDef);
+    }
+
+    /**
+     * @brief seeksymbolic function with given name and param type
+     *
+     * @attention this function will automatically instantiate template,
+     * and add real function name to funcDependencyRealName
+     *
+     * @param name name of symbolic function
+     * @param paramType parameter types
+     * @return std::tuple<bool, std::string> (is_find, realname)
+     */
+    std::tuple<bool, std::string> seekSymbolicFunc(const std::string &name, const std::vector<TypeInfo> &paramType) {
+        return seekReloadableFunc(name, paramType, &ContextGlobal::symbolicFuncDef, &ContextGlobal::templateSymbolicFuncDef);
+    }
+
+    /**
+     * @brief inner function for seek reloadable function
+     * 
+     * @tparam _Original storage of explicit defined function
+     * @tparam _Template storage of template function
+     * @param name function name
+     * @param paramType parameter types
+     * @param o storage of explicit defined function
+     * @param t storage of template function
+     * @return std::tuple<bool, std::string> (is_find, realname)
+     */
+    template <typename _Original, typename _Template>
+    std::tuple<bool, std::string> seekReloadableFunc(const std::string &name, const std::vector<TypeInfo> &paramType,
+                                                     _Original &&o, _Template &&t) {
+        if (auto memberFuncIt = (globalInfo().*o).find(name);
+            memberFuncIt != (globalInfo().*o).end()) {
             auto &tmp = memberFuncIt->second;
             if (auto realFuncNameIt = tmp.find(paramType); realFuncNameIt != tmp.end()) {
                 funcDependencyRealName.insert(realFuncNameIt->second);
@@ -890,8 +920,8 @@ struct ExpressionSemantic : public ASTVisitor {
             }
         }
         // no direct define of memberfunc, try template
-        if (auto templateMemberFuncIt = globalInfo().templateMemberFuncDef.find(name);
-            templateMemberFuncIt != globalInfo().templateMemberFuncDef.end()) {
+        if (auto templateMemberFuncIt = (globalInfo().*t).find(name);
+            templateMemberFuncIt != (globalInfo().*t).end()) {
             for (auto &tmp : templateMemberFuncIt->second) {
                 if (auto realFuncNameIt = tmp.instantiationRealName.find(paramType);
                     realFuncNameIt != tmp.instantiationRealName.end()) {
