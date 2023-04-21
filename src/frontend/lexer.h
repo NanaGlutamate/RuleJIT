@@ -89,6 +89,7 @@ struct ExpressionLexer {
         START = 1,
         IGNORE_BREAK = 2,
         UNARY_OP = 4,
+        NO_MULTICHARSYM = 8,
     };
 
     using Ele = char;

@@ -161,7 +161,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     // collect typedefs in XML
     for (auto &&[name, members] : data.typeDefines) {
         std::string member, serialize, deserialize;
-        for (auto [token, _type] : members) {
+        for (auto& [token, _type] : members) {
             auto type = _type;
             std::string pre, suf;
             while (type.back() == ']') {
@@ -217,7 +217,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
             params.erase(params.size() - 2, 2);
         }
         funcDefs +=
-            std::format(funcDef, CppStyleType(func->funcType->getReturnedType()), name, params,
+            std::format(funcDef, CppStyleType(func->funcType->getReturnedType()), codegen.toLegalName(name), params,
                         (func->funcType->isReturnedFunctionType() ? "return" : "") + (func->returnValue | codegen));
     }
     // collect extern func type

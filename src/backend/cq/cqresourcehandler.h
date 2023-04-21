@@ -95,8 +95,7 @@ struct DataStore {
     std::string arrayElementType(const std::string &s) {
         my_assert(isArray(s));
         std::string tmp = s;
-        tmp.pop_back();
-        tmp.pop_back();
+        tmp.erase(tmp.end() - 2, tmp.end());
         return tmp;
     }
 

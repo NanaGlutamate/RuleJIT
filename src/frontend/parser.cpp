@@ -53,6 +53,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseExpr(bool ignoreBreak, bool allo
         if (ignoreBreak) {
             eatBreak();
         }
+        // TODO: op == ":="
         ret = parseBinOpRHS(0, std::move(tmp), ignoreBreak);
     }
     AST2place[ret.get()] = start;
@@ -254,7 +255,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
     } else {
         return setError("unexcepted token: \"" + lexer->topCopy() + "\" in expression");
     }
-    
+
     while (lexer->tokenType() == TokenType::SYM) {
         // FuncCall | MemberAccess
         if (lexer->top() == ".") {
@@ -356,13 +357,30 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         return std::make_unique<VarDefAST>(indent, std::move(type), parseExpr());
     } else if (lexer->top() == "func") {
         // func def
-        // TODO: operator.
+        // TODO: operator. operator() operator[]
         lexer->pop(IGNORE_BREAK);
 
         std::vector<std::unique_ptr<rulejit::IdentifierExprAST>> params;
         std::string funcName;
         TypeInfo funcType;
         FunctionDefAST::FuncDefType funcDefType;
+
+        std::vector<std::string> tparams;
+        bool isTemplate = false;
+        if (lexer->top() == "<") {
+            isTemplate = true;
+            while (lexer->top() != ">") {
+                lexer->pop(IGNORE_BREAK);
+                if (lexer->tokenType() != TokenType::IDENT) {
+                    return setError("expected ident in template parameter list, found: " + lexer->topCopy());
+                }
+                tparams.push_back(lexer->popCopy());
+                if (lexer->top() != "," && lexer->top() != ">") {
+                    return setError("expected \",\" in template parameter list, found: " + lexer->topCopy());
+                }
+            }
+            lexer->pop(IGNORE_BREAK);
+        }
 
         parseFuncDef(params, funcType, funcName, funcDefType);
 
@@ -380,8 +398,14 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
 
         returnValue = parseExpr();
 
-        return std::make_unique<FunctionDefAST>(std::move(funcName), std::make_unique<TypeInfo>(funcType),
-                                                std::move(params), std::move(returnValue), funcDefType);
+        auto funcDefAST = std::make_unique<FunctionDefAST>(std::move(funcName), std::make_unique<TypeInfo>(funcType),
+                                                           std::move(params), std::move(returnValue), funcDefType);
+
+        if (isTemplate) {
+            return std::make_unique<TemplateDefAST>(std::move(tparams), std::move(funcDefAST));
+        } else {
+            return std::move(funcDefAST);
+        }
     } else if (lexer->top() == "type") {
         // type def
         lexer->pop(IGNORE_BREAK);
@@ -451,7 +475,7 @@ void rulejit::ExpressionParser::parseFuncDef(std::vector<std::unique_ptr<rulejit
             // symbolic (operator overload)
             funcName = lexer->popCopy(IGNORE_BREAK);
             funcDefType = FunctionDefAST::FuncDefType::SYMBOLIC;
-            if (RESERVED_NOT_RELOADABLE_SYMBOL.contains(funcName)) {
+            if (RESERVED_NOT_RELOADABLE_SYMBOL.contains(funcName) || KEYWORDS.contains(funcName)) {
                 setError("unsupport operator overload: " + funcName);
             }
             if (lexer->top() == "infix") {
@@ -464,6 +488,7 @@ void rulejit::ExpressionParser::parseFuncDef(std::vector<std::unique_ptr<rulejit
         eatBreak();
     }
 
+    // TODO: auto infer return type
     // parse returned type
     if (lexer->top() == ":") {
         // returned function
