@@ -95,8 +95,7 @@ struct DataStore {
     std::string arrayElementType(const std::string &s) {
         my_assert(isArray(s));
         std::string tmp = s;
-        tmp.pop_back();
-        tmp.pop_back();
+        tmp.erase(tmp.end() - 2, tmp.end());
         return tmp;
     }
 
@@ -204,9 +203,11 @@ struct ResourceHandler {
     }
 
     /**
-     * @brief read input, cache or output value into the buffer;
-     * if the value already in the buffer, return the index of the value;
+     * @brief read input, cache or output value into the buffer and return index of the value;
+     * if the value already in the buffer, directly return the index;
      * if the value not a input, cache or output value, throw an exception
+     * 
+     * @exception "unknown token: " + [name of var]
      *
      * @param s variable name
      * @return size_t token which referring to the value

@@ -77,15 +77,31 @@ struct TypeInfo {
     // type | where({"T", "int"}, ...);
     // friend std::map<std::string, TypeInfo> where(){}
 
+    struct TemplateParam {
+        std::map<std::string, TypeInfo> data;
+    };
+
+    /**
+     * @brief tool function to create template parameter table.
+     * used like 'type | where({"T", "int"}, ...);' or 'type | where(matched);'
+     *
+     * @tparam Args
+     * @param args
+     * @return TemplateParam
+     */
+    template <typename... Args> static TemplateParam where(Args... args) {
+        return {std::map<std::string, TypeInfo>{std::forward<Args>(args)...}};
+    }
+
     /**
      * @brief operator| used in template specialization
      *
      * @param table template param table
      * @return TypeInfo specialized type
      */
-    TypeInfo operator|(const std::map<std::string, TypeInfo> &table) const {
+    [[nodiscard]] TypeInfo operator|(const TemplateParam &table) const {
         if (isBaseType()) {
-            if (auto it = table.find(ident); it != table.end()) {
+            if (auto it = table.data.find(ident); it != table.data.end()) {
                 return it->second;
             }
         }
@@ -104,12 +120,12 @@ struct TypeInfo {
      *
      * @param tar TypeInfo need match
      * @param templateParam template args
-     * @param[out] matched empty map to receice match result. 
-     * 
+     * @param[out] matched empty map to receice match result.
+     *
      * @return bool, true if matched
      */
     bool match(const TypeInfo &tar, const std::set<std::string> &templateParam,
-               std::map<std::string, TypeInfo>& matched) const {
+               std::map<std::string, TypeInfo> &matched) const {
         // ATTENTION: complex type match are not allowed
         my_assert(ident != "struct" && ident != "class" && ident != "dynamic" && tokens.size() == 0);
         if (isBaseType()) {
@@ -127,14 +143,14 @@ struct TypeInfo {
             }
         }
         // this is not template param, try to completely match tar.
-        if(ident != tar.ident || subTypes.size() != tar.subTypes.size()){
+        if (ident != tar.ident || subTypes.size() != tar.subTypes.size()) {
             return false;
         }
         // match subTypes
-        for(auto ind : std::views::iota(size_t(0), subTypes.size())){
-            auto& sub = subTypes[ind];
-            auto& tarSub = tar.subTypes[ind];
-            if(!sub.match(tarSub, templateParam, matched)){
+        for (auto ind : std::views::iota(size_t(0), subTypes.size())) {
+            auto &sub = subTypes[ind];
+            auto &tarSub = tar.subTypes[ind];
+            if (!sub.match(tarSub, templateParam, matched)) {
                 return false;
             }
         }
@@ -144,12 +160,14 @@ struct TypeInfo {
     /**
      * @brief template match without templateParam constraint
      *
+     * @attention user need to check if matched contains Type already defined
+     *
      * @param tar TypeInfo need match
-     * @param[out] matched empty map to receice match result. 
-     * 
+     * @param[out] matched empty map to receice match result.
+     *
      * @return bool, true if matched
      */
-    bool freeMatch(const TypeInfo &tar, std::map<std::string, TypeInfo>& matched) const {
+    [[deprecated]] bool freeMatch(const TypeInfo &tar, std::map<std::string, TypeInfo> &matched) const {
         // ATTENTION: complex type match are not allowed
         my_assert(ident != "struct" && ident != "class" && ident != "dynamic" && tokens.size() == 0);
         if (isBaseType()) {
@@ -167,14 +185,14 @@ struct TypeInfo {
             }
         }
         // this is not template param, try to completely match tar.
-        if(ident != tar.ident || subTypes.size() != tar.subTypes.size()){
+        if (ident != tar.ident || subTypes.size() != tar.subTypes.size()) {
             return false;
         }
         // match subTypes
-        for(auto ind : std::views::iota(size_t(0), subTypes.size())){
-            auto& sub = subTypes[ind];
-            auto& tarSub = tar.subTypes[ind];
-            if(!sub.freeMatch(tarSub, matched)){
+        for (auto ind : std::views::iota(size_t(0), subTypes.size())) {
+            auto &sub = subTypes[ind];
+            auto &tarSub = tar.subTypes[ind];
+            if (!sub.freeMatch(tarSub, matched)) {
                 return false;
             }
         }
@@ -392,7 +410,10 @@ struct TypeInfo {
      *
      * @return size_t count of arguments
      */
-    size_t getParamCount() const { return subTypes.size() - 1; }
+    size_t getParamCount() const {
+        my_assert(isFunctionType(), "only function type has arg");
+        return subTypes.size() - 1;
+    }
 
     /**
      * @brief get returned type of this function type
@@ -557,7 +578,7 @@ struct TypeParser {
                 if (e.top() == ",") {
                     e.pop(ignore_break);
                 } else if (e.top() != ")") {
-                    return setError("mismatch \"(\" in func type");
+                    return setError("expect \"(\" in func type, found: " + e.topCopy());
                 }
             }
             e.pop();

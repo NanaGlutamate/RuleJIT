@@ -40,6 +40,23 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         e->accept(&t);
         return std::move(t.returned);
     }
+    /**
+     * @brief generate legal C++ function name
+     * 
+     * @param token original name
+     * @return std::string 
+     */
+    std::string toLegalName(const std::string &token) {
+        std::string tmp = "___buildin_generated_function_";
+        for (auto c : token) {
+            if (isalpha(c) || c == '_') {
+                tmp += c;
+            } else {
+                tmp += "_" + std::to_string((size_t)c);
+            }
+        }
+        return tmp;
+    }
 
   protected:
     VISIT_FUNCTION(IdentifierExprAST) {
@@ -78,7 +95,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     VISIT_FUNCTION(LiteralExprAST) {
         if (v.type->isFunctionType()) {
-            returned += v.value;
+            returned += toLegalName(v.value);
             return;
         }
         returned += "(";
