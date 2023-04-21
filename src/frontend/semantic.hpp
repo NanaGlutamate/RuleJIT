@@ -31,7 +31,6 @@
 #include "defines/language.hpp"
 #include "frontend/parser.h"
 #include "frontend/semantic.hpp"
-#include "frontend/templateins.hpp"
 #include "tools/myassert.hpp"
 #include "tools/pointercast.hpp"
 #include "tools/seterror.hpp"
@@ -120,20 +119,18 @@ struct ExpressionSemantic : public ASTVisitor {
         }
         auto [find, type] = c.seekVarDef(v.name);
         if (find) {
-            // normal var
+            // var
             v.type = std::make_unique<TypeInfo>(type);
             processType(*v.type);
-        } else if (auto it = globalInfo().funcDef.find(v.name); it != globalInfo().funcDef.end()) {
-            // func act as const global var
-            // normal func
-            auto realName = it->second;
-            funcDependencyRealName.insert(realName);
-            needChange =
-                std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(c.getRealFunctionType(realName)), realName);
+        } else if (auto [findc, literal] = c.seekConstDef(v.name); findc) {
+            if (std::get<0>(literal).isFunctionType()) {
+                // func act as const global
+                funcDependencyRealName.insert(std::get<1>(literal));
+            }
+            needChange = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(std::get<0>(literal)),
+                                                          std::get<1>(literal));
             processType(*needChange->type);
         } else {
-            // find -> defined in scope
-            // needChange -> is function
             return setError(std::format("Variable \"{}\" not defined", v.name));
         }
     }
@@ -192,29 +189,19 @@ struct ExpressionSemantic : public ASTVisitor {
         if (auto [p, p1] = getConstStringMemberAccessInfo(v.functionIdent.get()); p && p1) {
             // maybe a member function call
             callAccept(p->baseVar);
-            bool isMember = canAccess(*p);
-            auto memberFuncIt = globalInfo().memberFuncDef.find(p1->value);
-            bool isMemberFunc = memberFuncIt != globalInfo().memberFuncDef.end();
+
             std::vector<TypeInfo> paramType{*(p->baseVar->type)};
             for (auto &arg : v.params) {
                 paramType.push_back(*(arg->type));
             }
+            bool isMember = canAccess(*p);
+            auto [isMemberFunc, realFuncName] = seekMemberFunc(p1->value, paramType);
             if (!isMember && isMemberFunc) {
-                auto funcNameIt = memberFuncIt->second.find(paramType);
-                if (funcNameIt != memberFuncIt->second.end()) {
-                    // exactly member func, transform
-                    v.params.insert(v.params.begin(), unique_cast<ExprAST>(p->baseVar));
-                    auto realName = funcNameIt->second;
-                    funcDependencyRealName.insert(realName);
-                    v.functionIdent = std::make_unique<LiteralExprAST>(
-                        std::make_unique<TypeInfo>(c.getRealFunctionType(realName)), realName);
-                    // after change, continue to process v, not return
-                } else {
-                    std::string paramTypeString =
-                        paramType | std::ranges::views::transform([](auto &type) { return type.toString(); }) |
-                        mystr::join(", ");
-                    return setError(std::format("No Member function with param type: ({})", paramTypeString));
-                }
+                // exactly member func, transform
+                v.params.insert(v.params.begin(), unique_cast<ExprAST>(p->baseVar));
+                v.functionIdent = std::make_unique<LiteralExprAST>(
+                    std::make_unique<TypeInfo>(c.getRealFunctionType(realFuncName)), realFuncName);
+                // after change, continue to process v, not return
             } else if (isMember && isMemberFunc) {
                 return setError(std::format("Member and member function have same name: {}::{}",
                                             p->baseVar->type->toString(), p1->value));
@@ -225,6 +212,7 @@ struct ExpressionSemantic : public ASTVisitor {
                         {"length", make_type("func([]T):f64")},
                         {"resize", make_type("func([]T, f64)")},
                         {"push", make_type("func([]T, T)")},
+                        // pop, back
                     };
                     std::map<std::string, TypeInfo> spec{{"T", p->baseVar->type->getElementType()}};
                     if (auto it = arrayMemberFunc.find(p1->value); it != arrayMemberFunc.end()) {
@@ -234,7 +222,44 @@ struct ExpressionSemantic : public ASTVisitor {
                             std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(specType), p1->value);
                     } else {
                         return setError(
-                            std::format("No Member function: {}::{}", p->baseVar->type->toString(), p1->value));
+                            std::format("No member function: {}::{}", p->baseVar->type->toString(), p1->value));
+                    }
+                } else {
+                    setError(
+                        std::format("No member or member function: {}::{}", p->baseVar->type->toString(), p1->value));
+                }
+            }
+        }
+
+        if (auto p = dynamic_cast<IdentifierExprAST *>(v.functionIdent.get());
+            p && !std::get<0>(c.seekVarDef(p->name)) && !std::get<0>(c.seekConstDef(p->name))) {
+            // template function call
+            if (auto it = globalInfo().templateFuncDef.find(p->name); it != globalInfo().templateFuncDef.end()) {
+                std::vector<TypeInfo> paramType;
+                for (auto &arg : v.params) {
+                    paramType.push_back(*(arg->type));
+                }
+                if (auto insit = it->second.instantiationRealName.find(paramType);
+                    insit != it->second.instantiationRealName.end()) {
+                    v.functionIdent = std::make_unique<LiteralExprAST>(
+                        std::make_unique<TypeInfo>(c.getRealFunctionType(insit->second)), insit->second);
+                } else {
+                    auto [instantiated, matched] = it->second.instantiate(paramType);
+                    if (instantiated) {
+                        auto templateParamList =
+                            it->second.paramNames |
+                            std::views::transform([&](const std::string &param) { return matched[param].toString(); }) |
+                            mystr::join(",");
+                        auto name = std::format("<{}>{}", templateParamList, instantiated->name);
+                        auto realName = c.generateUniqueName(reservedPrefix, name);
+                        globalInfo().realFuncDefinition.emplace(realName, std::move(instantiated));
+                        funcDependencyRealName.insert(realName);
+                        it->second.instantiationRealName.emplace(std::move(paramType), std::move(realName));
+                    } else {
+                        setError(std::format("No template function match: {}({})", p->name,
+                                             paramType | std::views::transform([](const TypeInfo &t) {
+                                                 return t.toString();
+                                             }) | mystr::join(", ")));
                     }
                 }
             }
@@ -510,7 +535,7 @@ struct ExpressionSemantic : public ASTVisitor {
         if (globalInfo().typeDef.contains(v.name)) {
             return setError(std::format("Type \"{}\" redefined", v.name));
         }
-        globalInfo().typeDef[v.name] = *(v.definedType);
+        globalInfo().typeDef.emplace(v.name, *(v.definedType));
         needChange = nop();
         return;
     }
@@ -524,15 +549,26 @@ struct ExpressionSemantic : public ASTVisitor {
         } else if (*(v.valueType) == AutoType) {
             v.valueType = std::make_unique<TypeInfo>(*(v.definedValue->type));
         }
-        if (c.top().varDef.contains(v.name)) {
-            return setError(std::format("Var \"{}\" already defined", v.name));
-        }
-        c.top().varDef[v.name] = *(v.valueType);
-        if (c.size() == 1) {
-            needChange = std::make_unique<BinOpExprAST>(
-                std::make_unique<TypeInfo>(NoInstanceType), "=",
-                std::make_unique<IdentifierExprAST>(std::move(v.valueType), v.name), std::move(v.definedValue));
-            processType(*needChange->type);
+        switch (v.varDefType) {
+        case VarDefAST::VarDefType::NORMAL:
+            if (!c.addVarDef(v.name, *(v.valueType))) {
+                return setError(std::format("Var \"{}\" already defined", v.name));
+            }
+            if (c.size() == 1) {
+                needChange = std::make_unique<BinOpExprAST>(
+                    std::make_unique<TypeInfo>(NoInstanceType), "=",
+                    std::make_unique<IdentifierExprAST>(std::move(v.valueType), v.name), std::move(v.definedValue));
+                processType(*needChange->type);
+            }
+            break;
+        case VarDefAST::VarDefType::CONST:
+            if (auto p = dynamic_cast<LiteralExprAST *>(v.definedValue.get()); p == nullptr) {
+                return setError("Const var must be defined as literal");
+            } else if (!c.addConstDef(v.name, *(v.valueType), p->value)) {
+                return setError(std::format("Const \"{}\" already defined", v.name));
+            }
+            needChange = nop();
+            break;
         }
     }
     VISIT_FUNCTION(FunctionDefAST) {
@@ -541,7 +577,7 @@ struct ExpressionSemantic : public ASTVisitor {
             // TODO: named lambda
             return setError("Only allow top-level func def");
         }
-        std::string realFuncName = c.generateUniqueName(std::string(reservedPrefix), v.name);
+        std::string realFuncName = c.generateUniqueName(reservedPrefix, v.name);
         if (v.funcDefType == FunctionDefAST::FuncDefType::SYMBOLIC) {
             if (v.params.size() != 2 && (v.params.size() != 1 || !BUILDIN_UNARY.contains(v.name))) {
                 return setError("Infix function must have 2 params, "
@@ -574,18 +610,15 @@ struct ExpressionSemantic : public ASTVisitor {
                     v.name, std::map<std::vector<TypeInfo>, std::string>{{std::move(tmp), realFuncName}});
             }
         } else if (v.funcDefType == FunctionDefAST::FuncDefType::NORMAL) {
-            if (globalInfo().funcDef.contains(v.name) || globalInfo().templateFuncDef.contains(v.name)) {
-                return setError(std::format("Func name \"{}\" already defined", v.name));
+            if (!c.addConstDef(v.name, *(v.funcType), realFuncName)) {
+                return setError(std::format("Function redefined: \"{}\"", v.name));
             }
-            if (std::get<0>(c.seekVarDef(v.name))) {
-                return setError("Func name cannot same as var name");
-            }
-            globalInfo().funcDef[v.name] = realFuncName;
+            globalInfo().funcDef.emplace(v.name, realFuncName);
         } else {
             // TODO: lambda/named lambda
             return setError("only allow symbolic/member/normal function define");
         }
-        globalInfo().realFuncDefinition[realFuncName] = std::unique_ptr<FunctionDefAST>(&v);
+        globalInfo().realFuncDefinition.emplace(realFuncName, std::unique_ptr<FunctionDefAST>(&v));
         needChange = nop();
         needRelease = true;
     }
@@ -593,20 +626,24 @@ struct ExpressionSemantic : public ASTVisitor {
         if (c.size() != 1 || v.symbolCommandType != SymbolDefAST::SymbolCommandType::EXTERN) {
             return setError("Only allow top-level, extern symbol define");
         }
-        if (globalInfo().funcDef.contains(v.name)) {
-            return setError(std::format("Extern func name \"{}\" already defined as a func", v.name));
+        if (!c.isSymbolUnique(v.name)) {
+            return setError(std::format("Extern func name \"{}\" already defined", v.name));
         }
-        globalInfo().funcDef[v.name] = v.name;
-        globalInfo().externFuncDef[v.name] = *(v.definedType);
+        globalInfo().funcDef.emplace(v.name, v.name);
+        globalInfo().externFuncDef.emplace(v.name, *(v.definedType));
         needChange = nop();
     }
     VISIT_FUNCTION(TemplateDefAST) {
+        if (c.size() != 1) {
+            // TODO: named lambda
+            return setError("Only allow top-level func def");
+        }
         auto p = dynamic_cast<FunctionDefAST *>(v.def.get());
         if (!p) {
-            return setError("Template not supported");
+            return setError("Template type/var not supported");
         }
         auto name = p->name;
-        if (globalInfo().templateFuncDef.contains(name) || globalInfo().funcDef.contains(name)) {
+        if (!c.isSymbolUnique(name)) {
             return setError(std::format("Template function \"{}\" redefined", name));
         }
         switch (p->funcDefType) {
@@ -678,8 +715,8 @@ struct ExpressionSemantic : public ASTVisitor {
         globalInfo().funcDependency.emplace(name, std::move(funcDependencyRealName));
         funcDependencyRealName.clear();
         std::vector<std::unique_ptr<IdentifierExprAST>> params;
-        globalInfo().realFuncDefinition[name] =
-            std::make_unique<FunctionDefAST>(name, std::move(type), std::move(params), std::move(tmp));
+        globalInfo().realFuncDefinition.emplace(
+            name, std::make_unique<FunctionDefAST>(name, std::move(type), std::move(params), std::move(tmp)));
         // only check func when called, assume top-level expr is directly called, so check it
         checkFunction(name);
         return name;
@@ -738,7 +775,7 @@ struct ExpressionSemantic : public ASTVisitor {
         for (auto &&param : func->params) {
             // TODO: var name conflit with func?
             processType(*(param->type));
-            c.top().varDef[param->name] = *(param->type);
+            c.top().varDef.emplace(param->name, *(param->type));
         }
         callAccept(func->returnValue);
         auto &returnedType = func->funcType->getReturnedType();
@@ -750,7 +787,7 @@ struct ExpressionSemantic : public ASTVisitor {
         if (auto it = globalInfo().funcDependency.find(name); it != globalInfo().funcDependency.end()) {
             my_assert(funcDependencyRealName == it->second);
         }
-        globalInfo().funcDependency[name] = std::move(funcDependencyRealName);
+        globalInfo().funcDependency.emplace(name, std::move(funcDependencyRealName));
         funcDependencyRealName.clear();
         checked.insert(name);
         return globalInfo().funcDependency[name];
@@ -805,12 +842,15 @@ struct ExpressionSemantic : public ASTVisitor {
     /**
      * @brief check if expression a assignable l-value
      *
-     * @param v
+     * @attention must call canAccess before call to this function, so that const var
+     * already transfered to literal
+     *
+     * @param v expression to check
      * @return true
      * @return false
      */
     bool isAssignable(ExprAST *v) {
-        if (isType<IdentifierExprAST>(v)) {
+        if (auto p = dynamic_cast<IdentifierExprAST *>(v); p) {
             return true;
         }
         if (auto p = dynamic_cast<UnaryOpExprAST *>(v); p) {
@@ -828,11 +868,24 @@ struct ExpressionSemantic : public ASTVisitor {
         return false;
     }
 
+    // TODO: seek reloadable func
+
+    /**
+     * @brief seek member function with given name and param type
+     *
+     * @attention this function will automatically instantiate template,
+     * and add real function name to funcDependencyRealName
+     *
+     * @param name name of member function
+     * @param paramType
+     * @return std::tuple<bool, std::string>
+     */
     std::tuple<bool, std::string> seekMemberFunc(const std::string &name, const std::vector<TypeInfo> &paramType) {
         if (auto memberFuncIt = globalInfo().memberFuncDef.find(name);
             memberFuncIt != globalInfo().memberFuncDef.end()) {
             auto &tmp = memberFuncIt->second;
             if (auto realFuncNameIt = tmp.find(paramType); realFuncNameIt != tmp.end()) {
+                funcDependencyRealName.insert(realFuncNameIt->second);
                 return {true, realFuncNameIt->second};
             }
         }
@@ -843,55 +896,40 @@ struct ExpressionSemantic : public ASTVisitor {
                 if (auto realFuncNameIt = tmp.instantiationRealName.find(paramType);
                     realFuncNameIt != tmp.instantiationRealName.end()) {
                     // already instantiated
+                    funcDependencyRealName.insert(realFuncNameIt->second);
                     return {true, realFuncNameIt->second};
                 }
             }
             // not instantiated
             std::unordered_map<std::string, std::unique_ptr<FunctionDefAST>> alreadyMatch;
+            ContextGlobal::TemplateFunctionInfo *from = nullptr;
             for (auto &tmp : templateMemberFuncIt->second) {
-                std::set<std::string> templateParam{tmp.paramNames.begin(), tmp.paramNames.end()};
-                std::map<std::string, TypeInfo> matched;
-                auto &type = tmp.funcDef->funcType;
-                auto cnt = type->getParamCount();
-                if (cnt != paramType.size()) {
+                auto [instantiated, matched] = tmp.instantiate(paramType);
+                if (!instantiated) {
                     continue;
                 }
-                for (size_t i = 0; i < cnt; ++i) {
-                    if (!type->getParamType(i).match(paramType[i], templateParam, matched)) {
-                        continue;
-                    }
-                }
-                if (templateParam.size() != matched.size()) {
-                    continue;
-                }
-                // already matched, instantiate and return
-                // TODO: check for multi-match
-                auto instantiation = tmp.funcDef->copy();
-                TemplateInstantiator instantiator{TypeInfo::where(matched)};
-                instantiation | instantiator;
-                auto p = dynamic_cast<FunctionDefAST *>(instantiation.get());
-                // std::string templateParamList =
-                //     join(tmp.paramNames | std::ranges::transform_view(
-                //                               [&](const std::string &param) { return matched[param].toString(); }),
-                //          ",");
+                from = &tmp;
                 auto templateParamList =
                     tmp.paramNames |
-                    std::ranges::views::transform([&](const std::string &param) { return matched[param].toString(); }) |
+                    std::views::transform([&](const std::string &param) { return matched[param].toString(); }) |
                     mystr::join(",");
-                auto realName = c.generateUniqueName(reservedPrefix, std::format("<{}>{}", templateParamList, p->name));
-                alreadyMatch.emplace(realName, std::move(instantiation));
+                auto name = std::format("<{}>{}", templateParamList, instantiated->name);
+                alreadyMatch[name] = unique_cast<FunctionDefAST>(instantiated);
             }
-            if(alreadyMatch.empty()){
+            if (alreadyMatch.empty()) {
                 return {false, ""};
-            }else if(alreadyMatch.size() != 1){
-                setError("ambiguous template instantiation");
+            } else if (alreadyMatch.size() != 1) {
+                setError("ambiguous template instantiation: " + (std::views::keys(alreadyMatch) | mystr::join(", ")));
             }
             // 1 match, add to realfuncdef
-            auto realName = alreadyMatch.begin()->first;
-            globalInfo().realFuncDefinition.merge(std::move(alreadyMatch));
-            funcDependencyRealName.insert(realName);
+            auto [matchName, funcAST] = std::move(*alreadyMatch.begin());
+            auto realName = c.generateUniqueName(reservedPrefix, matchName);
+            globalInfo().realFuncDefinition.emplace(realName, std::move(funcAST));
+            funcDependencyRealName.emplace(realName);
+            from->instantiationRealName.emplace(paramType, realName);
             return {true, realName};
         }
+        return {false, ""};
     }
 
     ContextStack &c;

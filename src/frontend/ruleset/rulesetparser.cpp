@@ -139,8 +139,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             if (data.varType.contains(name)) {
                 error("Input, Output and Cache variables should have different names");
             }
-            target.push_back(name);
             data.varType[name] = type;
+            target.push_back(name);
             context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
             if (auto p = ele->first_node("Value"); p) {
                 // if contains <Value> node, add assignment to preprocessOriginal
@@ -157,7 +157,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                 } else {
                     for (auto c : tar) {
                         if ((c < '0' || c > '9') && c != '.') {
-                            error("InitValue should only be a number like 0, 0.0 or 3.14, no scientific notation "
+                            error("InitValue should only be a literal number like 0, 0.0 or 3.14, no scientific notation "
                                   "or hex/oct/binary support");
                         }
                     }

@@ -94,6 +94,7 @@ inline const std::set<std::string_view> DEF_KEYWORDS{
     "func",
     "var",
     "type",
+    "const",
 };
 
 inline const std::set<std::string_view> COMMAND_KEYWORDS{
@@ -102,7 +103,7 @@ inline const std::set<std::string_view> COMMAND_KEYWORDS{
     "extern",
 };
 
-// words in KEYWORD is regarded as SYM, not IDENT;
+// words in KEYWORD is regarded as SYM, not IDENT; keywords cannot reload
 inline const std::set<std::string_view> KEYWORDS{
     "if",     "else",   "until", "func", "var",   "type", "struct",   "class",  "dynamic",
     "extern", "return", "and",   "or",   "not",   "xor",  "continue", "import", "export",

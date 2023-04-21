@@ -42,7 +42,7 @@ struct StringJoinner{
     std::string middle;
 };
 
-StringJoinner join(const std::string& middle){
+inline StringJoinner join(const std::string& middle){
     return {middle};
 };
 

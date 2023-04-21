@@ -99,7 +99,7 @@ struct TypeInfo {
      * @param table template param table
      * @return TypeInfo specialized type
      */
-    TypeInfo operator|(const TemplateParam &table) const {
+    [[nodiscard]] TypeInfo operator|(const TemplateParam &table) const {
         if (isBaseType()) {
             if (auto it = table.data.find(ident); it != table.data.end()) {
                 return it->second;
@@ -578,7 +578,7 @@ struct TypeParser {
                 if (e.top() == ",") {
                     e.pop(ignore_break);
                 } else if (e.top() != ")") {
-                    return setError("mismatch \"(\" in func type");
+                    return setError("expect \"(\" in func type, found: " + e.topCopy());
                 }
             }
             e.pop();

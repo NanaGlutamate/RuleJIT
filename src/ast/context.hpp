@@ -25,6 +25,7 @@
 #include "ast/ast.hpp"
 #include "ast/type.hpp"
 #include "defines/language.hpp"
+#include "frontend/templateins.hpp"
 #include "tools/seterror.hpp"
 
 namespace rulejit {
@@ -40,6 +41,37 @@ struct ContextGlobal {
         std::map<std::vector<TypeInfo>, std::string> instantiationRealName;
         std::vector<std::string> paramNames;
         std::unique_ptr<FunctionDefAST> funcDef;
+        /**
+         * @brief instantiate this template function with given param type
+         * 
+         * @attention will not check or modify instantiationRealName
+         * 
+         * @param paramType type of each param
+         * @return (func_ptr, matched), func_ptr is nullptr if instantiation failed; matched is map
+         * from template param name to instantiated type
+         */
+        std::tuple<std::unique_ptr<FunctionDefAST>, std::map<std::string, TypeInfo>> instantiate(const std::vector<TypeInfo> &paramType) {
+            std::set<std::string> templateParam{paramNames.begin(), paramNames.end()};
+            std::map<std::string, TypeInfo> matched;
+            auto &type = funcDef->funcType;
+            auto cnt = type->getParamCount();
+            if (cnt != paramType.size()) {
+                return {nullptr, std::map<std::string, TypeInfo>{}};
+            }
+            for (size_t i = 0; i < cnt; ++i) {
+                if (!type->getParamType(i).match(paramType[i], templateParam, matched)) {
+                    return {nullptr, std::map<std::string, TypeInfo>{}};
+                }
+            }
+            if (templateParam.size() != matched.size()) {
+                return {nullptr, std::map<std::string, TypeInfo>{}};
+            }
+            // already matched, instantiate and return
+            auto instantiation = funcDef->copy();
+            TemplateInstantiator instantiator{TypeInfo::where(matched)};
+            instantiation | instantiator;
+            return {unique_cast<FunctionDefAST>(instantiation), std::move(matched)};
+        }
     };
 
     /// @brief real function dependency graph
@@ -66,7 +98,8 @@ struct ContextGlobal {
     /// @brief used function name("+") -> param type({"Vector3", "Vector3"}) -> real function
     /// name("func@0@2@+(Vector3,Vector3):Vector3")
     std::unordered_map<std::string, std::map<std::vector<TypeInfo>, std::string>> symbolicFuncDef;
-    // no template symbolic, 'a <int>in b' will result in ambiguity
+    /// @brief template name -> template function info
+    std::unordered_map<std::string, std::vector<TemplateFunctionInfo>> templateSymbolicFuncDef;
 
     /// @brief type alias name -> type name(may recursion)
     std::unordered_map<std::string, std::string> typeAlias;
@@ -81,6 +114,10 @@ struct ContextGlobal {
 struct ContextFrame {
     /// @brief var name / used function name -> type
     std::unordered_map<std::string, TypeInfo> varDef;
+
+    /// @brief var name / used function name -> type
+    std::unordered_map<std::string, std::tuple<TypeInfo, std::string>> constDef;
+
     // // var name -> real func closure type name list that capture this var
     // std::unordered_map<std::string, std::vector<std::string>> capturedInfo;
     // size_t scopeID = 0;
@@ -124,7 +161,52 @@ struct ContextStack {
     /// @brief scope stack
     std::vector<ContextFrame> scope;
 
-    std::string getRealFunctionNameOfNormalFunctionWithHint(const std::string &name, const TypeInfo &hint) {}
+    /**
+     * @brief check if a symbol is unique in current scope(i.e. can defined as a new type/var/func)
+     *
+     * @param name
+     * @return bool
+     */
+    bool isSymbolUnique(const std::string &name) {
+        if (scope.back().varDef.contains(name) || scope.back().constDef.contains(name) ||
+            (size() == 1 && global.templateFuncDef.contains(name))) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @brief add a var definition
+     *
+     * @param name name of var
+     * @param typeInfo type of var
+     *
+     * @return bool if success(failed when already defined)
+     */
+    [[nodiscard]] bool addVarDef(const std::string &name, const TypeInfo &typeInfo) {
+        if (!isSymbolUnique(name)) {
+            return false;
+        }
+        scope.back().varDef[name] = typeInfo;
+        return true;
+    };
+
+    /**
+     * @brief add a const definition
+     *
+     * @param name name of constant
+     * @param typeInfo type of constant
+     * @param value value of constant
+     *
+     * @return bool if success(failed when already defined)
+     */
+    [[nodiscard]] bool addConstDef(const std::string &name, const TypeInfo &typeInfo, const std::string &value) {
+        if (!isSymbolUnique(name)) {
+            return false;
+        }
+        scope.back().constDef[name] = {typeInfo, value};
+        return true;
+    };
 
     /**
      * @brief get real function type
@@ -203,9 +285,17 @@ struct ContextStack {
      * @brief function to seek var def in context stack
      *
      * @param s variable name
-     * @return (find, escaped, value)
+     * @return (find, type)
      */
     auto seekVarDef(const std::string &s) { return seek(&ContextFrame::varDef, s); }
+
+    /**
+     * @brief function to seek const def in context stack
+     *
+     * @param s variable name
+     * @return (find, (type, value))
+     */
+    auto seekConstDef(const std::string &s) { return seek(&ContextFrame::constDef, s); }
 
   private:
     /**
@@ -216,7 +306,7 @@ struct ContextStack {
      * @param p memner pointer
      * @param ind serached key
      * @param top current stack frame index, -1 for top frame
-     * @return (find, escaped, value)
+     * @return (find, value)
      */
     template <typename Item, typename Index> auto seek(Item p, const Index &ind, size_t top = size_t(-1)) {
         if (top == size_t(-1)) {

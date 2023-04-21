@@ -252,6 +252,8 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         }
         auto expr = parseExpr();
         lhs = std::make_unique<LoopAST>(std::move(label), nop(), std::move(cond), std::move(expr));
+    } else if (lexer->top() == "|") {
+        // lambda
     } else {
         return setError("unexcepted token: \"" + lexer->topCopy() + "\" in expression");
     }
@@ -324,9 +326,10 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBlock() {
 }
 
 std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
-    if (lexer->top() == "var") {
+    if (lexer->top() == "var" || lexer->top() == "const") {
         // var def
-        // TODO: un-init var like "var a int;"
+        VarDefAST::VarDefType varDefType = lexer->top() == "var" ? VarDefAST::VarDefType::NORMAL
+                                                                 : VarDefAST::VarDefType::CONST;
         lexer->pop(IGNORE_BREAK);
         if (lexer->tokenType() != TokenType::IDENT) {
             return setError("expected ident as var name, found: " + lexer->topCopy());
@@ -347,6 +350,9 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
                 auto defined = std::make_unique<ComplexLiteralExprAST>(
                     std::make_unique<TypeInfo>(*type),
                     std::vector<std::tuple<std::unique_ptr<ExprAST>, std::unique_ptr<ExprAST>>>{});
+                if (varDefType == VarDefAST::VarDefType::CONST) {
+                    return setError("const var must be explicitly initialized");
+                }
                 return std::make_unique<VarDefAST>(indent, std::move(type), std::move(defined));
             }
             auto tmp = lexer->pop(IGNORE_BREAK);
@@ -354,7 +360,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
                 return setError("expected \"=\" in var definition, found: " + std::string(tmp));
             }
         }
-        return std::make_unique<VarDefAST>(indent, std::move(type), parseExpr());
+        return std::make_unique<VarDefAST>(indent, std::move(type), parseExpr(), varDefType);
     } else if (lexer->top() == "func") {
         // func def
         // TODO: operator. operator() operator[]
@@ -367,7 +373,8 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
 
         std::vector<std::string> tparams;
         bool isTemplate = false;
-        if (lexer->top() == "<") {
+        if (lexer->top() == "<" && std::get<1>(lexer->foresee(1)) != "(") {
+            // extinguish reload of "<" and template function
             isTemplate = true;
             while (lexer->top() != ">") {
                 lexer->pop(IGNORE_BREAK);
@@ -384,19 +391,20 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
 
         parseFuncDef(params, funcType, funcName, funcDefType);
 
-        std::unique_ptr<ExprAST> returnValue;
+        eatBreak();
 
         // parse returned value
-        // TODO: named constructor 'func getStr():(ret string){}'? maybe need default construct var def
-        if (lexer->top() == "->") {
-            lexer->pop(IGNORE_BREAK);
-        } else if (lexer->top() == "{") {
-            // do nothing
-        } else {
-            return setError("expect \"->\" or \"{\" to indicate return value, found: " + lexer->topCopy());
-        }
 
-        returnValue = parseExpr();
+        // // TODO: named constructor 'func getStr():(ret string){}'? maybe need default construct var def
+        // if (lexer->top() == "->") {
+        //     lexer->pop(IGNORE_BREAK);
+        // } else if (lexer->top() == "{") {
+        //     // do nothing
+        // } else {
+        //     return setError("expect \"->\" or \"{\" to indicate return value, found: " + lexer->topCopy());
+        // }
+
+        std::unique_ptr<ExprAST> returnValue = parseExpr();
 
         auto funcDefAST = std::make_unique<FunctionDefAST>(std::move(funcName), std::make_unique<TypeInfo>(funcType),
                                                            std::move(params), std::move(returnValue), funcDefType);
@@ -435,13 +443,11 @@ void rulejit::ExpressionParser::parseFuncDef(std::vector<std::unique_ptr<rulejit
     TypeInfo returnType;
 
     // parse function definition
-    // TODO: extinguish reload of "<" and template function
     if (lexer->top() == "(") {
-        // lambda | member
+        // member
         params = parseParamList();
         eatBreak();
         if (lexer->tokenType() == TokenType::IDENT) {
-            // member
             funcName = lexer->popCopy(IGNORE_BREAK);
             if (lexer->top() != "(") {
                 setError("expected \"(\" after member function name in member function def, found: " +
@@ -457,8 +463,7 @@ void rulejit::ExpressionParser::parseFuncDef(std::vector<std::unique_ptr<rulejit
             }
             funcDefType = FunctionDefAST::FuncDefType::MEMBER;
         } else {
-            // lambda
-            funcDefType = FunctionDefAST::FuncDefType::LAMBDA;
+            setError("expected ident as function name in member function def, found: " + lexer->topCopy());
         }
     } else {
         // symbolic | normal
