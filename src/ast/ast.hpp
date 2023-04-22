@@ -187,14 +187,16 @@ struct FunctionCallExprAST : public ExprAST {
  */
 struct BinOpExprAST : public ExprAST {
     ACCEPT_FUNCTION;
-    std::string op;
+    ASTTokenType op;
     std::unique_ptr<ExprAST> lhs, rhs;
 
-    BinOpExprAST(std::unique_ptr<TypeInfo> type, std::string op, std::unique_ptr<ExprAST> lhs,
+    template <typename S>
+    BinOpExprAST(std::unique_ptr<TypeInfo> type, S op, std::unique_ptr<ExprAST> lhs,
                  std::unique_ptr<ExprAST> rhs)
-        : ExprAST(std::move(type)), op(std::move(op)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
-    BinOpExprAST(std::string op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
-        : BinOpExprAST(nullptr, std::move(op), std::move(lhs), std::move(rhs)) {}
+        : ExprAST(std::move(type)), op(std::forward<S>(op)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+    template <typename S>
+    BinOpExprAST(S op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
+        : BinOpExprAST(nullptr, std::forward<S>(op), std::move(lhs), std::move(rhs)) {}
     std::unique_ptr<ExprAST> copy() override {
         if(!type){
             return std::make_unique<BinOpExprAST>(op, lhs->copy(), rhs->copy());
@@ -209,13 +211,15 @@ struct BinOpExprAST : public ExprAST {
  */
 struct UnaryOpExprAST : public ExprAST {
     ACCEPT_FUNCTION;
-    std::string op;
+    ASTTokenType op;
     std::unique_ptr<ExprAST> rhs;
 
-    UnaryOpExprAST(std::unique_ptr<TypeInfo> type, std::string op, std::unique_ptr<ExprAST> rhs)
-        : ExprAST(std::move(type)), op(std::move(op)), rhs(std::move(rhs)) {}
-    UnaryOpExprAST(std::string op, std::unique_ptr<ExprAST> rhs)
-        : UnaryOpExprAST(nullptr, std::move(op), std::move(rhs)) {}
+    template <typename S>
+    UnaryOpExprAST(std::unique_ptr<TypeInfo> type, S op, std::unique_ptr<ExprAST> rhs)
+        : ExprAST(std::move(type)), op(std::forward<S>(op)), rhs(std::move(rhs)) {}
+    template <typename S>
+    UnaryOpExprAST(S op, std::unique_ptr<ExprAST> rhs)
+        : UnaryOpExprAST(nullptr, std::forward<S>(op), std::move(rhs)) {}
     std::unique_ptr<ExprAST> copy() override {
         if(!type){
             return std::make_unique<UnaryOpExprAST>(op, rhs->copy());
@@ -416,7 +420,7 @@ struct VarDefAST : public DefAST {
     std::unique_ptr<ExprAST> definedValue;
     enum class VarDefType {
         NORMAL,
-        CONST,
+        CONSTANT,
     } varDefType;
 
     template <typename S>
@@ -495,7 +499,7 @@ struct SymbolDefAST : public DefAST {
 // TEMPLATE := 'func' '<' IDENT (',' IDENT)* '>' 
 struct TemplateDefAST : public NoReturnExprAST {
     ACCEPT_FUNCTION;
-    std::vector<std::string> tparams;
+    std::vector<ASTTokenType> tparams;
     std::unique_ptr<DefAST> def;
 
     template <typename V1>

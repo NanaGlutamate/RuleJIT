@@ -201,6 +201,9 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         lexer->pop(IGNORE_BREAK);
         lhs = parseExpr(true);
         eatBreak();
+        if (lexer->top() == ",") {
+            // TODO: tuple
+        }
         if (lexer->pop() != ")") {
             return setError("mismatch \")\"");
         }
@@ -252,8 +255,15 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         }
         auto expr = parseExpr();
         lhs = std::make_unique<LoopAST>(std::move(label), nop(), std::move(cond), std::move(expr));
-    } else if (lexer->top() == "|") {
-        // lambda
+    } else if (lexer->top() == "|" || lexer->top() == "||") {
+        // capture
+        if (lexer->top() == "||") {
+            // no args
+            setError("only support pure function for now, so lambda without args is not supported");
+        }
+        lexer->pop(IGNORE_BREAK);
+        auto args = parseParamList();
+        // TODO:
     } else {
         return setError("unexcepted token: \"" + lexer->topCopy() + "\" in expression");
     }
@@ -328,8 +338,8 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBlock() {
 std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
     if (lexer->top() == "var" || lexer->top() == "const") {
         // var def
-        VarDefAST::VarDefType varDefType = lexer->top() == "var" ? VarDefAST::VarDefType::NORMAL
-                                                                 : VarDefAST::VarDefType::CONST;
+        VarDefAST::VarDefType varDefType =
+            lexer->top() == "var" ? VarDefAST::VarDefType::NORMAL : VarDefAST::VarDefType::CONSTANT;
         lexer->pop(IGNORE_BREAK);
         if (lexer->tokenType() != TokenType::IDENT) {
             return setError("expected ident as var name, found: " + lexer->topCopy());
@@ -350,7 +360,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
                 auto defined = std::make_unique<ComplexLiteralExprAST>(
                     std::make_unique<TypeInfo>(*type),
                     std::vector<std::tuple<std::unique_ptr<ExprAST>, std::unique_ptr<ExprAST>>>{});
-                if (varDefType == VarDefAST::VarDefType::CONST) {
+                if (varDefType == VarDefAST::VarDefType::CONSTANT) {
                     return setError("const var must be explicitly initialized");
                 }
                 return std::make_unique<VarDefAST>(indent, std::move(type), std::move(defined));
@@ -480,7 +490,7 @@ void rulejit::ExpressionParser::parseFuncDef(std::vector<std::unique_ptr<rulejit
             // symbolic (operator overload)
             funcName = lexer->popCopy(IGNORE_BREAK);
             funcDefType = FunctionDefAST::FuncDefType::SYMBOLIC;
-            if (RESERVED_NOT_RELOADABLE_SYMBOL.contains(funcName) || KEYWORDS.contains(funcName)) {
+            if (RESERVED_NOT_RELOADABLE_SYMBOL.contains(funcName)) {
                 setError("unsupport operator overload: " + funcName);
             }
             if (lexer->top() == "infix") {
@@ -527,10 +537,10 @@ void rulejit::ExpressionParser::parseFuncDef(std::vector<std::unique_ptr<rulejit
     funcType.addParamType(returnType);
 }
 
-std::vector<std::unique_ptr<IdentifierExprAST>> ExpressionParser::parseParamList() {
+std::vector<std::unique_ptr<IdentifierExprAST>> ExpressionParser::parseParamList(const std::string &end) {
     std::vector<std::unique_ptr<IdentifierExprAST>> ret;
     lexer->pop(IGNORE_BREAK);
-    while (lexer->top() != ")") {
+    while (lexer->top() != end) {
         // TODO: unnamed param
         if (lexer->tokenType() != TokenType::IDENT) {
             setError("except identifier in param list, found: " + lexer->topCopy());
@@ -539,12 +549,12 @@ std::vector<std::unique_ptr<IdentifierExprAST>> ExpressionParser::parseParamList
         ret.push_back(
             std::make_unique<IdentifierExprAST>(std::make_unique<TypeInfo>((*lexer) | TypeParser()), std::move(ident)));
         eatBreak();
-        if (lexer->top() != "," && lexer->top() != ")") {
+        if (lexer->top() != "," && lexer->top() != end) {
             setError("expect \",\" after single param, found: " + lexer->topCopy());
         }
         if (lexer->top() == ",") {
             lexer->pop(IGNORE_BREAK);
-            if (lexer->top() == ")") {
+            if (lexer->top() == end) {
                 setError("param list should not end with \",\"");
             }
         }

@@ -47,7 +47,7 @@ static_assert(canCallBeforeDefine + allowUserDefinedInfix + allowUserDefinedUnar
 } // namespace config
 
 inline const std::set<std::string> BUILDIN_UNARY{
-    "-", "not", "!", "&", "*", "~", "||", "&&", "*", "&", "<-", "->",
+    "-", "not", "!", "&", "*", "~", "or", "and", "*", "&", "<-", "->",
 };
 
 using Priority = int;
@@ -103,7 +103,7 @@ inline const std::set<std::string_view> COMMAND_KEYWORDS{
     "extern",
 };
 
-// words in KEYWORD is regarded as SYM, not IDENT; keywords cannot reload
+// words in KEYWORD is regarded as SYM, not IDENT
 inline const std::set<std::string_view> KEYWORDS{
     "if",     "else",   "until", "func", "var",   "type", "struct",   "class",  "dynamic",
     "extern", "return", "and",   "or",   "not",   "xor",  "continue", "import", "export",
@@ -111,7 +111,9 @@ inline const std::set<std::string_view> KEYWORDS{
 };
 
 inline const std::set<std::string_view> RESERVED_NOT_RELOADABLE_SYMBOL{
-    "=", ":=", "(", ")", "[", "]", "{", "}", ",", ";",
+    "=",      ":=",     "(",     ")",   "[",     "]",      "{",     "}",       ",",      ";",      "if",
+    "else",   "until",  "func",  "var", "type",  "struct", "class", "dynamic", "extern", "return", "continue",
+    "import", "export", "while", "for", "const", "auto",   "match", "when",    "is",     "as",     "fit",
 };
 
 } // namespace rulejit

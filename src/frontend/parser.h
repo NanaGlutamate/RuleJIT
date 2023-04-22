@@ -124,7 +124,7 @@ struct ExpressionParser {
 
     void parseFuncDef(std::vector<std::unique_ptr<rulejit::IdentifierExprAST>> &params, TypeInfo &returnType,
                       std::string &funcName, FunctionDefAST::FuncDefType &funcDefType);
-    std::vector<std::unique_ptr<IdentifierExprAST>> parseParamList();
+    std::vector<std::unique_ptr<IdentifierExprAST>> parseParamList(const std::string& end = ")");
 
     std::unique_ptr<ExprAST> parseCommand();
     std::unique_ptr<ExprAST> parseTopLevel();

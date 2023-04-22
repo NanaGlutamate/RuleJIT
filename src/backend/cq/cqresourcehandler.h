@@ -26,6 +26,7 @@
 #include "frontend/ruleset/rulesetparser.h"
 #include "tools/myassert.hpp"
 #include "tools/seterror.hpp"
+#include "tools/printcsvaluemap.hpp"
 
 namespace rulejit::cq {
 
@@ -111,29 +112,29 @@ struct DataStore {
         }
         if (rulesetxml::baseData.contains(type)) {
             if (type == "bool")
-                return bool();
+                return bool(false);
             if (type == "int8")
-                return int8_t();
+                return int8_t(0);
             if (type == "uint8")
-                return uint8_t();
+                return uint8_t(0);
             if (type == "int16")
-                return int16_t();
+                return int16_t(0);
             if (type == "uint16")
-                return uint16_t();
+                return uint16_t(0);
             if (type == "int32")
-                return int32_t();
+                return int32_t(0);
             if (type == "uint32")
-                return uint32_t();
+                return uint32_t(0);
             if (type == "int64")
-                return int64_t();
+                return int64_t(0);
             if (type == "uint64")
-                return uint64_t();
+                return uint64_t(0);
             if (type == "float32")
-                return float();
+                return float(0);
             if (type == "float64")
-                return double();
+                return double(0);
             if (type == "string")
-                return std::string();
+                return std::string{};
         }
         CSValueMap tmp;
         for (auto &&[name, type] : metaInfo.typeDefines[type]) {
@@ -438,6 +439,7 @@ struct ResourceHandler {
         } else if (v.type() == typeid(double)) {
             return std::any_cast<double>(v);
         } else {
+            printCSValueMap(std::any_cast<CSValueMap>(data.input["T_output"]));
             error(std::string("unknown type: ") + v.type().name());
         }
     }
