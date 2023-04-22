@@ -101,7 +101,6 @@ struct ExpressionSemantic : public ASTVisitor {
      */
     void checkFunction(const std::string &name) {
         init();
-        // maybe useless?
         if (globalInfo().externFuncDef.contains(name)) {
             // do not check extern func
             return;

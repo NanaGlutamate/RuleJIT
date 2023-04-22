@@ -42,8 +42,9 @@ struct StringJoinner{
     std::string middle;
 };
 
-inline StringJoinner join(const std::string& middle){
-    return {middle};
+template <typename S>
+inline StringJoinner join(S&& middle){
+    return {std::forward<S>(middle)};
 };
 
 // std::vector<std::string> split(const std::string& src, const std::string& middle){

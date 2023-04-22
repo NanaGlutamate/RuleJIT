@@ -13,12 +13,14 @@
  * </table>
  */
 #include "rulesetparser.h"
+#include "ast/escapedanalyzer.hpp"
 #include "frontend/lexer.h"
 #include "frontend/parser.h"
 #include "frontend/semantic.hpp"
 #include "rapidxml-1.13/rapidxml.hpp"
 #include "tools/myassert.hpp"
 #include "tools/seterror.hpp"
+#include "tools/stringprocess.hpp"
 
 namespace {
 
@@ -131,7 +133,11 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     std::string initOriginal = "{";
     // when has sub element <Value>, add assignment to preprocessOriginal
     // for each <Value>, create a single subruleset to execute to avoid data-race
-    std::vector<std::string> preprocessOriginal;
+    struct Assignment {
+        std::string target;
+        std::string value;
+    };
+    std::vector<Assignment> preprocessOriginal;
 
     auto load = [&](const std::string &nodeName, std::vector<std::string> &target) {
         for (auto ele = meta->first_node(nodeName.data())->first_node("Param"); ele; ele = ele->next_sibling("Param")) {
@@ -144,8 +150,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
             if (auto p = ele->first_node("Value"); p) {
                 // if contains <Value> node, add assignment to preprocessOriginal
-                preprocessOriginal.emplace_back(std::string(ele->first_attribute("name")->value()) + "={" +
-                                                p->first_node("Expression")->value() + "};");
+                preprocessOriginal.emplace_back(ele->first_attribute("name")->value(),
+                                                std::string("{") + p->first_node("Expression")->value() + "}");
             }
             if (auto p = ele->first_node("InitValue"); p) {
                 // TODO: add expression support?
@@ -157,8 +163,9 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                 } else {
                     for (auto c : tar) {
                         if ((c < '0' || c > '9') && c != '.') {
-                            error("InitValue should only be a literal number like 0, 0.0 or 3.14, no scientific notation "
-                                  "or hex/oct/binary support");
+                            error(
+                                "InitValue should only be a literal number like 0, 0.0 or 3.14, no scientific notation "
+                                "or hex/oct/binary support");
                         }
                     }
                 }
@@ -175,9 +182,58 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     initOriginal += "}";
     // parse initOriginal, get returned real function name
     ret.preDefines = (typeOriginal + "\n" + preDefines + "\n" + initOriginal) | lexer | parser | semantic;
+
+    // topo-sort preprocessOriginal
+    std::unordered_map<std::string, std::set<std::string>> valueDependency;
+    std::vector<std::unique_ptr<ExprAST>> assignmentValue;
+    // 1. collect dependency
+    for (auto &&p : preprocessOriginal) {
+        // TODO: avoid self-dependency?
+        auto exprFuncName = p.value | lexer | parser | semantic;
+        auto dependency = context.global.realFuncDefinition[exprFuncName]->returnValue | EscapedVarAnalyzer{};
+        my_assert(!valueDependency.contains(p.target));
+        if(dependency.contains(p.target)) {
+            error("Self-dependent value is not allowed: " + p.target);
+        }
+        valueDependency.emplace(p.target, std::move(dependency));
+    }
+    // 2. topo sort
+    std::set<std::string> openSet, closedSet;
+    std::vector<std::string> topoSorted;
+    for (auto &&[k, v] : valueDependency) {
+        if (v.empty()) {
+            openSet.insert(k);
+        }
+    }
+    while (!openSet.empty()) {
+        auto cur = *openSet.begin();
+        openSet.erase(openSet.begin());
+        topoSorted.push_back(cur);
+        closedSet.insert(cur);
+        for (auto &&[k, v] : valueDependency) {
+            if (v.contains(cur)) {
+                v.erase(cur);
+                if (v.empty()) {
+                    openSet.insert(k);
+                }
+            }
+        }
+    }
+    if (closedSet.size() != valueDependency.size()) {
+        std::string errorMsg = "Cyclic dependency detected: ";
+        for (auto &&[k, v] : valueDependency) {
+            if (!closedSet.contains(k)) {
+                errorMsg += k + " -> ";
+                errorMsg += v | mystr::join(", ");
+                errorMsg += k + ";\n";
+            }
+        }
+        error(errorMsg);
+    }
+
     // parse preprocessOriginal, get returned real function name
     for (auto &&o : preprocessOriginal) {
-        ret.preprocess.emplace_back(o | lexer | parser | semantic);
+        ret.preprocess.emplace_back((o.target + "=" + o.value) | lexer | parser | semantic);
     }
 
     // generate subruleset defs
