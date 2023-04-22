@@ -28,7 +28,7 @@ namespace rulejit {
  * @tparam Tar target type that unique_ptr point to (return std::unique_ptr<Tar>)
  * @tparam Src source type that unique_ptr point to, for auto deduction (given std::unique_ptr<Src>)
  * @param src source unique pointer
- * @return std::unique_ptr<Tar> 
+ * @return std::unique_ptr<Tar> casted unique pointer
  */
 template <typename Tar, typename Src> std::unique_ptr<Tar> unique_cast(std::unique_ptr<Src> &src) {
     if constexpr (std::is_base_of_v<Tar, Src>) {

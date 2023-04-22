@@ -445,6 +445,7 @@ struct FunctionDefAST : public DefAST {
     std::unique_ptr<TypeInfo> funcType;
     std::vector<std::unique_ptr<IdentifierExprAST>> params;
     std::unique_ptr<ExprAST> returnValue;
+    std::vector<std::unique_ptr<IdentifierExprAST>> captures;
     enum class FuncDefType {
         NORMAL,
         MEMBER,
@@ -506,7 +507,8 @@ struct TemplateDefAST : public NoReturnExprAST {
     TemplateDefAST(V1 &&tparams, std::unique_ptr<DefAST> def)
         : NoReturnExprAST(), tparams(std::forward<V1>(tparams)), def(std::move(def)) {}
     std::unique_ptr<ExprAST> copy() override {
-        std::unique_ptr<DefAST> newDef = unique_cast<DefAST>(def);
+        auto tmp = def->copy();
+        std::unique_ptr<DefAST> newDef = unique_cast<DefAST>(tmp);
         return std::make_unique<TemplateDefAST>(tparams, std::move(newDef));
     }
 };
