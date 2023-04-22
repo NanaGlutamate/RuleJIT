@@ -20,6 +20,7 @@
 #include "rapidxml-1.13/rapidxml.hpp"
 #include "tools/myassert.hpp"
 #include "tools/seterror.hpp"
+#include "tools/showmsg.hpp"
 #include "tools/stringprocess.hpp"
 
 namespace {
@@ -132,12 +133,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     // named "InitValue", add assignment to initOriginal
     std::string initOriginal = "{";
     // when has sub element <Value>, add assignment to preprocessOriginal
-    // for each <Value>, create a single subruleset to execute to avoid data-race
-    struct Assignment {
-        std::string target;
-        std::string value;
-    };
-    std::vector<Assignment> preprocessOriginal;
+    std::map<std::string, std::string> preprocessOriginal;
 
     auto load = [&](const std::string &nodeName, std::vector<std::string> &target) {
         for (auto ele = meta->first_node(nodeName.data())->first_node("Param"); ele; ele = ele->next_sibling("Param")) {
@@ -150,8 +146,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
             if (auto p = ele->first_node("Value"); p) {
                 // if contains <Value> node, add assignment to preprocessOriginal
-                preprocessOriginal.emplace_back(ele->first_attribute("name")->value(),
-                                                std::string("{") + p->first_node("Expression")->value() + "}");
+                preprocessOriginal.emplace(ele->first_attribute("name")->value(),
+                                           std::string("{") + p->first_node("Expression")->value() + "}");
             }
             if (auto p = ele->first_node("InitValue"); p) {
                 // TODO: add expression support?
@@ -189,13 +185,17 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     // 1. collect dependency
     for (auto &&p : preprocessOriginal) {
         // TODO: avoid self-dependency?
-        auto exprFuncName = p.value | lexer | parser | semantic;
-        auto dependency = context.global.realFuncDefinition[exprFuncName]->returnValue | EscapedVarAnalyzer{};
-        my_assert(!valueDependency.contains(p.target));
-        if(dependency.contains(p.target)) {
-            error("Self-dependent value is not allowed: " + p.target);
+        try {
+            auto exprFuncName = p.second | lexer | parser | semantic;
+            auto dependency = context.global.realFuncDefinition[exprFuncName]->returnValue | EscapedVarAnalyzer{};
+            my_assert(!valueDependency.contains(p.first), "assignment to a variable twice");
+            if (dependency.contains(p.first)) {
+                error("Self-dependent value is not allowed: " + p.first);
+            }
+            valueDependency.emplace(p.first, std::move(dependency));
+        } catch (std::logic_error &e) {
+            error(std::format("Error in preprocess intermediate variable assignment:\n    {} = {}\nwith information:\n{}", p.first, p.second, e.what()));
         }
-        valueDependency.emplace(p.target, std::move(dependency));
     }
     // 2. topo sort
     std::set<std::string> openSet, closedSet;
@@ -211,8 +211,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         topoSorted.push_back(cur);
         closedSet.insert(cur);
         for (auto &&[k, v] : valueDependency) {
-            if (v.contains(cur)) {
-                v.erase(cur);
+            if (auto it = v.find(cur); it != v.end()) {
+                v.erase(it);
                 if (v.empty()) {
                     openSet.insert(k);
                 }
@@ -220,21 +220,26 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         }
     }
     if (closedSet.size() != valueDependency.size()) {
-        std::string errorMsg = "Cyclic dependency detected: ";
+        std::string errorMsg = "Cyclic dependency detected in preprocess intermediate variable assignment: \n";
         for (auto &&[k, v] : valueDependency) {
             if (!closedSet.contains(k)) {
-                errorMsg += k + " -> ";
+                errorMsg += "\t" + k + " -> ";
                 errorMsg += v | mystr::join(", ");
                 errorMsg += k + ";\n";
             }
         }
         error(errorMsg);
     }
-
+    showMsg("Topo sorted: " + (topoSorted | mystr::join(", ")));
+    std::string valueAssignment = "{";
     // parse preprocessOriginal, get returned real function name
-    for (auto &&o : preprocessOriginal) {
-        ret.preprocess.emplace_back((o.target + "=" + o.value) | lexer | parser | semantic);
+    for (auto &&o_ : topoSorted) {
+        auto &o = *preprocessOriginal.find(o_);
+        valueAssignment += (o.first + "=" + o.second + ";");
     }
+    valueAssignment += "}";
+
+    ret.preprocess.push_back(valueAssignment | lexer | parser | semantic);
 
     // generate subruleset defs
     size_t id = 0;

@@ -329,7 +329,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
     if (lexer->top() == "var" || lexer->top() == "const") {
         // var def
         VarDefAST::VarDefType varDefType = lexer->top() == "var" ? VarDefAST::VarDefType::NORMAL
-                                                                 : VarDefAST::VarDefType::CONST;
+                                                                 : VarDefAST::VarDefType::CONSTANT;
         lexer->pop(IGNORE_BREAK);
         if (lexer->tokenType() != TokenType::IDENT) {
             return setError("expected ident as var name, found: " + lexer->topCopy());
@@ -350,7 +350,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
                 auto defined = std::make_unique<ComplexLiteralExprAST>(
                     std::make_unique<TypeInfo>(*type),
                     std::vector<std::tuple<std::unique_ptr<ExprAST>, std::unique_ptr<ExprAST>>>{});
-                if (varDefType == VarDefAST::VarDefType::CONST) {
+                if (varDefType == VarDefAST::VarDefType::CONSTANT) {
                     return setError("const var must be explicitly initialized");
                 }
                 return std::make_unique<VarDefAST>(indent, std::move(type), std::move(defined));

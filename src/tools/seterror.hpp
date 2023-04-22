@@ -36,7 +36,10 @@
 #include <stdexcept>
 #include <string>
 
-[[noreturn]] inline void error(const std::string &msg) { throw std::logic_error(msg); }
+[[noreturn]] inline void error(const std::string &msg) { 
+    // debug
+    throw std::logic_error(msg);
+}
 
 #else // __RULEJIT_DISABLE_EXCEPTION
 

@@ -557,7 +557,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 processType(*needChange->type);
             }
             break;
-        case VarDefAST::VarDefType::CONST:
+        case VarDefAST::VarDefType::CONSTANT:
             if (auto p = dynamic_cast<LiteralExprAST *>(v.definedValue.get()); p == nullptr) {
                 return setError("Const var must be defined as literal");
             } else if (!c.addConstDef(v.name, *(v.valueType), p->value)) {
