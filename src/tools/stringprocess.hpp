@@ -37,15 +37,15 @@ inline std::string join(_Range&& range, const std::string& middle){
 struct StringJoinner{
     template<typename Ty>
     friend std::string operator|(Ty&& tar, const StringJoinner& j){
-        return join(tar, j.middle);
+        return join(std::forward<Ty>(tar), j.middle);
     }
     std::string middle;
 };
 
 template <typename S>
 inline StringJoinner join(S&& middle){
-    return {std::forward<S>(middle)};
-};
+    return StringJoinner{std::forward<S>(middle)};
+}
 
 // std::vector<std::string> split(const std::string& src, const std::string& middle){
 //

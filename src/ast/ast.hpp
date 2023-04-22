@@ -416,7 +416,7 @@ struct VarDefAST : public DefAST {
     std::unique_ptr<ExprAST> definedValue;
     enum class VarDefType {
         NORMAL,
-        CONST,
+        CONSTANT,
     } varDefType;
 
     template <typename S>
