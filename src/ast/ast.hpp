@@ -191,11 +191,11 @@ struct BinOpExprAST : public ExprAST {
     std::unique_ptr<ExprAST> lhs, rhs;
 
     template <typename S>
-    BinOpExprAST(std::unique_ptr<TypeInfo> type, S op, std::unique_ptr<ExprAST> lhs,
+    BinOpExprAST(std::unique_ptr<TypeInfo> type, S&& op, std::unique_ptr<ExprAST> lhs,
                  std::unique_ptr<ExprAST> rhs)
         : ExprAST(std::move(type)), op(std::forward<S>(op)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
     template <typename S>
-    BinOpExprAST(S op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
+    BinOpExprAST(S&& op, std::unique_ptr<ExprAST> lhs, std::unique_ptr<ExprAST> rhs)
         : BinOpExprAST(nullptr, std::forward<S>(op), std::move(lhs), std::move(rhs)) {}
     std::unique_ptr<ExprAST> copy() override {
         if(!type){
@@ -215,10 +215,10 @@ struct UnaryOpExprAST : public ExprAST {
     std::unique_ptr<ExprAST> rhs;
 
     template <typename S>
-    UnaryOpExprAST(std::unique_ptr<TypeInfo> type, S op, std::unique_ptr<ExprAST> rhs)
+    UnaryOpExprAST(std::unique_ptr<TypeInfo> type, S&& op, std::unique_ptr<ExprAST> rhs)
         : ExprAST(std::move(type)), op(std::forward<S>(op)), rhs(std::move(rhs)) {}
     template <typename S>
-    UnaryOpExprAST(S op, std::unique_ptr<ExprAST> rhs)
+    UnaryOpExprAST(S&& op, std::unique_ptr<ExprAST> rhs)
         : UnaryOpExprAST(nullptr, std::forward<S>(op), std::move(rhs)) {}
     std::unique_ptr<ExprAST> copy() override {
         if(!type){
