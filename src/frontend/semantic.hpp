@@ -6,6 +6,7 @@
  * @date 2023-03-28
  *
  * @details Includes ExpressionSemantic which does semantic analysis
+ * TODO: template restriction
  *
  * @par history
  * <table>
@@ -112,10 +113,6 @@ struct ExpressionSemantic : public ASTVisitor {
 
   protected:
     VISIT_FUNCTION(IdentifierExprAST) {
-        if (v.name == "true" || v.name == "false") {
-            v.type = std::make_unique<TypeInfo>(RealType);
-            return;
-        }
         auto [find, type] = c.seekVarDef(v.name);
         if (find) {
             // var
@@ -171,6 +168,8 @@ struct ExpressionSemantic : public ASTVisitor {
                 funcDependencyRealName.insert(realName);
             } else if (auto it = globalInfo().externFuncDef.find(v.value); it != globalInfo().externFuncDef.end()) {
                 // do nothing
+                auto realName = it->first;
+                funcDependencyRealName.insert(realName);
             } else {
                 // build in template function for array
                 // TODO: must match array function provided in VISIT_FUNCTION(FunctionCallExprAST)
@@ -622,7 +621,7 @@ struct ExpressionSemantic : public ASTVisitor {
         if (c.size() != 1 || v.symbolCommandType != SymbolDefAST::SymbolCommandType::EXTERN) {
             return setError("Only allow top-level, extern symbol define");
         }
-        if (!c.isSymbolUnique(v.name)) {
+        if (!c.addConstDef(v.name, *(v.definedType), v.name)) {
             return setError(std::format("Extern func name \"{}\" already defined", v.name));
         }
         globalInfo().funcDef.emplace(v.name, v.name);
@@ -665,6 +664,7 @@ struct ExpressionSemantic : public ASTVisitor {
 
   private:
     void callAccept(std::unique_ptr<ExprAST> &tar) {
+        callStack.push_back(tar.get());
         tar->accept(this);
         if (needRelease) {
             needRelease = false;
@@ -674,6 +674,7 @@ struct ExpressionSemantic : public ASTVisitor {
             tar = std::move(needChange);
             needChange = nullptr;
         }
+        callStack.pop_back();
     };
 
     std::tuple<MemberAccessExprAST *, LiteralExprAST *> getConstStringMemberAccessInfo(ExprAST *v) {
@@ -725,6 +726,7 @@ struct ExpressionSemantic : public ASTVisitor {
         my_assert(!needChange);
         my_assert(!needRelease);
         funcDependencyRealName.clear();
+        callStack.clear();
         while (c.size() != 1) {
             c.pop();
         }
@@ -764,10 +766,16 @@ struct ExpressionSemantic : public ASTVisitor {
      * @return const std::set<std::string>& to avoid unexpected copy
      */
     const std::set<std::string> &checkSingleRealFunction(const std::string &name, std::set<std::string> &checked) {
+        if (globalInfo().externFuncDef.contains(name)) {
+            // do not check extern func
+            static const std::set<std::string> empty;
+            return empty;
+        }
         my_assert(c.size() == 1);
         if (globalInfo().checkedFunc.contains(name) || checked.contains(name)) {
-            my_assert(globalInfo().funcDependency.contains(name));
-            return globalInfo().funcDependency[name];
+            auto it = globalInfo().funcDependency.find(name);
+            my_assert(it != globalInfo().funcDependency.end());
+            return it->second;
         }
         auto &func = globalInfo().realFuncDefinition.find(name)->second;
         my_assert(funcDependencyRealName.empty());
@@ -805,10 +813,6 @@ struct ExpressionSemantic : public ASTVisitor {
         while (!needCheck.empty()) {
             auto name = *needCheck.begin();
             needCheck.erase(needCheck.begin());
-            if (globalInfo().externFuncDef.contains(name)) {
-                // do not check extern func
-                continue;
-            }
             for (auto &&name : checkSingleRealFunction(name, checked)) {
                 if (!checked.contains(name) && !globalInfo().checkedFunc.contains(name)) {
                     needCheck.insert(name);
@@ -964,6 +968,7 @@ struct ExpressionSemantic : public ASTVisitor {
     ContextStack &c;
 
     // temp variable need trans through function
+    std::vector<ExprAST*> callStack;
     bool needRelease;
     std::unique_ptr<ExprAST> needChange;
     std::set<std::string> funcDependencyRealName;

@@ -86,6 +86,8 @@ extern func floor(a f64):f64
 extern func sqrt(a f64):f64
 extern func pow(a f64, b f64):f64
 extern func atan2(a f64, b f64):f64
+const true f64 = 1.0
+const false f64 = 0.0
 )";
 
 } // namespace
