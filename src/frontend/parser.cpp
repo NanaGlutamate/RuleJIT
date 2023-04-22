@@ -256,13 +256,18 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         auto expr = parseExpr();
         lhs = std::make_unique<LoopAST>(std::move(label), nop(), std::move(cond), std::move(expr));
     } else if (lexer->top() == "|" || lexer->top() == "||") {
-        // capture
+        // closure
+        std::vector<std::unique_ptr<rulejit::IdentifierExprAST>> args;
         if (lexer->top() == "||") {
             // no args
-            setError("only support pure function for now, so lambda without args is not supported");
+            lexer->pop(IGNORE_BREAK);
+        } else {
+            lexer->pop(IGNORE_BREAK);
+            args = parseParamList();
         }
-        lexer->pop(IGNORE_BREAK);
-        auto args = parseParamList();
+        bool explicitCapture = false;
+        std::vector<std::unique_ptr<IdentifierExprAST>> captures;
+        if (lexer->top() == ":") {}
         // TODO:
     } else {
         return setError("unexcepted token: \"" + lexer->topCopy() + "\" in expression");
