@@ -21,6 +21,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 #include "ast/ast.hpp"
 #include "ast/type.hpp"
@@ -85,6 +86,7 @@ struct ContextGlobal {
     std::unordered_map<std::string, TypeInfo> externFuncDef;
 
     /// @brief used function name("add") -> real function name("func@0@2@add(f64,f64):f64")
+    // TODO: remove
     std::unordered_map<std::string, std::string> funcDef;
     /// @brief template name -> template function info
     std::unordered_map<std::string, TemplateFunctionInfo> templateFuncDef;

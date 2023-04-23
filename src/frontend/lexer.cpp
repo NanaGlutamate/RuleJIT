@@ -3,9 +3,9 @@
  * @author djw
  * @brief FrontEnd/Lexer
  * @date 2023-03-28
- * 
+ *
  * @details Lexer
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -36,7 +36,7 @@ namespace rulejit {
 void ExpressionLexer::extend(Guidence guidence) {
     while (isspace(*next)) {
         // SPACE
-        if (charEqual('\n')){
+        if (charEqual('\n')) {
             linePointer.push_back(next);
         }
         if (!config::ignoreAllBreak && guidence != Guidence::IGNORE_BREAK && charEqual('\n')) {
@@ -110,6 +110,7 @@ void ExpressionLexer::extend(Guidence guidence) {
         next++;
     } else if (charEqual(';')) {
         // endline
+        linePointer.push_back(next);
         type = TokenType::ENDLINE;
         next++;
         begin = next;
@@ -132,14 +133,15 @@ void ExpressionLexer::extend(Guidence guidence) {
             begin = next;
             return extend(guidence);
         }
-        if (charEqual('`')){
+        if (charEqual('`')) {
             // TODO: tokenized symbol? like `+(a, b) // return a+b
             // TODO: symbolized identifier?
         }
         // symbol
         type = TokenType::SYM;
         next++;
-        while (BUILD_IN_MULTICHAR_SYMBOL.contains(std::string_view(begin, next - begin + 1))) {
+        while (!(static_cast<int>(guidence) & static_cast<int>(Guidence::NO_MULTICHARSYM)) &&
+               BUILD_IN_MULTICHAR_SYMBOL.contains(std::string_view(begin, next - begin + 1))) {
             next++;
         }
         // eat ENDLINE

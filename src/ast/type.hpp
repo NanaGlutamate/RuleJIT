@@ -245,7 +245,7 @@ struct TypeInfo {
             res += ")";
             if (subTypes.back().isValid()) {
                 // returned function; if not returned, do nothing
-                res += ":" + subTypes.back().toString();
+                res += "->" + subTypes.back().toString();
             }
         } else if (ident == "struct" || ident == "class" || ident == "dynamic") {
             res += ident;
@@ -582,7 +582,7 @@ struct TypeParser {
                 }
             }
             e.pop();
-            if (e.top() != ":") {
+            if (e.top() != "->") {
                 info.subTypes.push_back(TypeInfo(std::string(typeident::NoInstanceTypeIdent)));
                 return info;
             } else {
@@ -614,6 +614,9 @@ struct TypeParser {
             }
             e.pop();
             return info;
+        // } else if (e.top()[0] == '<') {
+        //     // template
+        //     // TODO: check "<<"
         } else {
             return setError("expect type identifier, found: " + e.topCopy());
         }

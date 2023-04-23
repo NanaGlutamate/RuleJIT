@@ -140,7 +140,7 @@ struct ExpressionLexer {
      *
      * @tparam ReceiveTy type of target value
      * @param dst variable to receive value
-     * @param guidence ExpressionLexer::Guidence to control lexer behavior whrn pop
+     * @param guidence ExpressionLexer::Guidence to control lexer behavior when pop
      * @return ExpressionLexer& ExpressionLexer& reference to self
      */
     template <typename ReceiveTy> ExpressionLexer &fill(ReceiveTy &dst, Guidence guidence) {
@@ -163,7 +163,9 @@ struct ExpressionLexer {
             std::stringstream tmp;
             tmp << pop(guidence);
             tmp >> dst;
-            my_assert(tmp.eof(), std::string("cannot change literl to type ") + typeid(ReceiveTy).name());
+            if (!tmp.eof()) {
+                error(std::string("cannot change literl to type ") + typeid(ReceiveTy).name());
+            };
         }
         return *this;
     }
@@ -264,7 +266,7 @@ struct ExpressionLexer {
      * @return std::tuple<TokenType, std::string_view> foreseed token type and value
      */
     std::tuple<TokenType, std::string_view> foresee(size_t depth = 1) {
-        if(depth == 0){
+        if (depth == 0) {
             return std::make_tuple(type, top());
         }
         auto s = getState();
@@ -294,9 +296,9 @@ struct ExpressionLexer {
     /**
      * @brief get index in buffered string of first char of current token
      *
-     * @return size_t
+     * @return Ele*
      */
-    size_t beginIndex() const { return begin - buffer.data(); }
+    const Ele* beginPointer() const { return begin; }
 
     /**
      * @brief pointer to start position in buffered string of each new line,

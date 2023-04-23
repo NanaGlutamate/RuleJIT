@@ -36,8 +36,8 @@
 #include <stdexcept>
 #include <string>
 
-[[noreturn]] inline void error(const std::string &msg) { 
-    // debug
+[[noreturn]] inline void error(const std::string &msg) {
+    // show msg in debug mode
     throw std::logic_error(msg);
 }
 

@@ -19,7 +19,7 @@
 
 namespace rulejit::mystr{
 
-template <typename _Range>
+template <std::ranges::range _Range>
 inline std::string join(_Range&& range, const std::string& middle){
     std::string result;
     bool first = true;
@@ -35,7 +35,7 @@ inline std::string join(_Range&& range, const std::string& middle){
 }
 
 struct StringJoinner{
-    template<typename Ty>
+    template<std::ranges::range Ty>
     friend std::string operator|(Ty&& tar, const StringJoinner& j){
         return join(std::forward<Ty>(tar), j.middle);
     }
