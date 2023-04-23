@@ -42,6 +42,7 @@ struct ContextGlobal {
         std::map<std::vector<TypeInfo>, std::string> instantiationRealName;
         std::vector<std::string> paramNames;
         std::unique_ptr<FunctionDefAST> funcDef;
+        
         /**
          * @brief instantiate this template function with given param type
          * 

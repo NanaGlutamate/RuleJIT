@@ -35,7 +35,7 @@ inline const TypeInfo RealType{std::string(typeident::RealTypeIdent)};
 /// @brief auto type for type inference in var-def expression, auto generate only and cannot use by user
 inline const TypeInfo AutoType{std::string(typeident::AutoTypeIdent)};
 /// @brief type for unary function and operator
-inline const TypeInfo BuildInUnaryType = make_type("func(f64):f64");
+inline const TypeInfo BuildInUnaryType = make_type("func(f64)->f64");
 
 /// @brief build in types
 inline const std::set<TypeInfo> BuildInType{

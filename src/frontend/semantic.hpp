@@ -43,7 +43,7 @@
 
 namespace rulejit {
 
-constexpr inline auto reservedPrefix = "realfuncdef";
+constexpr inline auto reservedPrefix = "buildIn";
 
 /**
  * @brief main class for semantic analyzer
@@ -64,6 +64,11 @@ struct ExpressionSemantic : public ASTVisitor {
     ExpressionSemantic &operator=(const ExpressionSemantic &) = delete;
     ExpressionSemantic &operator=(ExpressionSemantic &&) = delete;
 
+    /**
+     * @brief get the call stack
+     * 
+     * @return std::vector<ExprAST*>& reference to call stack
+     */
     std::vector<ExprAST *> &getCallStack() { return callStack; }
 
     /**
@@ -210,7 +215,7 @@ struct ExpressionSemantic : public ASTVisitor {
                 if (p->baseVar->type->isArrayType()) {
                     // member functions every array has
                     static const std::map<std::string, TypeInfo> arrayMemberFunc{
-                        {"length", make_type("func([]T):f64")},
+                        {"length", make_type("func([]T)->f64")},
                         {"resize", make_type("func([]T, f64)")},
                         {"push", make_type("func([]T, T)")},
                         // pop, back
@@ -252,7 +257,7 @@ struct ExpressionSemantic : public ASTVisitor {
                             std::views::transform([&](const std::string &param) { return matched[param].toString(); }) |
                             mystr::join(",");
                         auto name = std::format("<{}>{}", templateParamList, instantiated->name);
-                        auto realName = c.generateUniqueName(reservedPrefix, name);
+                        auto realName = c.generateUniqueName(reservedPrefix, name + instantiated->funcType->toString());
                         globalInfo().realFuncDefinition.emplace(realName, std::move(instantiated));
                         funcDependencyRealName.insert(realName);
                         it->second.instantiationRealName.emplace(std::move(paramType), std::move(realName));
@@ -575,7 +580,7 @@ struct ExpressionSemantic : public ASTVisitor {
             // TODO: named lambda
             return setError("Only allow top-level func def");
         }
-        std::string realFuncName = c.generateUniqueName(reservedPrefix, v.name);
+        std::string realFuncName = c.generateUniqueName(reservedPrefix, v.name + v.funcType->toString());
         if (v.funcDefType == FunctionDefAST::FuncDefType::SYMBOLIC) {
             if (v.params.size() != 2 && (v.params.size() != 1 || !BUILDIN_UNARY.contains(v.name))) {
                 return setError("Infix function must have 2 params, "
@@ -669,6 +674,8 @@ struct ExpressionSemantic : public ASTVisitor {
         for (auto &&p : v.params) {
             my_assert(c.addVarDef(p->name, *(p->type)));
         }
+        // any function that the closure called will become a dependency of the function where the closure is defined
+        callAccept(v.returnValue);
         if (v.explicitCapture) {
             setError("Do not support explicit capture yet");
             // TODO: check type of captured variable
@@ -678,16 +685,15 @@ struct ExpressionSemantic : public ASTVisitor {
                 }
             }
         } else {
+            // constant will be automatically changed to literal
             auto vars = v.returnValue | EscapedVarAnalyzer{};
             for (auto &name : vars) {
-                if (!c.top().varDef.contains(name) || !c.scope[0].varDef.contains(name)) {
+                if (!c.top().varDef.contains(name) && !c.scope[0].varDef.contains(name)) {
                     // captured var is not a parameter nor global variable
                     setError("Do not support capture local variable by reference yet");
                 }
             }
         }
-        // any function that the closure called will become a dependency of the function where the closure is defined
-        callAccept(v.returnValue);
         if (*v.type == AutoType) {
             v.type = std::make_unique<TypeInfo>("func");
             for (auto &&param : v.params) {
@@ -700,16 +706,18 @@ struct ExpressionSemantic : public ASTVisitor {
                                 ", got: " + v.returnValue->type->toString());
             }
         }
-        auto name = c.generateUniqueName(reservedPrefix, "lambda");
+        auto name = c.generateUniqueName(reservedPrefix, "lambda" + v.type->toString());
+        // lambda do not dependent on any function, it is directly checked when constructed
+        globalInfo().funcDependency.emplace(name, std::set<std::string>{});
         funcDependencyRealName.emplace(name);
         auto funcDefAST =
-            std::make_unique<FunctionDefAST>("", std::move(v.type), std::move(v.params), std::move(v.returnValue));
+            std::make_unique<FunctionDefAST>("", std::make_unique<TypeInfo>(*v.type), std::move(v.params), std::move(v.returnValue));
         funcDefAST->captures = std::move(v.captures);
         globalInfo().realFuncDefinition.emplace(name, std::move(funcDefAST));
         globalInfo().checkedFunc.emplace(name);
         // TODO: add to real func
         c.pop();
-        needChange = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(*v.type), name);
+        needChange = std::make_unique<LiteralExprAST>(std::move(v.type), name);
     }
 
   private:
@@ -758,7 +766,7 @@ struct ExpressionSemantic : public ASTVisitor {
         } else {
             type->addParamType(NoInstanceType);
         }
-        auto name = c.generateUniqueName(reservedPrefix, "unnamed");
+        auto name = c.generateUniqueName(reservedPrefix, "unnamedfunc()");
         globalInfo().funcDependency.emplace(name, std::move(funcDependencyRealName));
         funcDependencyRealName.clear();
         std::vector<std::unique_ptr<IdentifierExprAST>> params;
@@ -1001,7 +1009,7 @@ struct ExpressionSemantic : public ASTVisitor {
             }
             // 1 match, add to realfuncdef
             auto [matchName, funcAST] = std::move(*alreadyMatch.begin());
-            auto realName = c.generateUniqueName(reservedPrefix, matchName);
+            auto realName = c.generateUniqueName(reservedPrefix, matchName + funcAST->funcType->toString());
             globalInfo().realFuncDefinition.emplace(realName, std::move(funcAST));
             funcDependencyRealName.emplace(realName);
             from->instantiationRealName.emplace(paramType, realName);

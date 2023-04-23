@@ -264,8 +264,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
             // no args
             lexer->pop(IGNORE_BREAK);
         } else {
-            lexer->pop(IGNORE_BREAK);
-            params = parseParamList();
+            params = parseParamList("|");
             eatBreak();
         }
         bool explicitCapture = false;

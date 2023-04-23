@@ -19,6 +19,7 @@
 
 namespace rulejit {
 
+// TODO: user defined local type has same name with template parameter?
 struct TemplateInstantiator : public ASTVisitor {
     template <typename T> TemplateInstantiator(T &&tparam) : tparam(std::forward<T>(tparam)){};
     friend void operator|(std::unique_ptr<ExprAST> &ast, TemplateInstantiator &t) { ast->accept(&t); }

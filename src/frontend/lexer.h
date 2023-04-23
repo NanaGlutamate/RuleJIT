@@ -307,6 +307,16 @@ struct ExpressionLexer {
      */
     std::vector<const char *> linePointer;
 
+    /**
+     * @brief return if all string has been lexered
+     * 
+     * @return true 
+     * @return false 
+     */
+    bool isEnd() const {
+        return begin == end;
+    }
+
   private:
     char readEscape(const char *&p) {
         static const std::map<char, char> escape{

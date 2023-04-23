@@ -169,7 +169,7 @@ int main() {
     // )");
     testCase(R"(
         const PI = 3.1415926
-        func <U, V>(l []U)map(f func(U):V):[]V{
+        func <U, V>(l []U)map(f func(U)->V)->[]V{
             var ltmp []V = []V{}
             var i = 0
             while(i < l.length()){
@@ -178,13 +178,12 @@ int main() {
             }
             ltmp
         }
-        func <U, V>|(l []U, f func(U):V):[]V{
+        func <U, V>|(l []U, f func(U)->V)->[]V{
             l.map(f)
         }
         var x []f64 = []f64{1, 2, 3}
-        func add1(a f64):f64 a + 1
-        x.map(add1)
-        x | add1
+        x.map(|a f64|a+1)
+        x | |a f64|a+1
     )");
 
     return 0;

@@ -631,7 +631,9 @@ struct TypeParser {
  */
 inline TypeInfo make_type(const std::string &type) {
     static ExpressionLexer lexer;
-    return type | lexer | TypeParser();
+    TypeInfo t = type | lexer | TypeParser();
+    my_assert(lexer.isEnd(), "type string not end");
+    return t;
 }
 
 } // namespace rulejit
