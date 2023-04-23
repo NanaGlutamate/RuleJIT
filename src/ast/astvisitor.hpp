@@ -22,7 +22,7 @@
 
 #define VISIT_FUNCTION(type) void visit(type &v) override
 #define VIRTUAL_VISIT_FUNCTION(type)                                                                                   \
-    virtual void visit(type &v) { error("not supported visit function"); }
+    virtual void visit(type &v) { error("not supported visit function to " #type); }
 #define PURE_VIRTUAL_VISIT_FUNCTION(type) virtual void visit(type &v) = 0
 
 #define AST_FRIEND_DECLEARATION                                                                                        \
@@ -41,7 +41,8 @@
     friend struct VarDefAST;                                                                                           \
     friend struct FunctionDefAST;                                                                                      \
     friend struct SymbolDefAST;                                                                                        \
-    friend struct TemplateDefAST;
+    friend struct TemplateDefAST;                                                                                      \
+    friend struct ClosureExprAST;
 
 namespace rulejit {
 
@@ -65,6 +66,7 @@ struct FunctionDefAST;
 struct SymbolDefAST;
 
 struct TemplateDefAST;
+struct ClosureExprAST;
 
 // template
 
@@ -195,6 +197,10 @@ struct ASTVisitor {
     /// @brief visit function for TemplateDefAST
     /// @param v TemplateDefAST to visit
     VIRTUAL_VISIT_FUNCTION(TemplateDefAST);
+
+    /// @brief visit function for ClosureExprAST
+    /// @param v ClosureExprAST to visit
+    VIRTUAL_VISIT_FUNCTION(ClosureExprAST);
 };
 
 } // namespace rulejit

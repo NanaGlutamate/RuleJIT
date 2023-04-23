@@ -72,20 +72,20 @@ std::string innerType(std::string type) {
  *
  */
 const inline std::string preDefines = R"(
-extern func sin(a f64):f64
-extern func cos(a f64):f64
-extern func tan(a f64):f64
-extern func cot(a f64):f64
-extern func atan(a f64):f64
-extern func asin(a f64):f64
-extern func acos(a f64):f64
-extern func fabs(a f64):f64
-extern func exp(a f64):f64
-extern func abs(a f64):f64
-extern func floor(a f64):f64
-extern func sqrt(a f64):f64
-extern func pow(a f64, b f64):f64
-extern func atan2(a f64, b f64):f64
+extern func sin(a f64)->f64
+extern func cos(a f64)->f64
+extern func tan(a f64)->f64
+extern func cot(a f64)->f64
+extern func atan(a f64)->f64
+extern func asin(a f64)->f64
+extern func acos(a f64)->f64
+extern func fabs(a f64)->f64
+extern func exp(a f64)->f64
+extern func abs(a f64)->f64
+extern func floor(a f64)->f64
+extern func sqrt(a f64)->f64
+extern func pow(a f64, b f64)->f64
+extern func atan2(a f64, b f64)->f64
 const true f64 = 1.0
 const false f64 = 0.0
 )";
@@ -148,7 +148,11 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
             if (auto p = ele->first_node("Value"); p) {
                 // if contains <Value> node, add assignment to preprocessOriginal
-                preprocessOriginal.emplace(ele->first_attribute("name")->value(),
+                auto ip = ele->first_attribute("name")->value();
+                // while (isspace(*ip)) {
+                //     ip++;
+                // }
+                preprocessOriginal.emplace(std::string(ip),
                                            std::string("{") + p->first_node("Expression")->value() + "}");
             }
             if (auto p = ele->first_node("InitValue"); p) {
@@ -161,9 +165,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                 } else {
                     for (auto c : tar) {
                         if ((c < '0' || c > '9') && c != '.') {
-                            error(
-                                "InitValue should only be a literal number like 0, 0.0 or 3.14, no scientific notation "
-                                "or hex/oct/binary support");
+                            error("InitValue should only be a literal number like 0, 0.0 or 3.14, "
+                                  "no scientific notation or hex/oct/binary support");
                         }
                     }
                 }
@@ -196,11 +199,24 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             }
             valueDependency.emplace(p.first, std::move(dependency));
         } catch (std::logic_error &e) {
-            error(std::format("Error in preprocess intermediate variable assignment:\n    {} = {}\nwith information:\n{}", p.first, p.second, e.what()));
+            error(
+                std::format("Error in preprocess intermediate variable assignment:\n    {} = {}\nwith information:\n{}",
+                            p.first, p.second, e.what()));
         }
     }
-    // 2. topo sort
-    std::set<std::string> openSet, closedSet;
+    // 2. filter out false dependency
+    for (auto& [name, dep] : valueDependency) {
+        for (auto it = dep.begin(); it != dep.end();) {
+            // is var and is intermediate
+            if (data.varType.contains(*it) && valueDependency.contains(*it)) {
+                it++;
+            } else {
+                it = dep.erase(it);
+            }
+        }
+    }
+    // 3. topo sort
+    std::set<std::string> openSet;
     std::vector<std::string> topoSorted;
     for (auto &&[k, v] : valueDependency) {
         if (v.empty()) {
@@ -208,10 +224,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         }
     }
     while (!openSet.empty()) {
-        auto cur = *openSet.begin();
-        openSet.erase(openSet.begin());
+        auto& cur = *openSet.begin();
         topoSorted.push_back(cur);
-        closedSet.insert(cur);
         for (auto &&[k, v] : valueDependency) {
             if (auto it = v.find(cur); it != v.end()) {
                 v.erase(it);
@@ -220,11 +234,13 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                 }
             }
         }
+        openSet.erase(openSet.begin());
     }
-    if (closedSet.size() != valueDependency.size()) {
+    if (topoSorted.size() != valueDependency.size()) {
         std::string errorMsg = "Cyclic dependency detected in preprocess intermediate variable assignment: \n";
         for (auto &&[k, v] : valueDependency) {
-            if (!closedSet.contains(k)) {
+            auto it = std::find(topoSorted.begin(), topoSorted.end(), k);
+            if (it == topoSorted.end()) {
                 errorMsg += "\t" + k + " -> ";
                 errorMsg += v | mystr::join(", ");
                 errorMsg += k + ";\n";

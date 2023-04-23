@@ -296,9 +296,9 @@ struct ExpressionLexer {
     /**
      * @brief get index in buffered string of first char of current token
      *
-     * @return size_t
+     * @return Ele*
      */
-    size_t beginIndex() const { return begin - buffer.data(); }
+    const Ele* beginPointer() const { return begin; }
 
     /**
      * @brief pointer to start position in buffered string of each new line,

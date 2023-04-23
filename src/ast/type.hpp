@@ -614,9 +614,9 @@ struct TypeParser {
             }
             e.pop();
             return info;
-        } else if (e.top()[0] == '<') {
-            // template
-            // TODO: check "<<"
+        // } else if (e.top()[0] == '<') {
+        //     // template
+        //     // TODO: check "<<"
         } else {
             return setError("expect type identifier, found: " + e.topCopy());
         }
