@@ -9,6 +9,13 @@
     2. Cache，即缓存变量，其行为是上一帧向缓存变量写入的值可以用于下一帧的输入
     3. Cache和Output的Value节点，其中的表达式将在每次Tick开始计算并赋值给相应对象；若表达式中含有包含Value节点的Cache和Output变量，计算顺序是没有保证的
 
+2023-04修改
+
+1. 数组操作：
+   1. `array.length()` 用于获取数组长度
+   2. `array.resize(l)` 用于调整数组大小，l是大于等于0的任意大小
+   3. `array.push(e)` 用于在数组尾部插入新元素
+
 源码结构
 
 1. XML文件格式要求：在doc/xml_design/example1.0.xml中，同文件夹的example1.0.xsd是其语法约束文件

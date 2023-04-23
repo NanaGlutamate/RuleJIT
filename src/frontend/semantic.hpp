@@ -265,9 +265,7 @@ struct ExpressionSemantic : public ASTVisitor {
                         it->second.instantiationRealName.emplace(std::move(paramType), std::move(realName));
                     } else {
                         setError(std::format("No template function match: {}({})", p->name,
-                                             paramType | std::views::transform([](const TypeInfo &t) {
-                                                 return t.toString();
-                                             }) | mystr::join(", ")));
+                                             paramType | std::views::transform(&TypeInfo::toString) | mystr::join(", ")));
                     }
                 }
             }
@@ -294,8 +292,13 @@ struct ExpressionSemantic : public ASTVisitor {
         processType(*v.type);
     }
     VISIT_FUNCTION(BinOpExprAST) {
-        callAccept(v.lhs);
-        callAccept(v.rhs);
+        if (v.op == "="){
+            callAccept(v.rhs);
+            callAccept(v.lhs);
+        } else {
+            callAccept(v.lhs);
+            callAccept(v.rhs);
+        }
         // only real binop allowed
         const static std::set<std::string> binOp{
             "+", "-", "*", "/", ">", "<", "==", "!=", ">=", "<=", "&&", "and", "||", "or", "%",

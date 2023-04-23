@@ -40,7 +40,18 @@ struct StringJoinner {
     std::string middle;
 };
 
-template <typename S> inline StringJoinner join(S &&middle) { return StringJoinner{std::forward<S>(middle)}; }
+/**
+ * @brief join a range of string with a middle string
+ *
+ * @tparam S middle string type, must be std::string
+ * @param middle middle string
+ * @return a struct to join a range of string
+ */
+template <typename S>
+    requires requires (S s) {std::string(s);}
+inline StringJoinner join(S &&middle) {
+    return StringJoinner{std::forward<S>(middle)};
+}
 
 template <typename Mid> struct StringSplitter {
     Mid middle;
@@ -73,16 +84,22 @@ template <typename Mid> struct StringSplitter {
         Iterator begin() const { return Iterator{src, middle, src.find(middle)}; }
         EndIterator end() const { return EndIterator{}; }
     };
-    SplitView friend operator|(std::string_view s, const StringSplitter &mid) {
-        return SplitView{s, mid.middle};
-    }
-    SplitView friend operator|(std::string_view s, StringSplitter &&mid) {
-        return SplitView{s, std::move(mid.middle)};
-    }
+    SplitView friend operator|(std::string_view s, const StringSplitter &mid) { return SplitView{s, mid.middle}; }
+    SplitView friend operator|(std::string_view s, StringSplitter &&mid) { return SplitView{s, std::move(mid.middle)}; }
 };
 
-template <typename T> auto split_view(T &&middle) {
-    // TODO: char middle
+/**
+ * @brief split a string by a middle string. if middle string is empty, return empty range;
+ * if middle string is not found or original string is empty, return a range contains original string.
+ *
+ * @tparam T type of middle string, must be std::string
+ * @param middle middle string
+ * @return a range of string_view
+ */
+template <typename T>
+    requires requires (T s) {std::string(s);}
+auto split_view(T &&middle) {
+    // TODO: char as middle
     return StringSplitter<std::string>{std::forward<T>(middle)};
 }
 

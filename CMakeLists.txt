@@ -4,6 +4,8 @@ project(${PROJ_NAME})
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# LLVM is not required if jit/aot module is not needed
+
 set(LLVM_DIR ${PROJECT_SOURCE_DIR}/../llvm-install-x86-debug-1507-nozlibstd/lib/cmake/llvm)
 # set(LLVM_DIR ${PROJECT_SOURCE_DIR}/../llvm-install-x86-relwithdebinfo-1507-nozlibstd/lib/cmake/llvm)
 find_package(LLVM REQUIRED CONFIG)

@@ -34,7 +34,7 @@ constexpr inline auto IGNORE_BREAK = rulejit::ExpressionLexer::Guidence::IGNORE_
 namespace rulejit {
 
 // EXPR := UNARYEXPR (op UNARYEXPR)*
-std::unique_ptr<ExprAST> ExpressionParser::parseExpr(bool ignoreBreak, bool allowTuple) {
+std::unique_ptr<ExprAST> ExpressionParser::parseExpr(bool ignoreBreak) {
     std::unique_ptr<ExprAST> ret;
     auto start = lexer->beginPointer();
     if (lexer->tokenType() == TokenType::SYM) {
@@ -63,7 +63,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parseExpr(bool ignoreBreak, bool allo
 }
 
 std::unique_ptr<ExprAST> ExpressionParser::parseBinOpRHS(Priority priority, std::unique_ptr<ExprAST> lhs,
-                                                         bool ignoreBreak, bool allowTuple) {
+                                                         bool ignoreBreak) {
     // todo: tuple definition, only aviliable when 'accept tuple'
     while (true) {
         Priority prec;

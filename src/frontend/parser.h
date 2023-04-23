@@ -114,9 +114,8 @@ struct ExpressionParser {
         return parseExpr();
     };
     // add tuple after generics support
-    std::unique_ptr<ExprAST> parseExpr(bool ignoreBreak = false, bool allowTuple = false);
-    std::unique_ptr<ExprAST> parseBinOpRHS(Priority priority, std::unique_ptr<ExprAST> lhs, bool ignoreBreak = false,
-                                           bool allowTuple = false);
+    std::unique_ptr<ExprAST> parseExpr(bool ignoreBreak = false);
+    std::unique_ptr<ExprAST> parseBinOpRHS(Priority priority, std::unique_ptr<ExprAST> lhs, bool ignoreBreak = false);
     std::unique_ptr<ExprAST> parseUnary();
     std::unique_ptr<ExprAST> parsePrimary();
     std::unique_ptr<ExprAST> parseBlock();
