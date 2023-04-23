@@ -92,6 +92,7 @@ const false f64 = 0.0
 
 } // namespace
 
+// TODO: collect debug info for interpreter; show more detailed info when lexer/parser/semantic error
 RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextStack &context, RuleSetMetaInfo &data) {
     using namespace rapidxml;
 
