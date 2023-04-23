@@ -158,7 +158,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
                     }
                     key = parseExpr(true);
                 }
-                if (lexer->top() == ":" || lexer->top() == "=") {
+                if (lexer->top() == "=") {
                     lexer->pop(IGNORE_BREAK);
                     auto value = parseExpr(true);
                     // eatBreak();
@@ -264,10 +264,11 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         } else {
             lexer->pop(IGNORE_BREAK);
             args = parseParamList();
+            eatBreak();
         }
         bool explicitCapture = false;
         std::vector<std::unique_ptr<IdentifierExprAST>> captures;
-        if (lexer->top() == ":") {}
+        if (lexer->top() == "->") {}
         // TODO:
     } else {
         return setError("unexcepted token: \"" + lexer->topCopy() + "\" in expression");
@@ -510,9 +511,9 @@ void rulejit::ExpressionParser::parseFuncDef(std::vector<std::unique_ptr<rulejit
 
     // TODO: auto infer return type
     // parse returned type
-    if (lexer->top() == ":") {
+    if (lexer->top() == "->") {
         // returned function
-        // TODO: remove ":"? donot,
+        // TODO: remove "->"? donot,
         //                   1. hard to parse user-defined infix operator
         //                   2. hard to distinguish lambda from member function
         lexer->pop(IGNORE_BREAK);

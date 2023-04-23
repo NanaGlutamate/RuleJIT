@@ -513,10 +513,13 @@ struct TemplateDefAST : public NoReturnExprAST {
     }
 };
 
-// struct TemplateInstantiationIdentifierExprAST : public IdentifierExprAST {
-//     // ACCEPT_FUNCTION;
-//     std::vector<TypeInfo> targs;
-// };
+struct TemplateInstantiationIdentifierExprAST : public ExprAST {};
+
+// struct TraitDefAST : public NoReturnExprAST {};
+
+// struct TypeMatchExprAST : public ExprAST {};
+
+// struct TypeCastExprAST : public ExprAST {};
 
 // // func <T> zero():T -> match T {fit []V => []V{}; is i64 => 0; else => null;}
 // TODO: use fit<V> []V to avoid call to freeMatch()?
