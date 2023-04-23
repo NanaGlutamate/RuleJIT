@@ -15,6 +15,8 @@
  * <tr><td>djw</td><td>2023-03-30</td><td>Change function check logic.</td></tr>
  * <tr><td>djw</td><td>2023-04-20</td><td>Change extern function logic, and make vardef whose name same with func
  * legal.</td></tr>
+ * <tr><td>djw</td><td>2023-04-21</td><td>Add template support.</td></tr>
+ * <tr><td>djw</td><td>2023-04-23</td><td>Add pure lambda support.</td></tr>
  * </table>
  */
 

@@ -11,6 +11,7 @@
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
  * <tr><td>djw</td><td>2023-04-20</td><td>Template.</td></tr>
+ * <tr><td>djw</td><td>2023-04-23</td><td>Add lambda support.</td></tr>
  * </table>
  */
 #pragma once

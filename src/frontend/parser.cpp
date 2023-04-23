@@ -11,6 +11,8 @@
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
  * <tr><td>djw</td><td>2023-03-30</td><td>Rewrite func-def parsering.</td></tr>
+ * <tr><td>djw</td><td>2023-04-22</td><td>Add template support.</td></tr>
+ * <tr><td>djw</td><td>2023-04-23</td><td>Add pure lambda support.</td></tr>
  * </table>
  */
 #include "frontend/parser.h"
