@@ -39,6 +39,11 @@ struct SubRuleSet {
     SubRuleSet(ContextStack &context, DataStore &dataStorage)
         : handler(dataStorage), interpreter(context, handler), subruleset(nullptr) {}
     SubRuleSet() = delete;
+    SubRuleSet(const SubRuleSet &) = delete;
+    SubRuleSet(SubRuleSet &&) = delete;
+    SubRuleSet &operator=(const SubRuleSet &) = delete;
+    SubRuleSet &operator=(SubRuleSet &&) = delete;
+
     /// @brief resource handler
     ResourceHandler handler;
     /// @brief expression interpreter
@@ -106,11 +111,11 @@ struct RuleSetEngine {
             [](auto& s){s.subruleset | s.interpreter;}
         );
 #else // __RULEJIT_PARALLEL_ENGINE
-        for (auto &&s : preprocess.subRuleSets) {
+        for (auto &s : preprocess.subRuleSets) {
             s.subruleset | s.interpreter;
         }
 #endif // __RULEJIT_PARALLEL_ENGINE
-        for (auto &&s : preprocess.subRuleSets) {
+        for (auto &s : preprocess.subRuleSets) {
             s.handler.writeBack();
             s.interpreter.reset();
         }

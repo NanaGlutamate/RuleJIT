@@ -38,9 +38,9 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
     notGenerate.emplace(preDefines);
 
     for (auto &&name : preProcess) {
+        notGenerate.insert(name);
         preprocess.subRuleSets.emplace_back(context, dataStorage);
-        auto &tmp = preprocess.subRuleSets.back();
-        tmp.subruleset = std::move(context.global.realFuncDefinition[name]->returnValue);
+        preprocess.subRuleSets.back().subruleset = std::move(context.global.realFuncDefinition[name]->returnValue);
     }
 
     // for each subruleset node, store generated ast in ruleset
@@ -51,7 +51,10 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
         tmp.subruleset = std::move(context.global.realFuncDefinition[subRuleSetName]->returnValue);
     }
 
-    std::erase_if(context.global.realFuncDefinition, [&](auto &tar) { return notGenerate.contains(tar.first); });
+    std::erase_if(context.global.realFuncDefinition, [&](auto &tar) {
+        // clear all func that represent a subruleset
+        return notGenerate.contains(tar.first);
+    });
 }
 
 } // namespace rulejit::cq

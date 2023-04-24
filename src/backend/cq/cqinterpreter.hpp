@@ -78,6 +78,7 @@ struct CQInterpreter : public ASTVisitor {
 
   protected:
     VISIT_FUNCTION(IdentifierExprAST) {
+        returned.type = Value::EMPTY;
         if (v.name == "true") {
             returned.value = 1.;
             returned.type = Value::VALUE;
@@ -164,10 +165,22 @@ struct CQInterpreter : public ASTVisitor {
             setErrorWhenFailed(v.params.size() == 1, "\"length\" only accept 1 param");
             v.params[0]->accept(this);
             setErrorWhenFailed(returned.type == Value::TOKEN, "expect array as receiver of \"length\"");
+            returned.type = Value::VALUE;
+            returned.value = static_cast<double>(handler.arrayLength(returned.token));
         } else if (funcName == "push") {
             setErrorWhenFailed(v.params.size() == 2, "\"push\" only accept 2 param");
             v.params[0]->accept(this);
             auto arg1 = returned;
+            v.params[1]->accept(this);
+            auto arg2 = returned;
+            setErrorWhenFailed(arg1.type == Value::TOKEN, "expect array as receiver of \"push\"");
+            if(arg2.type == Value::VALUE){
+                handler.arrayExtend(arg1.token, arg2.value);
+            }else if(arg2.type == Value::TOKEN){
+                handler.arrayExtend(arg1.token, arg2.token);
+            }else{
+                setError("arg2 of \"push\" has no return");
+            }
         } else if (funcName == "resize") {
             setErrorWhenFailed(v.params.size() == 2, "\"resize\" only accept 2 param");
             v.params[0]->accept(this);
@@ -175,6 +188,9 @@ struct CQInterpreter : public ASTVisitor {
             v.params[1]->accept(this);
             getReturnedValue();
             auto arg2 = returned.value;
+            setErrorWhenFailed(arg1.type == Value::TOKEN, "expect array as receiver of \"resize\"");
+            setErrorWhenFailed(arg2 == (double)floor(arg2), "array index out of range (should can be cast to int)");
+            handler.arrayResize(arg1.token, static_cast<size_t>(arg2));
         } else if (auto it = oneParamFunc.find(funcName); it != oneParamFunc.end()) {
             setErrorWhenFailed(v.params.size() == 1, std::format("\"{}\" only accept 1 param", funcName));
             v.params[0]->accept(this);
@@ -228,34 +244,40 @@ struct CQInterpreter : public ASTVisitor {
         };
         if (v.op == "=") {
             if (isType<IdentifierExprAST>(v.lhs.get())) {
+                v.rhs->accept(this);
+                auto rhs = returned;
                 auto p = dynamic_cast<IdentifierExprAST *>(v.lhs.get());
                 p->accept(this);
                 auto lhs = returned;
-                v.rhs->accept(this);
                 if (lhs.type == Value::TOKEN) {
-                    if (returned.type == Value::TOKEN) {
-                        handler.assign(lhs.token, returned.token);
+                    if (rhs.type == Value::TOKEN) {
+                        handler.assign(lhs.token, rhs.token);
                     } else {
-                        handler.writeValue(lhs.token, returned.value);
+                        handler.writeValue(lhs.token, rhs.value);
                     }
                 } else {
+                    // lhs is defined in program and stored in symbol stack
+                    returned = rhs;
                     getReturnedValue();
                     for (auto it = symbolStack.back().rbegin(); it != symbolStack.back().rend(); it++) {
-                        if (it->find(p->name) != it->end()) {
-                            (*it)[p->name] = returned;
+                        if (auto varIt = it->find(p->name); varIt != it->end()) {
+                            varIt->second = returned;
+                            returned.type = Value::EMPTY;
                             return;
                         }
                     }
                 }
             } else if (isType<MemberAccessExprAST>(v.lhs.get())) {
                 v.lhs->accept(this);
-                auto tmp = returned;
+                auto lhs = returned;
                 v.rhs->accept(this);
+                auto rhs = returned;
                 if (returned.type == Value::VALUE) {
-                    handler.writeValue(tmp.token, returned.value);
+                    handler.writeValue(lhs.token, rhs.value);
                 } else {
-                    handler.assign(tmp.token, returned.token);
+                    handler.assign(lhs.token, rhs.token);
                 }
+                returned.type = Value::EMPTY;
             } else {
                 setError("only allow direct or member variable assignment for now");
             }
@@ -336,6 +358,9 @@ struct CQInterpreter : public ASTVisitor {
         returned.type = Value::EMPTY;
         v.condition->accept(this);
         getReturnedValue();
+#ifdef __RULEJIT_INTERPRETER_DEBUG
+        std::cout << std::format("Evaluate: {}", returned.value?"true":"false") << std::endl;
+#endif
         if (returned.value != 0) {
             v.trueExpr->accept(this);
         } else {
