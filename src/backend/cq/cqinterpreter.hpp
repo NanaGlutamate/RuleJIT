@@ -42,7 +42,7 @@ namespace rulejit::cq {
 /**
  * @brief main class to interprete ast in cq environment
  *
- * TODO: remove type check
+ * TODO: remove type check; only check when runtime error
  *
  */
 struct CQInterpreter : public ASTVisitor {
@@ -105,7 +105,7 @@ struct CQInterpreter : public ASTVisitor {
         } else if (*(v.memberToken->type) == RealType) {
             v.memberToken->accept(this);
             getReturnedValue();
-            my_assert(returned.value == (double)floor(returned.value));
+            setErrorWhenFailed(returned.value == (double)floor(returned.value), "array index out of range (should can be cast to int)");
             returned.token = handler.arrayAccess(base.token, (size_t)returned.value);
         } else {
             setError("member access only accept string or int");
@@ -145,10 +145,10 @@ struct CQInterpreter : public ASTVisitor {
             auto p = dynamic_cast<LiteralExprAST *>(v.functionIdent.get());
             funcName = p->value;
         } else {
-            return setError("only allow direct function(no member, no function variable, no returned funciton) for now");
+            return setError("only allow direct function call, cannot call function through variable");
         }
         if (funcName == "print") {
-            my_assert(v.params.size() == 1, "\"print\" only accept 1 param");
+            setErrorWhenFailed(v.params.size() == 1, "\"print\" only accept 1 param");
             v.params[0]->accept(this);
             if (returned.type == Value::TOKEN) {
                 if (handler.isString(returned.token)) {
@@ -160,14 +160,29 @@ struct CQInterpreter : public ASTVisitor {
                 std::cout << returned.value << std::endl;
             }
             returned.type = Value::EMPTY;
+        } else if (funcName == "length") {
+            setErrorWhenFailed(v.params.size() == 1, "\"length\" only accept 1 param");
+            v.params[0]->accept(this);
+            setErrorWhenFailed(returned.type == Value::TOKEN, "expect array as receiver of \"length\"");
+        } else if (funcName == "push") {
+            setErrorWhenFailed(v.params.size() == 2, "\"push\" only accept 2 param");
+            v.params[0]->accept(this);
+            auto arg1 = returned;
+        } else if (funcName == "resize") {
+            setErrorWhenFailed(v.params.size() == 2, "\"resize\" only accept 2 param");
+            v.params[0]->accept(this);
+            auto arg1 = returned;
+            v.params[1]->accept(this);
+            getReturnedValue();
+            auto arg2 = returned.value;
         } else if (auto it = oneParamFunc.find(funcName); it != oneParamFunc.end()) {
-            my_assert(v.params.size() == 1, std::format("\"{}\" only accept 1 param", funcName));
+            setErrorWhenFailed(v.params.size() == 1, std::format("\"{}\" only accept 1 param", funcName));
             v.params[0]->accept(this);
             getReturnedValue();
             returned.value = it->second(returned.value);
             returned.type = Value::VALUE;
         } else if (auto it = twoParamFunc.find(funcName); it != twoParamFunc.end()) {
-            my_assert(v.params.size() == 2, std::format("\"{}\" only accept 2 param", funcName));
+            setErrorWhenFailed(v.params.size() == 2, std::format("\"{}\" only accept 2 param", funcName));
             v.params[0]->accept(this);
             getReturnedValue();
             double tmp = returned.value;
@@ -460,9 +475,7 @@ struct CQInterpreter : public ASTVisitor {
      * @param type string of type name
      * @return true if is numerical type
      */
-    bool isNumericalType(const TypeInfo &type) {
-        return type == RealType || type == IntType;
-    }
+    bool isNumericalType(const TypeInfo &type) { return type == RealType || type == IntType; }
 
     /**
      * @brief make "returned" a value,
@@ -482,13 +495,6 @@ struct CQInterpreter : public ASTVisitor {
     }
 
     /**
-     * @brief set errors
-     *
-     * @param msg error message
-     */
-    [[noreturn]] void setError(const std::string &msg) { error(msg); }
-
-    /**
      * @brief context, includes function defines
      *
      */
@@ -505,6 +511,10 @@ struct CQInterpreter : public ASTVisitor {
      *
      */
     Value returned;
+
+    SET_ERROR_MEMBER("(Interpreter)Runtime", void)
+    CONDITIONAL_SET_ERROR_MEMBER("(Interpreter)Runtime", void)
+
 #ifdef __RULEJIT_INTERPRETER_DEBUG
     size_t ruleCnt;
 #endif

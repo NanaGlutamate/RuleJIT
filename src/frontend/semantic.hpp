@@ -789,8 +789,11 @@ struct ExpressionSemantic : public ASTVisitor {
             c.pop();
         }
     }
+    
     rulejit::ContextGlobal &globalInfo() { return c.global; }
+
     SET_ERROR_MEMBER("Semantic Check", void)
+
     void processType(const TypeInfo &type) {
         if (!type.isValid() || type == NoInstanceType) {
             return;

@@ -25,8 +25,8 @@
 
 #include "frontend/ruleset/rulesetparser.h"
 #include "tools/myassert.hpp"
-#include "tools/seterror.hpp"
 #include "tools/printcsvaluemap.hpp"
+#include "tools/seterror.hpp"
 
 namespace rulejit::cq {
 
@@ -42,6 +42,25 @@ struct DataStore {
     CSValueMap output;
     CSValueMap cache;
     rulesetxml::RuleSetMetaInfo metaInfo;
+
+    /**
+     * @brief check all stored data to see if their type are as defined;
+     *
+     * @return std::string type check info
+     */
+    std::string genTypeCheckInfo() {
+        // use inner class act as a recursible lambda to avoid private function used only once / y-combinator
+        struct TypeChecker{
+            rulesetxml::RuleSetMetaInfo& metaInfo;
+            std::string check(){}
+        } typeChecker{metaInfo};
+        std::string ret;
+        std::vector<std::tuple<std::string, std::reference_wrapper<CSValueMap>>> v{
+            {"input", input}, {"output", output}, {"cache", cache}};
+        for (auto& [name, varTable] : v) {
+            // TODO:
+        }
+    }
 
     /**
      * @brief init function, will fill input, output and cache
@@ -207,7 +226,7 @@ struct ResourceHandler {
      * @brief read input, cache or output value into the buffer and return index of the value;
      * if the value already in the buffer, directly return the index;
      * if the value not a input, cache or output value, throw an exception
-     * 
+     *
      * @exception "unknown token: " + [name of var]
      *
      * @param s variable name
