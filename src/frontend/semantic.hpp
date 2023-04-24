@@ -68,7 +68,7 @@ struct ExpressionSemantic : public ASTVisitor {
 
     /**
      * @brief get the call stack
-     * 
+     *
      * @return std::vector<ExprAST*>& reference to call stack
      */
     std::vector<ExprAST *> &getCallStack() { return callStack; }
@@ -264,8 +264,9 @@ struct ExpressionSemantic : public ASTVisitor {
                         funcDependencyRealName.insert(realName);
                         it->second.instantiationRealName.emplace(std::move(paramType), std::move(realName));
                     } else {
-                        setError(std::format("No template function match: {}({})", p->name,
-                                             paramType | std::views::transform(&TypeInfo::toString) | mystr::join(", ")));
+                        setError(
+                            std::format("No template function match: {}({})", p->name,
+                                        paramType | std::views::transform(&TypeInfo::toString) | mystr::join(", ")));
                     }
                 }
             }
@@ -292,7 +293,7 @@ struct ExpressionSemantic : public ASTVisitor {
         processType(*v.type);
     }
     VISIT_FUNCTION(BinOpExprAST) {
-        if (v.op == "="){
+        if (v.op == "=") {
             callAccept(v.rhs);
             callAccept(v.lhs);
         } else {
@@ -548,14 +549,19 @@ struct ExpressionSemantic : public ASTVisitor {
         return;
     }
     VISIT_FUNCTION(VarDefAST) {
+        if (*(v.valueType) != AutoType) {
+            typeGuidence = {v.valueType.get()};
+        }
         callAccept(v.definedValue);
         if (*(v.definedValue->type) == NoInstanceType) {
             return setError("Var defined value has no return");
         }
-        if (*(v.definedValue->type) != *(v.valueType) && *(v.valueType) != AutoType) {
-            return setError("Var def type mismatch");
-        } else if (*(v.valueType) == AutoType) {
-            v.valueType = std::make_unique<TypeInfo>(*(v.definedValue->type));
+        if (*(v.definedValue->type) != *(v.valueType)) {
+            if (*(v.valueType) == AutoType) {
+                v.valueType = std::make_unique<TypeInfo>(*(v.definedValue->type));
+            } else {
+                return setError("Var def type mismatch");
+            }
         }
         switch (v.varDefType) {
         case VarDefAST::VarDefType::NORMAL:
@@ -627,8 +633,9 @@ struct ExpressionSemantic : public ASTVisitor {
             return setError("only allow symbolic/member/normal function define");
         }
         globalInfo().realFuncDefinition.emplace(
-            realFuncName, std::make_unique<FunctionDefAST>(std::move(v.name), std::move(v.funcType), std::move(v.params),
-                                                          std::move(v.returnValue), v.funcDefType));
+            realFuncName,
+            std::make_unique<FunctionDefAST>(std::move(v.name), std::move(v.funcType), std::move(v.params),
+                                             std::move(v.returnValue), v.funcDefType));
         needChange = nop();
     }
     VISIT_FUNCTION(SymbolDefAST) {
@@ -715,8 +722,8 @@ struct ExpressionSemantic : public ASTVisitor {
         // lambda do not dependent on any function, it is directly checked when constructed
         globalInfo().funcDependency.emplace(name, std::set<std::string>{});
         funcDependencyRealName.emplace(name);
-        auto funcDefAST =
-            std::make_unique<FunctionDefAST>("", std::make_unique<TypeInfo>(*v.type), std::move(v.params), std::move(v.returnValue));
+        auto funcDefAST = std::make_unique<FunctionDefAST>("", std::make_unique<TypeInfo>(*v.type), std::move(v.params),
+                                                           std::move(v.returnValue));
         funcDefAST->captures = std::move(v.captures);
         globalInfo().realFuncDefinition.emplace(name, std::move(funcDefAST));
         globalInfo().checkedFunc.emplace(name);
@@ -733,6 +740,7 @@ struct ExpressionSemantic : public ASTVisitor {
             tar = std::move(needChange);
             needChange = nullptr;
         }
+        typeGuidence.clear();
         callStack.pop_back();
     };
 
@@ -785,6 +793,7 @@ struct ExpressionSemantic : public ASTVisitor {
         my_assert(!needChange);
         funcDependencyRealName.clear();
         callStack.clear();
+        typeGuidence.clear();
         while (c.size() != 1) {
             c.pop();
         }
@@ -941,6 +950,7 @@ struct ExpressionSemantic : public ASTVisitor {
      * @return std::tuple<bool, std::string> (is_find, realname)
      */
     std::tuple<bool, std::string> seekMemberFunc(const std::string &name, const std::vector<TypeInfo> &paramType) {
+        // TODO: change paramType to std::vector<std::unique_ptr<IdentifierExprAST>>
         return seekReloadableFunc(name, paramType, &ContextGlobal::memberFuncDef,
                                   &ContextGlobal::templateMemberFuncDef);
     }
@@ -1026,6 +1036,7 @@ struct ExpressionSemantic : public ASTVisitor {
     ContextStack &c;
 
     // temp variable need trans through function
+    std::vector<TypeInfo *> typeGuidence;
     std::vector<ExprAST *> callStack;
     std::unique_ptr<ExprAST> needChange;
     std::set<std::string> funcDependencyRealName;
