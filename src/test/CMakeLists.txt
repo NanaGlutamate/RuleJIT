@@ -1,3 +1,5 @@
+add_subdirectory(unittest)
+
 add_executable(lexer_test ${FRONTEND_SRC} ${AST_SRC} lexermain.cpp)
 add_executable(astprinter_test ${FRONTEND_SRC} ${AST_SRC} astprintermain.cpp)
 add_executable(typeparse_test ${FRONTEND_SRC} ${AST_SRC} typeparsemain.cpp)

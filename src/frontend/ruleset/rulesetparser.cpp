@@ -13,12 +13,15 @@
  * </table>
  */
 #include "rulesetparser.h"
+#include "ast/escapedanalyzer.hpp"
 #include "frontend/lexer.h"
 #include "frontend/parser.h"
 #include "frontend/semantic.hpp"
 #include "rapidxml-1.13/rapidxml.hpp"
 #include "tools/myassert.hpp"
 #include "tools/seterror.hpp"
+#include "tools/showmsg.hpp"
+#include "tools/stringprocess.hpp"
 
 namespace {
 
@@ -69,20 +72,22 @@ std::string innerType(std::string type) {
  *
  */
 const inline std::string preDefines = R"(
-extern func sin(a f64):f64
-extern func cos(a f64):f64
-extern func tan(a f64):f64
-extern func cot(a f64):f64
-extern func atan(a f64):f64
-extern func asin(a f64):f64
-extern func acos(a f64):f64
-extern func fabs(a f64):f64
-extern func exp(a f64):f64
-extern func abs(a f64):f64
-extern func floor(a f64):f64
-extern func sqrt(a f64):f64
-extern func pow(a f64, b f64):f64
-extern func atan2(a f64, b f64):f64
+extern func sin(a f64)->f64
+extern func cos(a f64)->f64
+extern func tan(a f64)->f64
+extern func cot(a f64)->f64
+extern func atan(a f64)->f64
+extern func asin(a f64)->f64
+extern func acos(a f64)->f64
+extern func fabs(a f64)->f64
+extern func exp(a f64)->f64
+extern func abs(a f64)->f64
+extern func floor(a f64)->f64
+extern func sqrt(a f64)->f64
+extern func pow(a f64, b f64)->f64
+extern func atan2(a f64, b f64)->f64
+const true f64 = 1.0
+const false f64 = 0.0
 )";
 
 } // namespace
@@ -130,8 +135,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     // named "InitValue", add assignment to initOriginal
     std::string initOriginal = "{";
     // when has sub element <Value>, add assignment to preprocessOriginal
-    // for each <Value>, create a single subruleset to execute to avoid data-race
-    std::vector<std::string> preprocessOriginal;
+    std::map<std::string, std::string> preprocessOriginal;
 
     auto load = [&](const std::string &nodeName, std::vector<std::string> &target) {
         for (auto ele = meta->first_node(nodeName.data())->first_node("Param"); ele; ele = ele->next_sibling("Param")) {
@@ -139,13 +143,17 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             if (data.varType.contains(name)) {
                 error("Input, Output and Cache variables should have different names");
             }
-            target.push_back(name);
             data.varType[name] = type;
+            target.push_back(name);
             context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
             if (auto p = ele->first_node("Value"); p) {
                 // if contains <Value> node, add assignment to preprocessOriginal
-                preprocessOriginal.emplace_back(std::string(ele->first_attribute("name")->value()) + "={" +
-                                                p->first_node("Expression")->value() + "};");
+                auto ip = ele->first_attribute("name")->value();
+                // while (isspace(*ip)) {
+                //     ip++;
+                // }
+                preprocessOriginal.emplace(std::string(ip),
+                                           std::string("{") + p->first_node("Expression")->value() + "}");
             }
             if (auto p = ele->first_node("InitValue"); p) {
                 // TODO: add expression support?
@@ -157,8 +165,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                 } else {
                     for (auto c : tar) {
                         if ((c < '0' || c > '9') && c != '.') {
-                            error("InitValue should only be a number like 0, 0.0 or 3.14, no scientific notation "
-                                  "or hex/oct/binary support");
+                            error("InitValue should only be a literal number like 0, 0.0 or 3.14, "
+                                  "no scientific notation or hex/oct/binary support");
                         }
                     }
                 }
@@ -175,10 +183,81 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     initOriginal += "}";
     // parse initOriginal, get returned real function name
     ret.preDefines = (typeOriginal + "\n" + preDefines + "\n" + initOriginal) | lexer | parser | semantic;
-    // parse preprocessOriginal, get returned real function name
-    for (auto &&o : preprocessOriginal) {
-        ret.preprocess.emplace_back(o | lexer | parser | semantic);
+
+    // topo-sort preprocessOriginal
+    std::unordered_map<std::string, std::set<std::string>> valueDependency;
+    std::vector<std::unique_ptr<ExprAST>> assignmentValue;
+    // 1. collect dependency
+    for (auto &&p : preprocessOriginal) {
+        try {
+            auto exprFuncName = p.second | lexer | parser | semantic;
+            auto dependency = context.global.realFuncDefinition[exprFuncName]->returnValue | EscapedVarAnalyzer{};
+            context.global.realFuncDefinition.erase(exprFuncName);
+            my_assert(!valueDependency.contains(p.first), "assignment to a variable twice");
+            if (dependency.contains(p.first)) {
+                error("Self-dependent value is not allowed: " + p.first);
+            }
+            valueDependency.emplace(p.first, std::move(dependency));
+        } catch (std::logic_error &e) {
+            error(
+                std::format("Error in preprocess intermediate variable assignment:\n    {} = {}\nwith information:\n{}",
+                            p.first, p.second, e.what()));
+        }
     }
+    // 2. filter out false dependency
+    for (auto &[name, dep] : valueDependency) {
+        for (auto it = dep.begin(); it != dep.end();) {
+            // is var and is intermediate
+            if (data.varType.contains(*it) && valueDependency.contains(*it)) {
+                it++;
+            } else {
+                it = dep.erase(it);
+            }
+        }
+    }
+    // 3. topo sort
+    std::set<std::string> openSet;
+    std::vector<std::string> topoSorted;
+    for (auto &&[k, v] : valueDependency) {
+        if (v.empty()) {
+            openSet.insert(k);
+        }
+    }
+    while (!openSet.empty()) {
+        auto &cur = *openSet.begin();
+        topoSorted.push_back(cur);
+        for (auto &&[k, v] : valueDependency) {
+            if (auto it = v.find(cur); it != v.end()) {
+                v.erase(it);
+                if (v.empty()) {
+                    openSet.insert(k);
+                }
+            }
+        }
+        openSet.erase(openSet.begin());
+    }
+    if (topoSorted.size() != valueDependency.size()) {
+        std::string errorMsg = "Cyclic dependency detected in preprocess intermediate variable assignment: \n";
+        for (auto &&[k, v] : valueDependency) {
+            auto it = std::find(topoSorted.begin(), topoSorted.end(), k);
+            if (it == topoSorted.end()) {
+                errorMsg += "\t" + k + " -> ";
+                errorMsg += v | mystr::join(", ");
+                errorMsg += k + ";\n";
+            }
+        }
+        error(errorMsg);
+    }
+    showMsg("Topo sorted: " + (topoSorted | mystr::join(", ")));
+    std::string valueAssignment = "{";
+    // parse preprocessOriginal, get returned real function name
+    for (auto &&o_ : topoSorted) {
+        auto &o = *preprocessOriginal.find(o_);
+        valueAssignment += (o.first + "=" + o.second + ";");
+    }
+    valueAssignment += "}";
+
+    ret.preprocess.push_back(valueAssignment | lexer | parser | semantic);
 
     // generate subruleset defs
     size_t id = 0;
@@ -191,10 +270,21 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule"), act++) {
             expr += std::string("if({") + rule->first_node("Condition")->first_node("Expression")->value() + "}){";
             // TODO: add direct expression support
-            for (auto assign = rule->first_node("Consequence")->first_node("Assignment"); assign;
-                 assign = assign->next_sibling("Assignment")) {
-                expr += std::string(assign->first_node("Target")->value()) + "={" +
-                        assign->first_node("Value")->first_node("Expression")->value() + "};";
+            for (auto assign = rule->first_node("Consequence")->first_node(); assign; assign = assign->next_sibling()) {
+                using namespace std::literals;
+                if (assign->name() == "Assignment"s) {
+                    expr += std::string(assign->first_node("Target")->value()) + "={" +
+                            assign->first_node("Value")->first_node("Expression")->value() + "};";
+                } else if (assign->name() == "ArrayOperation"s) {
+                    std::string value;
+                    if(auto valueNode = assign->first_node("Args"); valueNode) {
+                        value = valueNode->first_node("Expression")->value();
+                    }
+                    expr += std::format("{}.{}({});", assign->first_node("Target")->value(),
+                                        assign->first_node("Operation")->value(), value);
+                } else {
+                    error("Unknown Consequence type: "s + assign->name() + "");
+                }
             }
             expr += std::to_string(act) + "}else ";
         }

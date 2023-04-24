@@ -47,14 +47,14 @@ static_assert(canCallBeforeDefine + allowUserDefinedInfix + allowUserDefinedUnar
 } // namespace config
 
 inline const std::set<std::string> BUILDIN_UNARY{
-    "-", "not", "!", "&", "*", "~", "||", "&&", "*", "&", "<-", "->",
+    "-", "not", "!", "&", "*", "~", "or", "and", "*", "&", "<-", "->",
 };
 
 using Priority = int;
 
 // A "<-" B := (*A) = B TODO: A < -B? use <<-
 inline const std::set<std::string_view> BUILD_IN_MULTICHAR_SYMBOL{
-    "==", "!=", ">=", "<=", "&&", "||", "->", "-<", "..", ">>", "<<", "<<-", ":=", "=>",
+    "==", "!=", ">=", "<=", "&&", "||", "->", "..", ">>", "<<", ":=", "=>",
 };
 
 // inline const std::set<std::string_view> unaryOnlyMultiCharSymbol{
@@ -90,14 +90,11 @@ inline const std::map<std::string, Priority> BUILDIN_INFIX{
     // {":=", ASSIGN_PRIORITY},
 };
 
-inline const std::set<std::string_view> RESERVED_NOT_RELOADABLE_SYMBOL{
-    "=", "(", ")", "[", "]", "{", "}", ",", ";",
-};
-
 inline const std::set<std::string_view> DEF_KEYWORDS{
     "func",
     "var",
     "type",
+    "const",
 };
 
 inline const std::set<std::string_view> COMMAND_KEYWORDS{
@@ -106,10 +103,17 @@ inline const std::set<std::string_view> COMMAND_KEYWORDS{
     "extern",
 };
 
-// "infix", "as" are not keywords
+// words in KEYWORD is regarded as SYM, not IDENT
 inline const std::set<std::string_view> KEYWORDS{
-    "if", "else", "until", "func",     "var",    "type",   "struct", "class", "dynamic", "extern", "return", "and",
-    "or", "not",  "xor",   "continue", "import", "export", "while",  "for",   "const",   "auto",   "match",
+    "if",     "else",   "until", "func", "var",   "type", "struct",   "class",  "dynamic",
+    "extern", "return", "and",   "or",   "not",   "xor",  "continue", "import", "export",
+    "while",  "for",    "const", "auto", "match", "when", "is",       "as",     "fit",
+};
+
+inline const std::set<std::string_view> RESERVED_NOT_RELOADABLE_SYMBOL{
+    "=",      ":=",     "(",     ")",   "[",     "]",      "{",     "}",       ",",      ";",      "if",
+    "else",   "until",  "func",  "var", "type",  "struct", "class", "dynamic", "extern", "return", "continue",
+    "import", "export", "while", "for", "const", "auto",   "match", "when",    "is",     "as",     "fit",
 };
 
 } // namespace rulejit

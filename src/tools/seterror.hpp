@@ -31,12 +31,23 @@
         error(std::format(src " Error{}: {}", location.line(), msg));                                                  \
     }
 
+#define CONDITIONAL_SET_ERROR_MEMBER(src, ret)                                                                         \
+    [[noreturn]] static ret setErrorWhenFailed(bool condition, std::string msg = "[no info]",                          \
+                                               const std::source_location location =                                   \
+                                                   std::source_location::current()) {                                  \
+        if (!condition)                                                                                                \
+            error(std::format(src " Error{}: {}", location.line(), msg));                                              \
+    }
+
 #ifndef __RULEJIT_DISABLE_EXCEPTION
 
 #include <stdexcept>
 #include <string>
 
-[[noreturn]] inline void error(const std::string &msg) { throw std::logic_error(msg); }
+[[noreturn]] inline void error(const std::string &msg) {
+    // show msg in debug mode
+    throw std::logic_error(msg);
+}
 
 #else // __RULEJIT_DISABLE_EXCEPTION
 

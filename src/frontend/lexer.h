@@ -3,9 +3,9 @@
  * @author djw
  * @brief FrontEnd/Lexer
  * @date 2023-03-28
- * 
+ *
  * @details Lexer
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -48,7 +48,7 @@ enum class TokenType {
 
 /**
  * @brief tool function to change TokenType to string
- * 
+ *
  * @param t TokenType input
  * @return std::string string output
  */
@@ -65,9 +65,9 @@ inline std::ostream &operator<<(std::ostream &o, TokenType type) { return o << t
 
 /**
  * @brief main class of lexer
- * 
+ *
  */
-struct ExpressionLexer {    
+struct ExpressionLexer {
     ExpressionLexer() = default;
     ExpressionLexer(const ExpressionLexer &e) = delete;
     ExpressionLexer(ExpressionLexer &&e) = delete;
@@ -89,6 +89,7 @@ struct ExpressionLexer {
         START = 1,
         IGNORE_BREAK = 2,
         UNARY_OP = 4,
+        NO_MULTICHARSYM = 8,
     };
 
     using Ele = char;
@@ -97,9 +98,9 @@ struct ExpressionLexer {
 
     /**
      * @brief load string to lexer
-     * 
+     *
      * TOSO: add concept restriction
-     * 
+     *
      * @tparam SrcTy const string& or string&&, used in std::forward
      * @param expression string need to load
      * @return ExpressionLexer& reference to self
@@ -112,7 +113,7 @@ struct ExpressionLexer {
 
     /**
      * @brief stream operator<< to load string
-     * 
+     *
      * @tparam SrcTy const string& or string&&, used in std::forward
      * @param expression string need to load
      * @return ExpressionLexer& reference to self
@@ -125,7 +126,7 @@ struct ExpressionLexer {
 
     /**
      * @brief stream operator>> to pop value
-     * 
+     *
      * @tparam ReceiveTy type of target value
      * @param dst variable to receive value
      * @return ExpressionLexer& reference to self
@@ -136,10 +137,10 @@ struct ExpressionLexer {
      * @brief function to pop value
      * @attention will tranfer escape character if type of token and receiver is both string,
      * else use std::stringstream to convert
-     * 
+     *
      * @tparam ReceiveTy type of target value
      * @param dst variable to receive value
-     * @param guidence ExpressionLexer::Guidence to control lexer behavior whrn pop
+     * @param guidence ExpressionLexer::Guidence to control lexer behavior when pop
      * @return ExpressionLexer& ExpressionLexer& reference to self
      */
     template <typename ReceiveTy> ExpressionLexer &fill(ReceiveTy &dst, Guidence guidence) {
@@ -162,28 +163,30 @@ struct ExpressionLexer {
             std::stringstream tmp;
             tmp << pop(guidence);
             tmp >> dst;
-            my_assert(tmp.eof(), std::string("cannot change literl to type ") + typeid(ReceiveTy).name());
+            if (!tmp.eof()) {
+                error(std::string("cannot change literl to type ") + typeid(ReceiveTy).name());
+            };
         }
         return *this;
     }
-    
+
     /**
      * @brief get token type of current token
-     * 
+     *
      * @return TokenType token type
      */
     TokenType tokenType() { return type; }
 
     /**
      * @brief get current token as std::string without pop it
-     * 
+     *
      * @return BufferType current token
      */
     BufferType topCopy() { return BufferType(begin, next - begin); }
 
     /**
      * @brief pop current token and return it as std::string
-     * 
+     *
      * @param guidence guidence to control lexer behavior when pop
      * @return BufferType current token
      */
@@ -196,14 +199,14 @@ struct ExpressionLexer {
 
     /**
      * @brief get current token as std::string_view without pop it
-     * 
+     *
      * @return BufferView current token
      */
     BufferView top() { return BufferView(begin, next - begin); }
 
     /**
      * @brief pop current token and return it as std::string_view
-     * 
+     *
      * @param guidence guidence to control lexer behavior when pop
      * @return BufferView current token
      */
@@ -216,16 +219,14 @@ struct ExpressionLexer {
 
     /**
      * @brief get first char of current token without pop it
-     * 
+     *
      * @return char first char
      */
-    char topChar() {
-        return *begin;
-    }
+    char topChar() { return *begin; }
 
     /**
      * @brief pipe operator| to load string
-     * 
+     *
      * @tparam Ty const string& or string&&, used in std::forward
      * @param src source string
      * @param e receiver ExpressionLexer
@@ -238,10 +239,10 @@ struct ExpressionLexer {
 
     /**
      * @brief get current state of ExpressionLexer, used in loadState
-     * 
+     *
      * @see ExpressionLexer::loadState
-     * 
-     * @return std::tuple<const char *, const char *, bool, rulejit::TokenType> 
+     *
+     * @return std::tuple<const char *, const char *, bool, rulejit::TokenType>
      */
     std::tuple<const char *, const char *, bool, rulejit::TokenType> getState() {
         return std::make_tuple(begin, next, errorHandler.err, type);
@@ -251,7 +252,7 @@ struct ExpressionLexer {
      * @brief load stored state
      * @attention state must generated by the same object, and no load operation between
      * get and load of state
-     * 
+     *
      * @param s state need to load
      */
     void loadState(const std::tuple<const char *, const char *, bool, rulejit::TokenType> &s) {
@@ -260,21 +261,26 @@ struct ExpressionLexer {
 
     /**
      * @brief foresee next depth-th token
-     * 
+     *
      * @param depth number of token to foresee
      * @return std::tuple<TokenType, std::string_view> foreseed token type and value
      */
     std::tuple<TokenType, std::string_view> foresee(size_t depth = 1) {
+        if (depth == 0) {
+            return std::make_tuple(type, top());
+        }
         auto s = getState();
-        pop();
-        auto t = (depth == 1) ? std::make_tuple(type, top()) : foresee(depth - 1);
+        while (depth--) {
+            pop();
+        }
+        auto t = std::make_tuple(type, top());
         loadState(s);
         return t;
     }
 
     /**
      * @brief restart lexer, clear all state but reserve buffer
-     * 
+     *
      */
     void restart() {
         linePointer.clear();
@@ -289,17 +295,27 @@ struct ExpressionLexer {
 
     /**
      * @brief get index in buffered string of first char of current token
-     * 
-     * @return size_t 
+     *
+     * @return Ele*
      */
-    size_t beginIndex() const { return begin - buffer.data(); }
+    const Ele* beginPointer() const { return begin; }
 
     /**
      * @brief pointer to start position in buffered string of each new line,
      * used to generate better error message
-     * 
+     *
      */
     std::vector<const char *> linePointer;
+
+    /**
+     * @brief return if all string has been lexered
+     * 
+     * @return true 
+     * @return false 
+     */
+    bool isEnd() const {
+        return begin == end;
+    }
 
   private:
     char readEscape(const char *&p) {
@@ -342,7 +358,7 @@ struct ExpressionLexer {
         };
         error(info);
     }
-    
+
     bool charEqual(Ele e) { return *next == e; }
 
     void extend(Guidence guidence);

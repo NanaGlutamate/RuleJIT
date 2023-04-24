@@ -204,10 +204,10 @@ struct RuleSet{{
         in.FromValueMap(map);
     }}
     void Tick(){{
-        auto &_in = in;
-        auto &_out = out;
-        auto _base = 0;
-        auto loadCache = [](auto x, auto y, auto z){{}};
+        // auto &_in = in;
+        // auto &_out = out;
+        // auto _base = 0;
+        // auto loadCache = [](auto x, auto y, auto z){{}};
 {6}
 {7}
 {2}
@@ -223,6 +223,7 @@ struct RuleSet{{
 inline constexpr auto subRulesetCall = "        subRuleSet{0}.Tick(*this);\n";
 inline constexpr auto subRulesetWrite = "        subRuleSet{0}.writeBack(*this);\n";
 
+// TODO: use double-buffer / copy-on-write to replace unconditional buffer copy
 // id, func
 inline constexpr auto subRulesetDef = R"(    struct {{
         _Cache cache;
@@ -237,7 +238,7 @@ inline constexpr auto subRulesetDef = R"(    struct {{
                     // so if src->*p == tmp, there must no write back by this subruleset,
                     // or may write back same value.
                     // in the second case, assume no other write back requires to this value,
-                    // so no need to write back.
+                    // so no need to write back in any case.
                     if(src->*p == origin)return;
                     dst->*p = src->*p;
                 }});

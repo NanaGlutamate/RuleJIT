@@ -10,6 +10,7 @@
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-28</td><td>Initial version.</td></tr>
+ * <tr><td>djw</td><td>2023-04-19</td><td>Collect conditional compile marcos.</td></tr>
  * </table>
  */
 #pragma once
@@ -34,9 +35,40 @@
 
 namespace rulejit::gc {
 
+#ifdef __RULEJIT_GC_DEBUG
+    inline void debugLog(const std::string &type, const std::string &msg) {
+        static std::string last;
+        static size_t cnt = 0;
+        static struct Last {
+            ~Last() {
+                if (cnt != 0) {
+                    std::cout << std::format("    sent {} more times", cnt) << std::endl;
+                }
+            }
+        } lastJob;
+        if (last.empty() || last != type) {
+            if (cnt != 0) {
+                std::cout << std::format("    sent {} more times", cnt) << std::endl;
+                cnt = 0;
+            }
+            last = type;
+            std::cout << std::format("[{}]: {}", type, msg) << std::endl;
+        } else {
+            cnt++;
+        }
+    }
+#else // __RULEJIT_GC_DEBUG
+    inline void debugLog([[maybe_unused]] const std::string &type, [[maybe_unused]] const std::string &msg) {}
+#endif // __RULEJIT_GC_DEBUG
+
 // TODO: destructor support
 // std::vector<std::function<void(uint64_t*)>> funcTable;
 // std::unordered_map<uint64_t*, size_t> destructorBinding;
+
+/**
+ * @brief static class which contains a set of functions to manage memory.
+ * 
+ */
 struct StaticMarkSweepGarbageCollector {
     using DataType = uint64_t;
     struct Data {
@@ -49,6 +81,7 @@ struct StaticMarkSweepGarbageCollector {
     static_assert(sizeof(Data) == sizeof(uint64_t) * 2);
     static_assert(sizeof(Data *) == 8);
     // root is normally a stack, with every reference is to a stack frame
+    // TODO: remove root and use 'std::vector<uint64_t*> reachable' instead.
     static void extendRoot() {
         uint32_t originalSize = (root->referenceCount + HeadSize);
         uint32_t newSize = originalSize * 3 / 2;
@@ -71,32 +104,29 @@ struct StaticMarkSweepGarbageCollector {
         static struct Init2 {
             Init2(Data *dst, size_t counter, size_t ref) {
                 root = dst;
-#ifdef __RULEJIT_GC_DEBUG
                 my_assert(counter == 0, "root must have no value");
-                log("INIT", std::format("init root node with {} member reference", ref));
-#endif
+                debugLog("INIT", std::format("init root node with {} member reference", ref));
             }
         } init2(dst, valueCount, referenceCount);
         return dst->data;
     }
-    static void releaseLastAllocated() {
-        if (!head)
-            return;
-        auto tmp = head->next;
-        innerRelease(head);
-        head = tmp;
-    }
-    static void tryReleaseInSet(std::unordered_set<uint64_t *> &tar) {
-        while (head && tar.contains(reinterpret_cast<uint64_t *>(head) + HeadSize)) {
-            auto tmp = head->next;
-            innerRelease(head);
-            head = tmp;
-        }
-    }
+    // static void releaseLastAllocated() {
+    //     if (!head)
+    //         return;
+    //     auto tmp = head->next;
+    //     innerRelease(head);
+    //     head = tmp;
+    // }
+    // static void tryReleaseInSet(std::unordered_set<uint64_t *> &tar) {
+    //     while (head && tar.contains(reinterpret_cast<uint64_t *>(head) + HeadSize)) {
+    //         auto tmp = head->next;
+    //         innerRelease(head);
+    //         head = tmp;
+    //     }
+    // }
     static void fullGC() {
-#ifdef __RULEJIT_GC_DEBUG
-        auto tmp = allocatedCount;
-#endif
+        auto tmp [[maybe_unused]] = allocatedCount;
+        // TODO: mark in list
         if (!root)
             return;
         mark(root);
@@ -115,40 +145,13 @@ struct StaticMarkSweepGarbageCollector {
             }
             p = p->next;
         }
-#ifdef __RULEJIT_GC_DEBUG
-        log("FULL GC", std::format("obj number: {}->{}", tmp, allocatedCount));
-#endif
+        debugLog("FULL GC", std::format("obj number: {}->{}", tmp, allocatedCount));
     }
 
   private:
-#ifdef __RULEJIT_GC_DEBUG
-    static void log(const std::string &type, const std::string &msg) {
-        static std::string last;
-        static size_t cnt = 0;
-        static struct Last {
-            ~Last() {
-                if (cnt != 0) {
-                    std::cout << std::format("    sent {} more times", cnt) << std::endl;
-                }
-            }
-        } lastJob;
-        if (last.empty() || last != type) {
-            if (cnt != 0) {
-                std::cout << std::format("    sent {} more times", cnt) << std::endl;
-                cnt = 0;
-            }
-            last = type;
-            std::cout << std::format("[{}]: {}", type, msg) << std::endl;
-        } else {
-            cnt++;
-        }
-    }
-#endif
     static void tryFree() {
         if (allocatedCount > gcThreshold) {
-#ifdef __RULEJIT_GC_DEBUG
-            auto tmp = gcThreshold;
-#endif
+            auto tmp [[maybe_unused]] = gcThreshold;
             auto pre = allocatedCount;
             fullGC();
             if (gcThreshold > 512) {
@@ -160,9 +163,7 @@ struct StaticMarkSweepGarbageCollector {
                     gcThreshold = gcThreshold * 3Ui64 / 2;
                 }
             }
-#ifdef __RULEJIT_GC_DEBUG
-            log("AUTO GC", std::format("change GC Threshold from {} to {}", tmp, gcThreshold));
-#endif
+            debugLog("AUTO GC", std::format("change GC Threshold from {} to {}", tmp, gcThreshold));
         }
     }
     static void mark(Data *t) {
@@ -187,43 +188,32 @@ struct StaticMarkSweepGarbageCollector {
         allocatedCount++;
         if (size * sizeof(uint64_t) < 16) {
             auto p = reinterpret_cast<Data *>(soa1.alloc());
-#ifdef __RULEJIT_GC_DEBUG
-            log("SOA1 ALLOC", std::to_string(size) + " uint64_t at " + std::to_string((size_t)p));
-#endif
+            debugLog("SOA1 ALLOC", std::to_string(size) + " uint64_t at " + std::to_string((size_t)p));
             return std::make_tuple(p, 1);
         } else if (size * sizeof(uint64_t) < 32) {
             auto p = reinterpret_cast<Data *>(soa2.alloc());
-#ifdef __RULEJIT_GC_DEBUG
-            log("SOA2 ALLOC", std::to_string(size) + " uint64_t at " + std::to_string((size_t)p));
-#endif
+            debugLog("SOA2 ALLOC", std::to_string(size) + " uint64_t at " + std::to_string((size_t)p));
             return std::make_tuple(p, 2);
         } else if (size * sizeof(uint64_t) < 64) {
             auto p = reinterpret_cast<Data *>(soa3.alloc());
-#ifdef __RULEJIT_GC_DEBUG
-            log("SOA3 ALLOC", std::to_string(size) + " uint64_t at " + std::to_string((size_t)p));
-#endif
+            debugLog("SOA3 ALLOC", std::to_string(size) + " uint64_t at " + std::to_string((size_t)p));
             return std::make_tuple(p, 3);
         } else if (size * sizeof(uint64_t) < 128) {
             auto p = reinterpret_cast<Data *>(soa4.alloc());
-#ifdef __RULEJIT_GC_DEBUG
-            log("SOA4 ALLOC", std::to_string(size) + " uint64_t at " + std::to_string((size_t)p));
-#endif
+            debugLog("SOA4 ALLOC", std::to_string(size) + " uint64_t at " + std::to_string((size_t)p));
             return std::make_tuple(p, 4);
         }
         auto p = reinterpret_cast<Data *>(new size_t[size * sizeof(uint64_t)]);
-#ifdef __RULEJIT_GC_DEBUG
-        log("SYS ALLOC", std::to_string(size) + " uint64_t at " + std::to_string((size_t)p));
-#endif
+        debugLog("SYS ALLOC", std::to_string(size) + " uint64_t at " + std::to_string((size_t)p));
         return std::make_tuple(p, 0);
     }
     static void innerRelease(Data *p) {
         allocatedCount--;
-#ifdef __RULEJIT_GC_DEBUG
-        log("FREE", std::to_string((size_t)p));
-#endif
+        debugLog("FREE", std::to_string((size_t)p));
         // small object [soacnt-1]
         switch (p->soacnt) {
         case 0:
+            // TODO: destructor
             delete[] reinterpret_cast<size_t *>(p);
             break;
         case 1:

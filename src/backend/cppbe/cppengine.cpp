@@ -14,6 +14,7 @@
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
  * <tr><td>djw</td><td>2023-03-29</td><td>Move XML-Parsering to frontend/ruleset</td></tr>
+ * <tr><td>djw</td><td>2023-04-18</td><td>make every <Value> a single subruleset</td></tr>
  * </table>
  */
 #include <iostream>
@@ -160,7 +161,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     // collect typedefs in XML
     for (auto &&[name, members] : data.typeDefines) {
         std::string member, serialize, deserialize;
-        for (auto [token, _type] : members) {
+        for (auto& [token, _type] : members) {
             auto type = _type;
             std::string pre, suf;
             while (type.back() == ']') {
@@ -216,7 +217,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
             params.erase(params.size() - 2, 2);
         }
         funcDefs +=
-            std::format(funcDef, CppStyleType(func->funcType->getReturnedType()), name, params,
+            std::format(funcDef, CppStyleType(func->funcType->getReturnedType()), codegen.toLegalName(name), params,
                         (func->funcType->isReturnedFunctionType() ? "return" : "") + (func->returnValue | codegen));
     }
     // collect extern func type

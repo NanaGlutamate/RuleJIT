@@ -17,9 +17,9 @@
             <FunctionIdentifier>
                 <Name>add</Name>
                 <FunctionType>
-                    <Type>u</Type>
-                    <Type>u</Type>
-                    <Type>u</Type>
+                    <Type>u64</Type>
+                    <Type>u64</Type>
+                    <Type>u64</Type>
                 </FunctionType>
                 <Params>
                     <Param>a</Param>
@@ -36,7 +36,7 @@
                 <FunctionType>
                     <Type>Vector3</Type>
                     <Type>Vector3</Type>
-                    <Type>f</Type>
+                    <Type>f64</Type>
                 </FunctionType>
                 <Params>
                     <Param>a</Param>

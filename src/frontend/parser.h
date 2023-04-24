@@ -88,7 +88,7 @@ struct ExpressionParser {
      * @brief map from AST to place in string, used for better error message, not used for now
      *
      */
-    std::map<IAST *, size_t> AST2place;
+    std::map<IAST *, std::string_view> AST2place;
 
   private:
     [[noreturn]] std::nullptr_t setError(const std::string &info) {
@@ -114,9 +114,8 @@ struct ExpressionParser {
         return parseExpr();
     };
     // add tuple after generics support
-    std::unique_ptr<ExprAST> parseExpr(bool ignoreBreak = false, bool allowTuple = false);
-    std::unique_ptr<ExprAST> parseBinOpRHS(Priority priority, std::unique_ptr<ExprAST> lhs, bool ignoreBreak = false,
-                                           bool allowTuple = false);
+    std::unique_ptr<ExprAST> parseExpr(bool ignoreBreak = false);
+    std::unique_ptr<ExprAST> parseBinOpRHS(Priority priority, std::unique_ptr<ExprAST> lhs, bool ignoreBreak = false);
     std::unique_ptr<ExprAST> parseUnary();
     std::unique_ptr<ExprAST> parsePrimary();
     std::unique_ptr<ExprAST> parseBlock();
@@ -124,7 +123,7 @@ struct ExpressionParser {
 
     void parseFuncDef(std::vector<std::unique_ptr<rulejit::IdentifierExprAST>> &params, TypeInfo &returnType,
                       std::string &funcName, FunctionDefAST::FuncDefType &funcDefType);
-    std::vector<std::unique_ptr<IdentifierExprAST>> parseParamList();
+    std::vector<std::unique_ptr<IdentifierExprAST>> parseParamList(const std::string& end = ")");
 
     std::unique_ptr<ExprAST> parseCommand();
     std::unique_ptr<ExprAST> parseTopLevel();

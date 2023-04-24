@@ -157,15 +157,33 @@ int main() {
     //     var tmp := Tmp{}
     //     tmp.a()
     // )");
+    // testCase(R"(
+    //     type Tmp struct {x func()}
+    //     func (a Tmp)wa(){
+    //         a.x()
+    //     }
+    //     var tmp = Tmp{}
+    //     tmp.wa()
+    //     var a = []f64{1, 2, 3}
+    //     a.length()
+    // )");
     testCase(R"(
-        type Tmp struct {x func()}
-        func (a Tmp)__buildin__0_a(){
-            a.x()
+        const PI = 3.1415926
+        func <U, V>(l []U)map(f func(U)->V)->[]V{
+            var ltmp []V = []V{}
+            var i = 0
+            while(i < l.length()){
+                ltmp.push(f(l[i]))
+                i = i + 1
+            }
+            ltmp
         }
-        var tmp = Tmp{}
-        tmp.__buildin__0_a()
-        var a = []f64{1, 2, 3}
-        a.length()
+        func <U, V>|(l []U, f func(U)->V)->[]V{
+            l.map(f)
+        }
+        var x []f64 = []f64{1, 2, 3}
+        x.map(|a f64|a+1)
+        x | |a f64|a+1
     )");
 
     return 0;

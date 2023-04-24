@@ -42,7 +42,7 @@ int main() {
 
 #ifdef _WIN32
     auto hmodule = LoadLibraryExA(lib_path_.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-#else // _WIN32
+#else  // _WIN32
     void *hmodule = dlopen(lib_path_.c_str(), RTLD_LAZY | RTLD_GLOBAL);
 #endif // _WIN32
     if (!hmodule) {
@@ -53,16 +53,16 @@ int main() {
     }
 
 #ifdef _WIN32
-    auto create_obj_ = (auto(*)()->CSModelObject*)GetProcAddress(hmodule, "CreateModelObject");
-    auto destroy_obj_ = (auto(*)(void*, bool)->void)GetProcAddress(hmodule, "DestroyMemory");
-#else // _WIN32
-    auto create_obj_ = (auto(*)()->CSModelObject*)dlsym(hmodule, "CreateModelObject");
-    auto destroy_obj_ = (auto(*)(void*, bool)->void)dlsym(hmodule, "DestroyMemory");
+    auto create_obj_ = (auto (*)()->CSModelObject *)GetProcAddress(hmodule, "CreateModelObject");
+    auto destroy_obj_ = (auto (*)(void *, bool)->void)GetProcAddress(hmodule, "DestroyMemory");
+#else  // _WIN32
+    auto create_obj_ = (auto (*)()->CSModelObject *)dlsym(hmodule, "CreateModelObject");
+    auto destroy_obj_ = (auto (*)(void *, bool)->void)dlsym(hmodule, "DestroyMemory");
 #endif // _WIN32
     if (!create_obj_ || !destroy_obj_) {
 #ifdef _WIN32
         if (!FreeLibrary(hmodule))
-#else // _WIN32
+#else  // _WIN32
         if (!dlclose(hmodule))
 #endif // _WIN32
             std::cout << "release dll error" << std::endl;
@@ -124,57 +124,30 @@ int main() {
     auto tmp = CSValueMap{
         {"A_output",
          CSValueMap{
-             {"Longitude", double(246.12477477168511)},
-             {"Latitude", double(84.044066498026964)},
-             {"Altitude", double(9999.8603515625000)},
-             {"Speed", double(240)},
-             {"Roll", double(0-0.00052141430312255992)},
-             {"Pitch", double(0.40654809018419047)},
-             {"Yaw", double(8.7693997795885350e-6)},
+             {"Longitude", (double)106},
+             {"Latitude", (double)36},
+             {"Altitude", (double)500},
+             {"vx", (double)300},
+             {"vy", (double)0},
+             {"vz", (double)0},
+             {"Speed", (double)300},
+             {"Roll", (double)0},
+             {"Pitch", (double)0},
+             {"Yaw", (double)0},
          }},
         {"T_output",
          CSValueMap{
-             {"Longitude", double(246.12477477168511)},
-             {"Latitude", double(84.044066498026964)},
-             {"Altitude", double(9999.8603515625000)},
-             {"Speed", double(240)},
-             {"Roll", double(-0.00052141430312255992)},
-             {"Pitch", double(0.40654809018419047)},
-             {"Yaw", double(8.7693997795885350e-06)},
+             {"Longitude", (double)106.1},
+             {"Latitude", (double)36.2},
+             {"Altitude", (double)500},
+             {"vx", (double)300},
+             {"vy", (double)0},
+             {"vz", (double)0},
+             {"Speed", (double)300},
+             {"Roll", (double)0},
+             {"Pitch", (double)0},
+             {"Yaw", (double)0},
          }},
-        {"radar", bool(false)},
-        {"missile", bool(false)},
-        {"DT",
-         CSValueMap{
-             {"DRmax", double(50000)},
-             {"DMmax", double(40000)},
-             {"DMmin", double(10000)},
-             {"DMKmax", double(30000)},
-             {"DMKmin", double(20000)},
-             {"phiRmax", double(70)},
-             {"phiMmax", double(50)},
-             {"phiMK", double(30)},
-             {"DNmax", double(10000)},
-             {"DNmin", double(2000)},
-             {"DNok", double(5000)},
-             {"phiNmax", double(40)},
-         }},
-        {"DA",
-         CSValueMap{
-             {"DRmax", double(50000)},
-             {"DMmax", double(40000)},
-             {"DMmin", double(10000)},
-             {"DMKmax", double(30000)},
-             {"DMKmin", double(20000)},
-             {"phiRmax", double(70)},
-             {"phiMmax", double(50)},
-             {"phiMK", double(30)},
-             {"DNmax", double(10000)},
-             {"DNmin", double(2000)},
-             {"DNok", double(5000)},
-             {"phiNmax", double(40)},
-         }},
-        {"flag", bool(true)},
     };
     model_obj_ = create_obj_();
     if (nullptr == model_obj_) {
@@ -184,7 +157,7 @@ int main() {
     engine = model_obj_;
     // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
     engine->SetLogFun([](const std::string &msg, uint32_t type) {});
-    engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/rule(2).xml")}});
+    engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/rule_err.xml")}});
     engine->SetInput(tmp);
     engine->Tick(0.02);
     printCSValueMap(*(engine->GetOutput()));
