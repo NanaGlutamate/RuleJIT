@@ -34,6 +34,10 @@ inline static std::set<std::string> baseData{
 struct RuleSetMetaInfo {
     RuleSetMetaInfo() = default;
     RuleSetMetaInfo(const RuleSetMetaInfo &) = delete;
+    RuleSetMetaInfo(RuleSetMetaInfo &&) = delete;
+    RuleSetMetaInfo &operator=(const RuleSetMetaInfo &) = delete;
+    RuleSetMetaInfo &operator=(RuleSetMetaInfo &&) = delete;
+
     /// @brief Stored input/output/cache variable names
     std::vector<std::string> inputVar, outputVar, cacheVar;
     /// @brief Stored variable types, name -> type

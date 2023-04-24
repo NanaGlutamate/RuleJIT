@@ -361,8 +361,8 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBlock() {
 std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
     if (lexer->top() == "var" || lexer->top() == "const") {
         // var def
-        VarDefAST::VarDefType varDefType =
-            lexer->top() == "var" ? VarDefAST::VarDefType::NORMAL : VarDefAST::VarDefType::CONSTANT;
+        VarDefAST::VarDefType varDefType = lexer->top() == "var" ? VarDefAST::VarDefType::NORMAL
+                                                                 : VarDefAST::VarDefType::CONSTANT;
         lexer->pop(IGNORE_BREAK);
         if (lexer->tokenType() != TokenType::IDENT) {
             return setError("expected ident as var name, found: " + lexer->topCopy());

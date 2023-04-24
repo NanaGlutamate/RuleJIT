@@ -190,10 +190,10 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     std::vector<std::unique_ptr<ExprAST>> assignmentValue;
     // 1. collect dependency
     for (auto &&p : preprocessOriginal) {
-        // TODO: avoid self-dependency?
         try {
             auto exprFuncName = p.second | lexer | parser | semantic;
             auto dependency = context.global.realFuncDefinition[exprFuncName]->returnValue | EscapedVarAnalyzer{};
+            context.global.realFuncDefinition.erase(exprFuncName);
             my_assert(!valueDependency.contains(p.first), "assignment to a variable twice");
             if (dependency.contains(p.first)) {
                 error("Self-dependent value is not allowed: " + p.first);
@@ -206,7 +206,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         }
     }
     // 2. filter out false dependency
-    for (auto& [name, dep] : valueDependency) {
+    for (auto &[name, dep] : valueDependency) {
         for (auto it = dep.begin(); it != dep.end();) {
             // is var and is intermediate
             if (data.varType.contains(*it) && valueDependency.contains(*it)) {
@@ -225,7 +225,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         }
     }
     while (!openSet.empty()) {
-        auto& cur = *openSet.begin();
+        auto &cur = *openSet.begin();
         topoSorted.push_back(cur);
         for (auto &&[k, v] : valueDependency) {
             if (auto it = v.find(cur); it != v.end()) {
@@ -271,10 +271,21 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule"), act++) {
             expr += std::string("if({") + rule->first_node("Condition")->first_node("Expression")->value() + "}){";
             // TODO: add direct expression support
-            for (auto assign = rule->first_node("Consequence")->first_node("Assignment"); assign;
-                 assign = assign->next_sibling("Assignment")) {
-                expr += std::string(assign->first_node("Target")->value()) + "={" +
-                        assign->first_node("Value")->first_node("Expression")->value() + "};";
+            for (auto assign = rule->first_node("Consequence")->first_node(); assign; assign = assign->next_sibling()) {
+                using namespace std::literals;
+                if (assign->name() == "Assignment"s) {
+                    expr += std::string(assign->first_node("Target")->value()) + "={" +
+                            assign->first_node("Value")->first_node("Expression")->value() + "};";
+                } else if (assign->name() == "ArrayOperation"s) {
+                    std::string value;
+                    if(auto valueNode = assign->first_node("Args"); valueNode) {
+                        value = valueNode->first_node("Expression")->value();
+                    }
+                    expr += std::format("{}.{}({});", assign->first_node("Target")->value(),
+                                        assign->first_node("Operation")->value(), value);
+                } else {
+                    error("Unknown Consequence type: "s + assign->name() + "");
+                }
             }
             expr += std::to_string(act) + "}else ";
         }
