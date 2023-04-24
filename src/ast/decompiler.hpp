@@ -21,6 +21,7 @@ namespace rulejit {
 
 struct Decompiler : public ASTVisitor {
     Decompiler() = default;
+    virtual ~Decompiler() = default;
     std::string friend operator|(std::unique_ptr<ExprAST> &ast, const Decompiler& _) {
         static Decompiler u;
         u.returned.clear();
@@ -123,7 +124,6 @@ struct Decompiler : public ASTVisitor {
     }
     VISIT_FUNCTION(FunctionDefAST) { returned += "[FUNC DEF]"; }
     VISIT_FUNCTION(SymbolDefAST) { returned += "[SYMBOL DEF]"; }
-    virtual ~Decompiler() = default;
 
   private:
     std::string returned;

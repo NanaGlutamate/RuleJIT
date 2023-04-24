@@ -33,8 +33,8 @@ int main() {
 
     engine.init();
     for (int i = 0; i < 1000; i++) {
-        engine.setInput(CSValueMap{{"Input1", std::vector<std::any>{uint32_t(1), uint32_t(3), uint32_t(5)}},
-                                   {"Input2", uint32_t(2)}});
+        engine.setInput(CSValueMap{{"Input1", std::vector<std::any>{double(1), double(3), double(5)}},
+                                   {"Input2", double(2)}});
         engine.tick();
         printCSValueMap(*(engine.getOutput()));
         // printCSValueMap(engine.data.cache);

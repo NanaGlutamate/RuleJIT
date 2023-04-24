@@ -16,8 +16,8 @@
     <MetaInfo>
         <Inputs>
             <!-- init value not fully supported -->
-            <Param name="Input1" type="uint32[]" />
-            <Param name="Input2" type="uint32" />
+            <Param name="Input1" type="float64[]" />
+            <Param name="Input2" type="float64" />
         </Inputs>
         <Outputs>
             <Param name="Output1" type="float64" />
@@ -26,6 +26,7 @@
             <Param name="Cache1" type="float64">
                 <Value><Expression>Input1[0]+Input2</Expression></Value>
             </Param>
+            <Param name="Cache2" type="float64[]" />
         </Caches>
     </MetaInfo>
     <SubRuleSets>
@@ -33,15 +34,39 @@
             <Rules>
                 <Rule>
                     <Condition>
-                        <Expression>true</Expression>
+                        <Expression>Cache2.length()==0</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>Cache2</Target>
+                            <Value>
+                                <Expression>Input1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+        <SubRuleSet>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>Cache2.length()!=0</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
                             <Target>Output1</Target>
                             <Value>
-                                <Expression>sin(Input1[Input2])+Cache1</Expression>
+                                <Expression>Cache2[Cache2.length()-1]</Expression>
                             </Value>
                         </Assignment>
+                        <ArrayOperation>
+                            <Target>Cache2</Target>
+                            <Operation>push</Operation>
+                            <Args>
+                                <Expression>Cache2.length()</Expression>
+                            </Args>
+                        </ArrayOperation>
                     </Consequence>
                 </Rule>
             </Rules>
