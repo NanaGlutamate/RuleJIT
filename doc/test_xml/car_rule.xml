@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="example1.0.xsd"?>
+<RuleSet version="1.0">
+    <TypeDefines>
+        <TypeDefine type="Location">
+            <Variable name="altitude" type="float64" />
+            <Variable name="longitude" type="float64" />
+            <Variable name="latitude" type="float64" />
+        </TypeDefine>
+        <TypeDefine type="Vector3">
+            <Variable name="x" type="float64" />
+            <Variable name="y" type="float64" />
+            <Variable name="z" type="float64" />
+        </TypeDefine>
+		<TypeDefine type="BaseInfo">
+			<Variable name="id" type="uint64"/>
+			<Variable name="side" type="uint16"/>
+			<Variable name="type" type="uint16"/>
+			<Variable name="damageLevel" type="uint16"/>
+		</TypeDefine>
+		<TypeDefine type="EntityInfo">
+			<Variable name="baseInfo" type="BaseInfo"/>
+			<Variable name="velocity" type="Vector3"/>
+			<Variable name="position" type="Vector3"/>
+		</TypeDefine>
+		<TypeDefine type="WeaponInfo">
+			<Variable name="ammo" type="int32"/>
+			<Variable name="reloadingState" type="float64"/>
+			<Variable name="range" type="float64"/>
+			<Variable name="direction" type="float64"/>
+			<Variable name="weaponName" type="string"/>
+		</TypeDefine>
+    </TypeDefines>
+    <MetaInfo>
+        <Inputs>
+            <Param name="selfInfo" type="EntityInfo"/>
+            <Param name="scannedInfo" type="EntityInfo[]"/>
+			<Param name="roll" type="float64"/>
+			<Param name="pitch" type="float64"/>
+			<Param name="yaw" type="float64"/>
+			<Param name="weaponinfo" type="WeaponInfo[]"/>
+        </Inputs>
+        <Outputs>
+			<Param name="ActionId" type="uint64"/>
+            <Param name="Param1" type="float64"/>
+			<Param name="Param2" type="float64"/>
+        </Outputs>
+		<Caches>
+			<Param name="enemy_index" type="float64">
+				<Value>
+					<Expression>
+						{var a f64 = 1.0e20;var index f64 = 0;var i f64 = 0;while(i&lt;scannedInfo.length()){ var tmp f64= pow((scannedInfo[i].position.x - selfInfo.position.x) * 111000,2)+pow((scannedInfo[i].position.z - selfInfo.position.z),2)+pow((scannedInfo[i].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2);index=if(tmp &lt; a) i else index;a = if(tmp &lt; a) tmp else a;i=i+1};index}
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="d" type="float64">
+				<Value>
+					<Expression>
+						sqrt(pow((scannedInfo[enemy_index].position.x - selfInfo.position.x) * 111000,2)+pow((scannedInfo[enemy_index].position.z - selfInfo.position.z),2)+pow((scannedInfo[enemy_index].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2))
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="phi" type="float64">
+				<Value>
+					<Expression>
+						atan2(scannedInfo[enemy_index].position.x - selfInfo.position.x, scannedInfo[enemy_index].position.y - selfInfo.position.y)
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="damagelevel" type="float64">
+				<Value>
+					<Expression>
+						scannedInfo[enemy_index].baseInfo.damageLevel
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="enemyid" type="float64">
+				<Value>
+					<Expression>
+						scannedInfo[enemy_index].baseInfo.id
+					</Expression>
+				</Value>
+			</Param>
+		</Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>selfInfo.baseInfo.damagelevel&gt;damagelevel and d&gt;2500</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+							<Target>Param1</Target>
+							<Value>
+								<Expression>-100</Expression>
+							</Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+				<Rule>
+					<Condition>
+						<Expression>(fabs(weaponinfo[0].direction-phi)&lt;0.04 or fabs(weaponinfo[0].direction-phi)&gt;3.1) and d&lt;3100</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>ActionId</Target>
+							<Value>
+								<Expression>13</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>Param1</Target>
+							<Value>
+								<Expression>0</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>Param2</Target>
+							<Value>
+								<Expression>phi</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>(fabs(weaponinfo[0].direction-phi)&lt;0.04 or fabs(weaponinfo[0].direction-phi)&gt;3.1) and d&lt;2500</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>ActionId</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>Param1</Target>
+							<Value>
+								<Expression>0</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>Param2</Target>
+							<Value>
+								<Expression>enemyid</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>(fabs(weaponinfo[0].direction-phi)&lt;0.04 or fabs(weaponinfo[0].direction-phi)&gt;3.1) and pitch>25</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>ActionId</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>Param1</Target>
+							<Value>
+								<Expression>0</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>Param2</Target>
+							<Value>
+								<Expression>enemyid</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>(fabs(yaw-phi)&lt;0.04 or fabs(yaw-phi)&gt;3.1) and d&gt;2500</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>ActionId</Target>
+							<Value>
+								<Expression>7</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>Param1</Target>
+							<Value>
+								<Expression>100</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>Param2</Target>
+							<Value>
+								<Expression>phi</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>(fabs(yaw-phi)&lt;0.04 or fabs(yaw-phi)&gt;3.1) and d&gt;2500</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>ActionId</Target>
+							<Value>
+								<Expression>2</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>Param1</Target>
+							<Value>
+								<Expression>100</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

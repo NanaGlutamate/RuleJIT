@@ -58,7 +58,7 @@ std::string innerType(std::string type) {
         type.pop_back();
         tmp += "[]";
     }
-    if (baseData.contains(type)) {
+    if (baseNumericalData.contains(type)) {
         tmp += "f64";
     } else {
         tmp += type;
@@ -81,11 +81,12 @@ extern func asin(a f64)->f64
 extern func acos(a f64)->f64
 extern func fabs(a f64)->f64
 extern func exp(a f64)->f64
-extern func abs(a f64)->f64
 extern func floor(a f64)->f64
 extern func sqrt(a f64)->f64
 extern func pow(a f64, b f64)->f64
 extern func atan2(a f64, b f64)->f64
+extern func strEqual(a string, b string) -> bool
+func ==(a string, b string) -> bool {strEqual(a, b)}
 const true f64 = 1.0
 const false f64 = 0.0
 )";
@@ -181,6 +182,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     load("Outputs", data.outputVar);
 
     initOriginal += "}";
+    std::cout << typeOriginal;
     // parse initOriginal, get returned real function name
     ret.preDefines = (typeOriginal + "\n" + preDefines + "\n" + initOriginal) | lexer | parser | semantic;
 

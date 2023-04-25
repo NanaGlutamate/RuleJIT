@@ -29,7 +29,7 @@ int main() {
     using CSValueMap = std::unordered_map<std::string, std::any>;
 
     RuleSetEngine engine;
-    engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/xml_design/example1.0.xml");
+    engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/test_xml/car_rule.xml");
 
     engine.init();
     for (int i = 0; i < 1000; i++) {

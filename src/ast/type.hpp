@@ -599,8 +599,8 @@ struct TypeParser {
                 return setError("expect \"{\", found: " + e.topCopy());
             }
             while (e.top() != "}") {
-                if (e.tokenType() != TokenType::IDENT) {
-                    return setError("expect ident, found: " + e.topCopy());
+                if (e.tokenType() != TokenType::IDENT && !KEYWORDS.contains(e.top())) {
+                    return setError("expect member name, found: " + e.topCopy());
                 }
                 info.tokens.push_back(e.popCopy(ignore_break));
                 auto memberType = e | TypeParser();

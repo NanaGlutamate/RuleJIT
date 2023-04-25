@@ -30,6 +30,12 @@ inline static std::set<std::string> baseData{
     "int64", "uint64", "float32", "float64", "float128", "string",
 };
 
+/// @brief Supported numerical data types in ruleset XML
+inline static std::set<std::string> baseNumericalData{
+    "bool",  "int8",   "uint8",   "int16",   "uint16",   "int32",  "uint32",
+    "int64", "uint64", "float32", "float64", "float128",
+};
+
 /// @brief rule set meta-informations, collected from <MetaInfo> node
 struct RuleSetMetaInfo {
     RuleSetMetaInfo() = default;

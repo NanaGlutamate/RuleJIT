@@ -77,7 +77,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             //     returned += std::format("(cache.{})", v.name);
             // }
         } else {
-            returned += std::format("({})", v.name);
+            returned += std::format(" {} ", v.name);
         }
     }
     VISIT_FUNCTION(MemberAccessExprAST) {

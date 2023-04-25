@@ -42,7 +42,7 @@ std::string CppStyleType(const TypeInfo &type) {
     }
     if (type.isBaseType()) {
         auto tmp = type.getBaseTypeString();
-        if (rulesetxml::baseData.contains(tmp)) {
+        if (rulesetxml::baseNumericalData.contains(tmp)) {
             return "typedReal<" + tmp + ">";
         } else {
             return tmp;
@@ -73,7 +73,7 @@ std::string CppStyleParamType(const TypeInfo &type) {
     
     if (type.isBaseType()) {
         auto tmp = type.getBaseTypeString();
-        if (rulesetxml::baseData.contains(tmp)) {
+        if (rulesetxml::baseNumericalData.contains(tmp)) {
             return "typedReal<" + tmp + ">";
         } else {
             return "const " + tmp + "&";
@@ -169,7 +169,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
                 pre += "std::vector<";
                 suf += ">";
             }
-            if (baseData.contains(type) && type != "float64") {
+            if (baseNumericalData.contains(type)) {
                 pre += "typedReal<";
                 suf += ">";
             }

@@ -106,7 +106,8 @@ struct CQInterpreter : public ASTVisitor {
         } else if (*(v.memberToken->type) == RealType) {
             v.memberToken->accept(this);
             getReturnedValue();
-            setErrorWhenFailed(returned.value == (double)floor(returned.value), "array index out of range (should can be cast to int)");
+            setErrorWhenFailed(returned.value == (double)floor(returned.value),
+                               "array index out of range (should can be cast to int)");
             returned.token = handler.arrayAccess(base.token, (size_t)returned.value);
         } else {
             setError("member access only accept string or int");
@@ -174,11 +175,11 @@ struct CQInterpreter : public ASTVisitor {
             v.params[1]->accept(this);
             auto arg2 = returned;
             setErrorWhenFailed(arg1.type == Value::TOKEN, "expect array as receiver of \"push\"");
-            if(arg2.type == Value::VALUE){
+            if (arg2.type == Value::VALUE) {
                 handler.arrayExtend(arg1.token, arg2.value);
-            }else if(arg2.type == Value::TOKEN){
+            } else if (arg2.type == Value::TOKEN) {
                 handler.arrayExtend(arg1.token, arg2.token);
-            }else{
+            } else {
                 setError("arg2 of \"push\" has no return");
             }
         } else if (funcName == "resize") {
@@ -191,6 +192,16 @@ struct CQInterpreter : public ASTVisitor {
             setErrorWhenFailed(arg1.type == Value::TOKEN, "expect array as receiver of \"resize\"");
             setErrorWhenFailed(arg2 == (double)floor(arg2), "array index out of range (should can be cast to int)");
             handler.arrayResize(arg1.token, static_cast<size_t>(arg2));
+        } else if (funcName == "strEqual") {
+            v.params[0]->accept(this);
+            returned.type == Value::TOKEN &&handler.isString(returned.token);
+            auto tmp = returned.token;
+            v.params[1]->accept(this);
+            if (returned.type != Value::TOKEN || !handler.isString(returned.token)) {
+                setError("can't compare string with non-string");
+            }
+            returned.type = Value::VALUE;
+            returned.value = handler.stringComp(tmp, returned.token);
         } else if (auto it = oneParamFunc.find(funcName); it != oneParamFunc.end()) {
             setErrorWhenFailed(v.params.size() == 1, std::format("\"{}\" only accept 1 param", funcName));
             v.params[0]->accept(this);
@@ -284,17 +295,6 @@ struct CQInterpreter : public ASTVisitor {
             returned.type = Value::EMPTY;
         } else if (auto it = normalBinOp.find(v.op); it != normalBinOp.end()) {
             v.lhs->accept(this);
-            // TODO: compare between complex object
-            if (v.op == "==" && returned.type == Value::TOKEN && handler.isString(returned.token)) {
-                auto tmp = returned.token;
-                v.rhs->accept(this);
-                if (returned.type != Value::TOKEN || !handler.isString(returned.token)) {
-                    setError("can't compare string with non-string");
-                }
-                returned.type = Value::VALUE;
-                returned.value = handler.stringComp(tmp, returned.token);
-                return;
-            }
             getReturnedValue();
             auto tmp = returned.value;
             v.rhs->accept(this);
@@ -359,7 +359,7 @@ struct CQInterpreter : public ASTVisitor {
         v.condition->accept(this);
         getReturnedValue();
 #ifdef __RULEJIT_INTERPRETER_DEBUG
-        std::cout << std::format("Evaluate: {}", returned.value?"true":"false") << std::endl;
+        std::cout << std::format("Evaluate: {}", returned.value ? "true" : "false") << std::endl;
 #endif
         if (returned.value != 0) {
             v.trueExpr->accept(this);
