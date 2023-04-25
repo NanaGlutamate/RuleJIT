@@ -58,6 +58,29 @@ inline StringJoinner join(S &&middle) {
     return StringJoinner{std::forward<S>(middle)};
 }
 
+inline std::string repeat(const std::string &str, size_t times) {
+    std::string result;
+    for (size_t i = 0; i < times; i++) {
+        result += str;
+    }
+    return result;
+}
+
+struct StringBuilder {
+    template <typename Range>
+    friend std::string operator| (Range &&range, const StringBuilder &builder) {
+        std::string result;
+        for (auto &&item : range) {
+            result += item;
+        }
+        return result;
+    }
+};
+
+inline StringBuilder buildString(){
+    return StringBuilder{};
+}
+
 // template <typename Mid> struct StringSplitter {
 //     Mid middle;
 //     // TODO: wide string support

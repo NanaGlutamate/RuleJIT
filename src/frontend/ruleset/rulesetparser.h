@@ -60,6 +60,9 @@ struct RuleSetParseInfo {
     std::vector<std::string> preprocess;
     /// @brief real function names of subrulesets
     std::vector<std::string> subRuleSets;
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+    std::vector<std::map<ExprAST*, std::string>> debugInfo;
+#endif // __RULEJIT_DEBUG_IN_RUNTIME
 };
 
 /// @brief static class which contains tool functions for parsing ruleset XML

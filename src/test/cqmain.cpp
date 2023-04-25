@@ -29,12 +29,17 @@ int main() {
     using CSValueMap = std::unordered_map<std::string, std::any>;
 
     RuleSetEngine engine;
-    engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/test_xml/car_rule.xml");
 
-    engine.init();
+    try {
+        engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/test_xml/car_rule.xml");
+        engine.init();
+    } catch (std::logic_error(e)) {
+        std::cout << e.what() << std::endl;
+        return 0;
+    }
     for (int i = 0; i < 1000; i++) {
-        engine.setInput(CSValueMap{{"Input1", std::vector<std::any>{double(1), double(3), double(5)}},
-                                   {"Input2", double(2)}});
+        engine.setInput(
+            CSValueMap{{"Input1", std::vector<std::any>{double(1), double(3), double(5)}}, {"Input2", double(2)}});
         engine.tick();
         printCSValueMap(*(engine.getOutput()));
         // printCSValueMap(engine.data.cache);

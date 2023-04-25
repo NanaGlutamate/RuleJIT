@@ -32,7 +32,12 @@ void RuleSetEngine::buildFromSource(const std::string &srcXML) {
 
     // CAUTION: discard statements in preDefines
     // TODO: execute preDefines once to handle init value?
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+    auto [preDefines, preProcess, subRuleSets, tmpDebugInfo] = RuleSetParser::readSource(srcXML, context, dataStorage.metaInfo);
+    debugInfo = std::move(tmpDebugInfo);
+#else
     auto [preDefines, preProcess, subRuleSets] = RuleSetParser::readSource(srcXML, context, dataStorage.metaInfo);
+#endif // __RULEJIT_DEBUG_IN_RUNTIME
 
     std::set<std::string> notGenerate{preProcess.begin(), preProcess.end()};
     notGenerate.emplace(preDefines);

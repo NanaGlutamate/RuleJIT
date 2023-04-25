@@ -90,7 +90,7 @@ template <typename T> T *isType(std::unique_ptr<ExprAST> &ast) { return dynamic_
  * @brief indicates Identifier
  *
  */
-struct IdentifierExprAST : public ExprAST {
+struct IdentifierExprAST final : public ExprAST {
     ACCEPT_FUNCTION;
     ASTTokenType name;
 

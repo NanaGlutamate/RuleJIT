@@ -49,35 +49,67 @@
 			<Param name="enemy_index" type="float64">
 				<Value>
 					<Expression>
-						{var a f64 = 1.0e20;var index f64 = 0;var i f64 = 0;while(i&lt;scannedInfo.length()){ var tmp f64= pow((scannedInfo[i].position.x - selfInfo.position.x) * 111000,2)+pow((scannedInfo[i].position.z - selfInfo.position.z),2)+pow((scannedInfo[i].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2);index=if(tmp &lt; a) i else index;a = if(tmp &lt; a) tmp else a;i=i+1};index}
+						{
+							var a = 1.0e20;
+							var index = 0;
+							var i = 0;
+							while(i&lt;scannedInfo.length()){
+								var tmp = pow((scannedInfo[i].position.x - selfInfo.position.x) * 111000,2) + 
+									pow((scannedInfo[i].position.z - selfInfo.position.z),2) + 
+									pow((scannedInfo[i].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2);
+								index = if(tmp &lt; a) i else index;
+								a = if(tmp &lt; a) tmp else a;
+								i = i + 1
+							}
+							index
+						}
 					</Expression>
 				</Value>
 			</Param>
 			<Param name="d" type="float64">
 				<Value>
 					<Expression>
-						sqrt(pow((scannedInfo[enemy_index].position.x - selfInfo.position.x) * 111000,2)+pow((scannedInfo[enemy_index].position.z - selfInfo.position.z),2)+pow((scannedInfo[enemy_index].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2))
+						if(not scannedInfo.length())
+							0
+						else
+							sqrt(
+								pow((scannedInfo[enemy_index].position.x - selfInfo.position.x) * 111000,2) + 
+								pow((scannedInfo[enemy_index].position.z - selfInfo.position.z), 2) + 
+								pow((scannedInfo[enemy_index].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926), 2)
+							)
 					</Expression>
 				</Value>
 			</Param>
 			<Param name="phi" type="float64">
 				<Value>
 					<Expression>
-						atan2(scannedInfo[enemy_index].position.x - selfInfo.position.x, scannedInfo[enemy_index].position.y - selfInfo.position.y)
+						if(not scannedInfo.length())
+							0
+						else
+							atan2(
+								scannedInfo[enemy_index].position.x - selfInfo.position.x,
+								scannedInfo[enemy_index].position.y - selfInfo.position.y
+							)
 					</Expression>
 				</Value>
 			</Param>
 			<Param name="damagelevel" type="float64">
 				<Value>
 					<Expression>
-						scannedInfo[enemy_index].baseInfo.damageLevel
+						if(not scannedInfo.length())
+							0
+						else
+							scannedInfo[enemy_index].baseInfo.damageLevel
 					</Expression>
 				</Value>
 			</Param>
 			<Param name="enemyid" type="float64">
 				<Value>
 					<Expression>
-						scannedInfo[enemy_index].baseInfo.id
+						if(not scannedInfo.length())
+							0
+						else
+							scannedInfo[enemy_index].baseInfo.id
 					</Expression>
 				</Value>
 			</Param>
@@ -88,7 +120,20 @@
             <Rules>
                 <Rule>
                     <Condition>
-                        <Expression>selfInfo.baseInfo.damagelevel&gt;damagelevel and d&gt;2500</Expression>
+                        <Expression>scannedInfo.length() == 0</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>selfInfo.baseInfo.damageLevel &gt; damagelevel and d &gt; 2500</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
@@ -107,7 +152,7 @@
                 </Rule>
 				<Rule>
 					<Condition>
-						<Expression>(fabs(weaponinfo[0].direction-phi)&lt;0.04 or fabs(weaponinfo[0].direction-phi)&gt;3.1) and d&lt;3100</Expression>
+						<Expression>(fabs(weaponinfo[0].direction-phi) &lt; 0.04 or fabs(weaponinfo[0].direction-phi) &gt; 3.1) and d &lt; 3100</Expression>
 					</Condition>
 					<Consequence>
 						<Assignment>
@@ -132,7 +177,7 @@
 				</Rule>
 				<Rule>
 					<Condition>
-						<Expression>(fabs(weaponinfo[0].direction-phi)&lt;0.04 or fabs(weaponinfo[0].direction-phi)&gt;3.1) and d&lt;2500</Expression>
+						<Expression>(fabs(weaponinfo[0].direction-phi) &lt; 0.04 or fabs(weaponinfo[0].direction-phi) &gt; 3.1) and d &lt; 2500</Expression>
 					</Condition>
 					<Consequence>
 						<Assignment>
@@ -157,7 +202,7 @@
 				</Rule>
 				<Rule>
 					<Condition>
-						<Expression>(fabs(weaponinfo[0].direction-phi)&lt;0.04 or fabs(weaponinfo[0].direction-phi)&gt;3.1) and pitch>25</Expression>
+						<Expression>(fabs(weaponinfo[0].direction-phi) &lt; 0.04 or fabs(weaponinfo[0].direction-phi) &gt; 3.1) and pitch &gt; 25</Expression>
 					</Condition>
 					<Consequence>
 						<Assignment>
@@ -182,7 +227,7 @@
 				</Rule>
 				<Rule>
 					<Condition>
-						<Expression>(fabs(yaw-phi)&lt;0.04 or fabs(yaw-phi)&gt;3.1) and d&gt;2500</Expression>
+						<Expression>(fabs(yaw-phi) &lt; 0.04 or fabs(yaw-phi) &gt; 3.1) and d &gt; 2500</Expression>
 					</Condition>
 					<Consequence>
 						<Assignment>
@@ -207,7 +252,7 @@
 				</Rule>
 				<Rule>
 					<Condition>
-						<Expression>(fabs(yaw-phi)&lt;0.04 or fabs(yaw-phi)&gt;3.1) and d&gt;2500</Expression>
+						<Expression>(fabs(yaw-phi) &lt; 0.04 or fabs(yaw-phi) &gt; 3.1) and d &gt; 2500</Expression>
 					</Condition>
 					<Consequence>
 						<Assignment>

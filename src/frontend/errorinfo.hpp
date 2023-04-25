@@ -14,18 +14,51 @@
  */
 #pragma once
 
-#include "frontend/lexer.h"
-#include "frontend/parser.h"
-#include "frontend/semantic.hpp"
+#include <map>
+#include <string>
+#include <string_view>
+#include <vector>
+
+#include "ast/ast.hpp"
+#include "tools/stringprocess.hpp"
 
 namespace rulejit {
 
-// struct DebugInfo {};
+struct ErrorLocation {
+    std::string_view preline;
+    std::string_view line;
+    size_t start, length;
+    std::string genIdentifier() const { return mystr::repeat(" ", start) + mystr::repeat("^", length); }
+    std::string concatenateIdentifier(size_t maxCharPerLine = 80, size_t ident = 4) const {
+        std::string_view original = line;
+        std::string identifier = genIdentifier() + mystr::repeat(" ", original.size() - length - start), ret;
+        std::string pre = mystr::repeat(" ", ident);
+        while (original.size() > maxCharPerLine) {
+            ret += pre + std::string(original.substr(0, maxCharPerLine)) + "\n" + pre + identifier.substr(0, maxCharPerLine) + "\n";
+            original = original.substr(maxCharPerLine);
+            identifier = identifier.substr(maxCharPerLine);
+        }
+        if (!original.empty()) {
+            ret += pre + std::string(original) + "\n" + pre + std::move(identifier) + "\n";
+        }
+        return ret;
+    }
+};
 
-std::string genErrorInfo(const std::vector<ExprAST *> &callStack, const std::map<ExprAST *, std::string_view> &ast2place,
-                         const std::vector<const char *> &linePointer, const char * now, const std::string &errorType) {
-    std::string info;
-    ExprAST* nearestAST = nullptr;
+/**
+ * @brief generate error information from state from lexer, parser and semantic.
+ * (call stack, ast2place, linePointer and now)
+ *
+ * @param callStack call stack of semantic
+ * @param ast2place location map of parser
+ * @param linePointer location map of lexer
+ * @param now current pointer of lexer
+ * @return ErrorLocation
+ */
+ErrorLocation genErrorInfo(const std::vector<ExprAST *> &callStack,
+                           const std::map<ExprAST *, std::string_view> &ast2place,
+                           const std::vector<const char *> &linePointer, const char *now) {
+    ExprAST *nearestAST = nullptr;
     std::string_view ASTText;
     for (auto it = callStack.rbegin(); it != callStack.rend(); it++) {
         if (auto p = ast2place.find(*it); p != ast2place.end()) {
@@ -33,10 +66,41 @@ std::string genErrorInfo(const std::vector<ExprAST *> &callStack, const std::map
             break;
         }
     }
-    if (!nearestAST) {
-        return "No position record found.";
+    if (!nearestAST && !linePointer.empty()) {
+        // not start semantic check yet
+        while (*now != '\n' && *now != '\0')
+            now++;
+        auto tmp = std::string_view{linePointer.back(), now};
+        std::string_view pre;
+        if (linePointer.size() > 1) {
+            pre = std::string_view{*(linePointer.end() - 2), linePointer.back()};
+        }
+        return ErrorLocation{pre, tmp, 0, tmp.size()};
+    } else if (linePointer.empty()) {
+        // not start lexer yet
+        return ErrorLocation{"", "", 0, 0};
     }
-    return info;
+    const char *begin = linePointer.back();
+    const char *end = now;
+    const char *pre = nullptr;
+    for (auto it = linePointer.rbegin(); it != linePointer.rend(); it++) {
+        if (*it > &ASTText[0]) {
+            end = begin;
+            begin = *it;
+        } else {
+            end = begin;
+            begin = *it;
+            if (it != linePointer.rend() - 1) {
+                pre = *(it + 1);
+            } else {
+                pre = begin;
+            }
+            break;
+        }
+    }
+    size_t start = &ASTText[0] - begin;
+    size_t length = ASTText.size();
+    return ErrorLocation{std::string_view{pre, begin}, std::string_view{begin, end}, start, length};
 }
 
 } // namespace rulejit
