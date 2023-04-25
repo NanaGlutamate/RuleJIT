@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="example1.0.xsd"?>
+<RuleSet version="1.0">
+    <TypeDefines>
+        <TypeDefine type="Location">
+            <Variable name="altitude" type="float64" />
+            <Variable name="longitude" type="float64" />
+            <Variable name="latitude" type="float64" />
+        </TypeDefine>
+        <TypeDefine type="Vector3">
+            <Variable name="x" type="float64" />
+            <Variable name="y" type="float64" />
+            <Variable name="z" type="float64" />
+        </TypeDefine>
+		<Type name="BaseInfo">
+			<Params>
+				<Param name="id" type="uint64" unit=""/>
+				<Param name="side" type="uint16" unit=""/>
+				<Param name="type" type="uint16" unit=""/>
+				<Param name="damageLevel" type="uint16" unit=""/>
+			</Params>
+		</Type>
+		    <Type name="EntityInfo">
+			<Params>
+				 <Param name="baseInfo" type="BaseInfo" unit=""/>
+				 <Param name="velocity" type="Vector3" unit=""/>
+				 <Param name="position" type="Vector3" unit=""/>   
+			</Params>
+		</Type>
+		    <Type name="WeaponInfo">
+			<Params>
+			    <Param name="ammo" type="int32" unit=""/>
+				<Param name="reloadingState" type="float64" unit=""/>
+				<Param name="range" type="float64" unit=""/>
+				<Param name="direction" type="float64" unit=""/>
+				<Param name="weaponName" type="string" unit=""/>     
+			</Params>
+		</Type>
+    </TypeDefines>
+    <MetaInfo>
+        <Inputs>
+            <!-- init value not fully supported -->
+            <Param name="selfInfo" type="EntityInfo" display_name="我车实体信息"/>
+            <Param name="scannedInfo" type="EntityInfo[]" display_name="我车探测信息"/>
+			<Param name="roll" type="float64" display_name="我车滚转角"/>
+			<Param name="pitch" type="float64" display_name="我车俯仰角"/>
+			<Param name="yaw" type="float64" display_name="我车偏航角"/>
+			<Param nmae="weaponinfo" type="WeaponInfo" display_name="武器信息"/>
+        </Inputs>
+        <Outputs>
+            <Param name="ExpectSpeed" type="float64" display_name="期望速度"/>
+			<Param name="ExpectDirction" type="float64" display_name="期望方向"/>
+			<Param name="EnemyId" type="uint_64" display_name="敌方id"/>
+			<Param name="WeaponId" type="uint_64" display_name="武器编号"/>
+			<Param name="ActionId" type="uint_64" display_name="动作号"/>
+        </Outputs>
+		<Caches>
+			<Param name="dmin" type="float64">
+				<Value>
+					<Expression>
+						{var a f64 = 100000;var i f64 = 0;while(i&lt;scannedInfo.length()){ var tmp f64= pow((scannedInfo[i].position.x - selfInfo.position.x) * 111000,2)+pow((scannedInfo[i].position.z - selfInfo.position.z),2)+pow((scannedInfo[i].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2); a = if(tmp &lt; a) pow(tmp,0.5) else a;}; a}
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="phi" type="float64">
+				<Value>
+					<Expression>
+						{var a f64 = 100000;var i f64 = 0;var phi f64 = 0;var xT f64=0;var yT f64=0;while(i&lt;scannedInfo.length()){ var tmp f64= pow((scannedInfo[i].position.x - selfInfo.position.x) * 111000,2)+pow((scannedInfo[i].position.z - selfInfo.position.z),2)+pow((scannedInfo[i].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2); xT=pow(pow((scannedInfo[i].position.x - selfInfo.position.x) * 111000,2),0.5);yT=pow(pow((scannedInfo[i].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2),0.5);phi= if(tmp &lt; a) atan2(yT,xT) else phi;a = if(tmp &lt; a) pow(tmp,0.5) else a;}; phi}
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="damagelevel" type="float64">
+				<Value>
+					<Expression>
+						{var a f64 = 100000;var i f64 = 0;var damage f64=0;while(i&lt;scannedInfo.length()){ var tmp f64= pow((scannedInfo[i].position.x - selfInfo.position.x) * 111000,2)+pow((scannedInfo[i].position.z - selfInfo.position.z),2)+pow((scannedInfo[i].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2);damage=if(tmp &lt; a) scannedInfo[i].baseInfo.damageLevel else damage;a = if(tmp &lt; a) pow(tmp,0.5) else a;};damage}
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="enemyid" type="float64">
+				<Value>
+					<Expression>
+						{var a f64 = 100000;var i f64 = 0;var enemyid f64=0;while(i&lt;scannedInfo.length()){ var tmp f64= pow((scannedInfo[i].position.x - selfInfo.position.x) * 111000,2)+pow((scannedInfo[i].position.z - selfInfo.position.z),2)+pow((scannedInfo[i].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2);enemyid=if(tmp &lt; a) scannedInfo[i].baseInfo.id else enemyid;a = if(tmp &lt; a) pow(tmp,0.5) else a;};enemyid}
+					</Expression>
+				</Value>
+			</Param>
+		</Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>selfInfo.baseInfo.damagelevel&gt;damagelevel and d&gt;2500</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+							<Target>ExpectSpeed</Target>
+							<Value>
+								<Expression>-100</Expression>
+							</Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+				<Rule>
+					<Condition>
+						<Expression>fabs(weaponinfo.direction-phi)&gt;0.1 and d&lt;3100</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>ActionId</Target>
+							<Value>
+								<Expression>13</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>EnemyDirction</Target>
+							<Value>
+								<Expression>phi</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>fabs(weaponinfo.direction-phi)&lt;0.1 and d&lt;2500</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>ActionId</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>EnemyId</Target>
+							<Value>
+								<Expression>enemyid</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>WeaponId</Target>
+							<Value>
+								<Expression>0</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>fabs(weaponinfo.direction-phi)&lt;0.1 and d&lt;3000 and pitch>25</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>ActionId</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>EnemyId</Target>
+							<Value>
+								<Expression>enemyid</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>WeaponId</Target>
+							<Value>
+								<Expression>0</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>fabs(yaw-phi)&gt;0.1 and d&gt;2500</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>ActionId</Target>
+							<Value>
+								<Expression>7</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>ExpectSpeed</Target>
+							<Value>
+								<Expression>100</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>ExpectDirection</Target>
+							<Value>
+								<Expression>phi</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>fabs(yaw-phi)&lt;0.1 and d&gt;2500</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>ActionId</Target>
+							<Value>
+								<Expression>2</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>ExpectSpeed</Target>
+							<Value>
+								<Expression>100</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

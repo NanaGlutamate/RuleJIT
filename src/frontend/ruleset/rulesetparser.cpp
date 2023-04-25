@@ -10,10 +10,12 @@
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-29</td><td>Initial version.</td></tr>
+ * <tr><td>djw</td><td>2023-04-24</td><td>Add more error info.</td></tr>
  * </table>
  */
 #include "rulesetparser.h"
 #include "ast/escapedanalyzer.hpp"
+#include "frontend/errorinfo.hpp"
 #include "frontend/lexer.h"
 #include "frontend/parser.h"
 #include "frontend/semantic.hpp"
@@ -278,7 +280,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                             assign->first_node("Value")->first_node("Expression")->value() + "};";
                 } else if (assign->name() == "ArrayOperation"s) {
                     std::string value;
-                    if(auto valueNode = assign->first_node("Args"); valueNode) {
+                    if (auto valueNode = assign->first_node("Args"); valueNode) {
                         value = valueNode->first_node("Expression")->value();
                     }
                     expr += std::format("{}.{}({});", assign->first_node("Target")->value(),
