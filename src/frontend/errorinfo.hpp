@@ -30,23 +30,27 @@ struct ErrorLocation {
     size_t start, length;
     std::string genIdentifier() const { return mystr::repeat(" ", start) + mystr::repeat("^", length); }
     std::string concatenateIdentifier(size_t maxCharPerLine = 80, size_t ident = 4) const {
-        std::string_view original = line;
-        std::string identifier = genIdentifier() + mystr::repeat(" ", original.size() - length - start), ret;
-        std::string pre = mystr::repeat(" ", ident);
-        while (original.size() > maxCharPerLine) {
-            ret += pre + std::string(original.substr(0, maxCharPerLine)) + "\n" + pre + identifier.substr(0, maxCharPerLine) + "\n";
-            original = original.substr(maxCharPerLine);
-            identifier = identifier.substr(maxCharPerLine);
+        std::string line1, line2, ret;
+        size_t totalCnt = 0;
+        for (auto &c : line) {
+            if (totalCnt % maxCharPerLine == 0) {
+                ret += std::move(line1) + "\n" + std::move(line2) + "\n";
+                line1.clear();
+                line2.clear();
+            }
+            line1 += isspace(c) ? ' ' : c;
+            line2 += (totalCnt >= start && totalCnt < start + length) ? '^' : ' ';
+            totalCnt++;
         }
-        if (!original.empty()) {
-            ret += pre + std::string(original) + "\n" + pre + std::move(identifier) + "\n";
+        if (!line1.empty()) {
+            ret += std::move(line1) + "\n" + std::move(line2) + "\n";
         }
         return ret;
     }
 };
 
 /**
- * @brief generate error information from state from lexer, parser and semantic.
+ * @brief generate error information from state of lexer, parser and semantic.
  * (call stack, ast2place, linePointer and now)
  *
  * @param callStack call stack of semantic
@@ -57,7 +61,7 @@ struct ErrorLocation {
  */
 ErrorLocation genErrorInfo(const std::vector<ExprAST *> &callStack,
                            const std::map<ExprAST *, std::string_view> &ast2place,
-                           const std::vector<const char *> &linePointer, const char *now) {
+                           const std::vector<const char *> &linePointer, const char *now, const char *next) {
     ExprAST *nearestAST = nullptr;
     std::string_view ASTText;
     for (auto it = callStack.rbegin(); it != callStack.rend(); it++) {
@@ -67,17 +71,21 @@ ErrorLocation genErrorInfo(const std::vector<ExprAST *> &callStack,
         }
     }
     if (!nearestAST && !linePointer.empty()) {
-        // not start semantic check yet
-        while (*now != '\n' && *now != '\0')
+        // not start semantic check yet, means error caused by parser/lexer
+        // so to indicate the curent token
+        auto begin = now;
+        while (*now != '\n' && *now != '\0') {
             now++;
+        }
         auto tmp = std::string_view{linePointer.back(), now};
         std::string_view pre;
         if (linePointer.size() > 1) {
             pre = std::string_view{*(linePointer.end() - 2), linePointer.back()};
         }
-        return ErrorLocation{pre, tmp, 0, tmp.size()};
+        return ErrorLocation{pre, tmp, static_cast<size_t>(begin - linePointer.back()),
+                             static_cast<size_t>(next - linePointer.back())};
     } else if (linePointer.empty()) {
-        // not start lexer yet
+        // not start lexer yet, no info to show
         return ErrorLocation{"", "", 0, 0};
     }
     const char *begin = linePointer.back();

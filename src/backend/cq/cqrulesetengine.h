@@ -154,6 +154,9 @@ struct RuleSetEngine {
                             ("    at context: "s + debugInfo[cnt][p] |
                              transform([](char c) { return c == '\n' ? std::string("\\n") : ""s + c; }) | join("")) +
                             "\n";
+                        if(debugInfo[cnt][p].back() == '\n' || debugInfo[cnt][p].back() == ';'){
+                            break;
+                        }
                     }
                     error(info);
                 }

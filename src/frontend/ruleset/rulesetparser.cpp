@@ -206,7 +206,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         // parse initOriginal, get returned real function name
         ret.preDefines = (typeOriginal + "\n" + preDefines + "\n" + initOriginal) | lexer | parser | semantic;
     } catch (std::logic_error &e) {
-        auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer());
+        auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer(),
+                                 lexer.nextPointer());
         error(std::format("Error in preprocess pre-defines:\n\nwith information:\n\n{}\n\ndetails:\n\n{}", e.what(),
                           info.concatenateIdentifier()));
     }
@@ -226,8 +227,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             }
             valueDependency.emplace(p.first, std::move(dependency));
         } catch (std::logic_error &e) {
-            auto info =
-                genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer());
+            auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer(),
+                                     lexer.nextPointer());
             error(std::format("Error in preprocess intermediate variable expression:\n\n    {} = {}\n\nwith "
                               "information:\n\n{}\n\ndetails:\n\n{}",
                               p.first, p.second, e.what(), info.concatenateIdentifier()));
@@ -289,7 +290,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     try {
         ret.preprocess.push_back(valueAssignment | lexer | parser | semantic);
     } catch (std::logic_error &e) {
-        auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer());
+        auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer(),
+                                 lexer.nextPointer());
         error(std::format("Error in process intermediate variable assignment in XML\n\nwith "
                           "information:\n\n{}\n\ndetails:\n\n{}",
                           e.what(), info.concatenateIdentifier()));
@@ -330,8 +332,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             auto astName = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
             ret.subRuleSets.push_back(astName);
         } catch (std::logic_error &e) {
-            auto info =
-                genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer());
+            auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer(),
+                                     lexer.nextPointer());
             error(std::format("Error in process sub ruleset No.{}(zero-based) in XML\n\nwith "
                               "information:\n\n{}\n\ndetails:\n\n{}",
                               id, e.what(), info.concatenateIdentifier()));

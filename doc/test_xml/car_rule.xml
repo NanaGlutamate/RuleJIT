@@ -50,16 +50,16 @@
 				<Value>
 					<Expression>
 						{
-							var a = 1.0e20;
-							var index = 0;
-							var i = 0;
-							while(i&lt;scannedInfo.length()){
+							var a = 1.0e20
+							var index = 0
+							var i = 0
+							while(i &lt; scannedInfo.length()){
 								var tmp = pow((scannedInfo[i].position.x - selfInfo.position.x) * 111000,2) + 
 									pow((scannedInfo[i].position.z - selfInfo.position.z),2) + 
-									pow((scannedInfo[i].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2);
-								index = if(tmp &lt; a) i else index;
-								a = if(tmp &lt; a) tmp else a;
-								i = i + 1
+									pow((scannedInfo[i].position.y - selfInfo.position.y) * 111000 * cos(selfInfo.position.x / 180 * 3.1415926),2)
+								index = if(tmp &lt; a) i else index
+								a = if(tmp &lt; a) tmp else a
+								i = i  1
 							}
 							index
 						}
