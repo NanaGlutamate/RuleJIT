@@ -24,4 +24,4 @@
 
 1. XML文件格式要求：在doc/xml_design/example1.0.xml中，同文件夹的example1.0.xsd是其语法约束文件
 2. 解析工具源码：在src文件夹下，可通过${FRONTEND_SRC}和${BACKEND_SRC}两个CMake变量访问；解析工具的测试源码在src/test/cqmain.cpp，对应的CMake目标为cq_test.e
-3. 解析dll源码：主要文件在src/release/cq_interpreter下
+3. 解析dll源码：主要文件在src/release/cq_interpreter下，同时包含test_main
