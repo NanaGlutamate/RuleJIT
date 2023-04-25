@@ -88,7 +88,7 @@ struct ExpressionParser {
      * @brief map from AST to place in string, used for better error message, not used for now
      *
      */
-    std::map<ExprAST *, std::string_view> AST2place;
+    std::map<IAST *, std::string_view> AST2place;
 
   private:
     [[noreturn]] std::nullptr_t setError(const std::string &info) {

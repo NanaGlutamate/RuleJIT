@@ -24,9 +24,9 @@ int main(int argc, char **argv) {
                      "Options:\n"
                      "        <input file>        Set the input file.\n"
                      "\n"
-                     "        --outpath <path>    Set the output path.\n"
-                     "        --namespace <name>  Set the namespace name.\n"
-                     "        --prefix <prefix>   Set the prefix for generated file.\n"
+                     "        -outpath <path>     Set the output path.\n"
+                     "        -namespace <name>   Set the namespace name.\n"
+                     "        -prefix <prefix>    Set the prefix for generated file.\n"
                      "\n";
         return 0;
     }
@@ -34,21 +34,21 @@ int main(int argc, char **argv) {
     std::string in;
     // process command line arguments
     for (int i = 1; i < argc; i++) {
-        if (argv[i] == std::string_view("--outpath")) {
+        if (argv[i] == std::string_view("-outpath")) {
             i++;
             if (i == argc) {
                 std::cout << "No output path specified." << std::endl;
                 return 1;
             }
             codegen.setOutputPath(argv[i]);
-        } else if (argv[i] == std::string_view("--namespace")) {
+        } else if (argv[i] == std::string_view("-namespace")) {
             i++;
             if (i == argc) {
                 std::cout << "No namespace specified." << std::endl;
                 return 1;
             }
             codegen.setNamespaceName(argv[i]);
-        } else if (argv[i] == std::string_view("--prefix")) {
+        } else if (argv[i] == std::string_view("-prefix")) {
             i++;
             if (i == argc) {
                 std::cout << "No prefix specified." << std::endl;
@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
     try {
         codegen.buildFromFile(in);
     } catch (std::exception &e) {
-        std::cout << "Generation not complete, error: \n" << e.what() << std::endl;
+        std::cout << "Generate not complete, error: " << e.what() << std::endl;
         return 1;
     }
     return 0;
