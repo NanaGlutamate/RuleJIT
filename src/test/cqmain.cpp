@@ -32,15 +32,23 @@ int main() {
 
     try {
         engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/test_xml/car_rule.xml");
+        // engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/xml_design/example1.0.xml");
         engine.init();
     } catch (std::logic_error(e)) {
         std::cout << e.what() << std::endl;
         return 0;
     }
     for (int i = 0; i < 1000; i++) {
+        // engine.setInput(
+        //     CSValueMap{{"Input1", std::vector<std::any>{double(1), double(3), double(5)}}, {"Input2", double(2)}});
         engine.setInput(
             CSValueMap{{"Input1", std::vector<std::any>{double(1), double(3), double(5)}}, {"Input2", double(2)}});
-        engine.tick();
+        try {
+            engine.tick();
+        } catch (std::logic_error(e)) {
+            std::cout << e.what() << std::endl;
+            return 0;
+        }
         printCSValueMap(*(engine.getOutput()));
         // printCSValueMap(engine.data.cache);
         std::cout << std::endl;

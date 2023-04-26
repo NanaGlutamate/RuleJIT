@@ -139,7 +139,13 @@ struct RuleSetEngine {
             for (auto &s : ruleset->subRuleSets) {
 #ifdef __RULEJIT_DEBUG_IN_RUNTIME
                 try {
-                    s.subruleset | s.interpreter;
+                    try {
+                        s.subruleset | s.interpreter;
+                    } catch (std::logic_error &e) {
+                        throw e;
+                    } catch (...) {
+                        error("[Unhandled Exception]");
+                    }
                 } catch (std::logic_error &e) {
                     using namespace std::views;
                     using namespace std::literals;
@@ -147,17 +153,20 @@ struct RuleSetEngine {
                     std::string name = ruleset == &preprocess ? "pre processing"
                                                               : "sub ruleset " + std::to_string(cnt) + "(zero-based)";
                     std::string info = e.what() + "\n\nin "s + name + " when try to execute expression:    ";
-                    // info += debugInfo[cnt][*it] + "\n";
                     for (auto p : s.interpreter.currentExpr | reverse |
                                       filter([&](auto curr) { return debugInfo[cnt].contains(curr); }) | take(5)) {
                         info +=
                             ("    at context: "s + debugInfo[cnt][p] |
                              transform([](char c) { return c == '\n' ? std::string("\\n") : ""s + c; }) | join("")) +
                             "\n";
-                        if(debugInfo[cnt][p].back() == '\n' || debugInfo[cnt][p].back() == ';'){
+                        if (debugInfo[cnt][p].back() == '\n' || debugInfo[cnt][p].back() == ';') {
                             break;
                         }
                     }
+                    info += "Core dump: \n\n";
+                    info += dataStorage.dump();
+                    info += "Type Check info: \n\n";
+                    info += dataStorage.genTypeCheckInfo();
                     error(info);
                 }
                 cnt++;

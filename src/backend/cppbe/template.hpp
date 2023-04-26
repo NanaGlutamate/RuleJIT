@@ -157,6 +157,7 @@ inline constexpr auto funcDefHpp = R"(#pragma once
 #include "{1}typedef.hpp"
 
 extern "C" {{
+using namespace {0};
 {3}
 }}
 

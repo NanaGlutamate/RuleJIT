@@ -13,6 +13,7 @@
 #pragma once
 
 #include <any>
+#include <format>
 #include <list>
 #include <map>
 #include <memory>
@@ -28,6 +29,7 @@
 #include "tools/myassert.hpp"
 #include "tools/printcsvaluemap.hpp"
 #include "tools/seterror.hpp"
+#include "tools/stringprocess.hpp"
 
 namespace rulejit::cq {
 
@@ -45,11 +47,23 @@ struct DataStore {
     rulesetxml::RuleSetMetaInfo metaInfo;
 
     /**
+     * @brief generate core dump
+     * 
+     * @return std::string core dump
+     */
+    std::string dump() {
+        return std::format(
+            "Input:\n{}\n\nOutput:\n{}\n\nCache:\n{}\n", mystr::autoIdent(printCSValueMapToString(input), 1),
+            mystr::autoIdent(printCSValueMapToString(output), 1), mystr::autoIdent(printCSValueMapToString(cache), 1));
+    }
+
+    /**
      * @brief check all stored data to see if their type are as defined;
      *
      * @return std::string type check info
      */
     std::string genTypeCheckInfo() {
+        std::string ret;
         // use inner class act as a recursible lambda to avoid private function used only once / y-combinator
         struct TypeChecker {
             rulesetxml::RuleSetMetaInfo &metaInfo;
@@ -95,7 +109,6 @@ struct DataStore {
                 return std::move(ret);
             }
         } typeChecker{metaInfo, *this};
-        std::string ret;
         std::vector<std::tuple<std::string, std::reference_wrapper<CSValueMap>>> v{
             {"Input", input}, {"Output", output}, {"Cache", cache}};
         for (auto &[name, varTable] : v) {
@@ -103,7 +116,7 @@ struct DataStore {
             for (auto &[varName, varValue] : varTable.get()) {
                 auto varTypeIt = metaInfo.varType.find(varName);
                 if (varTypeIt == metaInfo.varType.end()) {
-                    detail += std::format("    unknown variable \"{}\" found in {}\n", varName, name);
+                    detail += std::format("    undefined variable \"{}\" found in {}\n", varName, name);
                     continue;
                 }
                 detail += typeChecker.check(varName, varTypeIt->second, varValue);
@@ -112,6 +125,7 @@ struct DataStore {
                 ret += "Runtime Error in " + name + " Vars:\n" + detail;
             }
         }
+        return ret;
     }
 
     /**
@@ -298,8 +312,6 @@ struct ResourceHandler {
         }
         bufferMap[s] = buffer.size() - 1;
         originalValue[s] = std::get<0>(buffer[buffer.size() - 1]);
-        // printCSValueMap({{s, std::get<0>(buffer[buffer.size() - 1])}});
-        // printCSValueMap({{s, originalValue[s]}});
         return buffer.size() - 1;
     }
 
@@ -534,7 +546,6 @@ struct ResourceHandler {
         } else if (v.type() == typeid(double)) {
             return std::any_cast<double>(v);
         } else {
-            printCSValueMap(std::any_cast<CSValueMap>(data.input["T_output"]));
             error(std::string("unknown type: ") + v.type().name());
         }
     }
@@ -548,7 +559,6 @@ struct ResourceHandler {
      * @param tar assigned value
      */
     void writeValue(size_t index, double tar) {
-        // TODO: string
         auto &v = std::get<0>(buffer[index]);
         if (v.type() == typeid(bool)) {
             v = (bool)(tar);

@@ -170,9 +170,9 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             v.falseExpr->accept(this);
             returned += ")";
         } else {
-            returned += "if";
+            returned += "if(";
             v.condition->accept(this);
-            returned += "{";
+            returned += "){";
             v.trueExpr->accept(this);
             returned += ";}else{";
             v.falseExpr->accept(this);
