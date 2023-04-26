@@ -55,7 +55,7 @@ inline std::string printAnyToString(const std::any &a) {
 inline std::string printCSValueMapToString(const std::unordered_map<std::string, std::any> &v) {
     using namespace std;
     return std::format("{{{}}}", mystr::join(v | std::views::transform([](const auto &p) {
-                                                 return std::format("{{{} : {}}}", p.first, printAnyToString(p.second));
+                                                 return std::format("{} : {}", p.first, printAnyToString(p.second));
                                              }),
                                              ", "));
 }

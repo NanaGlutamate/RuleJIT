@@ -105,13 +105,14 @@ extern func pow(a f64, b f64)->f64
 extern func atan2(a f64, b f64)->f64
 extern func strEqual(a string, b string)->f64
 func ==(a string, b string)->f64{strEqual(a, b)}
+func abs(a f64)->f64 fabs(a)
 const true f64 = 1.0
 const false f64 = 0.0
 )";
 
 } // namespace
 
-// TODO: collect debug info for interpreter; show more detailed info when lexer/parser/semantic error
+// show more detailed info when lexer/parser/semantic error
 RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextStack &context, RuleSetMetaInfo &data) {
     using namespace rapidxml;
 

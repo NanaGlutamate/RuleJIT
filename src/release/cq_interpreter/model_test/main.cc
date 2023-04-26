@@ -157,9 +157,14 @@ int main() {
     engine = model_obj_;
     // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
     engine->SetLogFun([](const std::string &msg, uint32_t type) {});
-    engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/rule_err.xml")}});
-    engine->SetInput(tmp);
-    engine->Tick(0.02);
+    try {
+        engine->Init(CSValueMap{ {"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/rule_err.xml")} });
+        engine->SetInput(tmp);
+        engine->Tick(0.02);
+    } catch (std::logic_error& e) {
+        std::cout << e.what();
+        return 0;
+    }
     printCSValueMap(*(engine->GetOutput()));
 
     return 0;

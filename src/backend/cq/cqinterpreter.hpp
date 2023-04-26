@@ -30,6 +30,8 @@
 #include "defines/marco.hpp"
 #include "tools/seterror.hpp"
 
+#define setErrorWhenFailed(cond, info) if(!(cond))error((info))
+
 /**
  * @brief front declaration of main function, used for repl_main.cpp
  *
@@ -554,7 +556,6 @@ struct CQInterpreter : public ASTVisitor {
     Value returned;
 
     SET_ERROR_MEMBER("(Interpreter)Runtime", void)
-    CONDITIONAL_SET_ERROR_MEMBER("(Interpreter)Runtime", void)
 
 #ifdef __RULEJIT_INTERPRETER_DEBUG
     size_t ruleCnt;
