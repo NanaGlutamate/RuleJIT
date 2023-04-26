@@ -158,7 +158,8 @@ int main() {
     // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
     engine->SetLogFun([](const std::string &msg, uint32_t type) {});
     try {
-        engine->Init(CSValueMap{ {"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/rule_err.xml")} });
+        // engine->Init(CSValueMap{ {"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/rule_err.xml")} });
+        engine->Init(CSValueMap{ {"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/car_rule.xml")} });
         engine->SetInput(tmp);
         engine->Tick(0.02);
     } catch (std::logic_error& e) {

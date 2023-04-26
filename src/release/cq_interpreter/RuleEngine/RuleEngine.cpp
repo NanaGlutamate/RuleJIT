@@ -67,16 +67,16 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
         filePath = library_dir_ + "rule.xml";
     }
     if(!std::filesystem::exists(filePath)){
-        WriteLog(std::format("Init RuleEngine error: file {} not exists", filePath), 1);
+        WriteLog(std::format("Init RuleEngine error: file {} not exists", filePath), 4);
         error(std::format("Init RuleEngine error: file {} not exists", filePath));
         return false;
     }
-    // try {
+    try {
         engine.buildFromFile(filePath);
-    // } catch (std::exception &e) {
-    //     WriteLog(std::string("Init RuleEngine error: ") + e.what(), 1);
-    //     return false;
-    // }
+    } catch (std::exception &e) {
+         WriteLog(std::string("Init RuleEngine Error: \n") + e.what(), 4);
+         return false;
+    }
     if(!log_){
         SetLogFun([](const std::string &msg, int level) {});
     }
@@ -85,6 +85,13 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
 }
 
 bool RuleEngine::Tick(double time) {
+    try {
+        engine.tick();
+    }
+    catch (std::exception& e) {
+        WriteLog(std::string("RuleEngine Tick Error: \n") + e.what(), 4);
+        return false;
+    }
     engine.tick();
     WriteLog("RuleEngine model Tick", 1);
     return true;
