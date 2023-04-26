@@ -28,9 +28,9 @@ int main(int argc, const char **argv) {
     opt.registerFlag({"-h", "--help", "-?"}, "Show this help message");
     opt.registerArg({"-o", "--output"}, "Set output file path(\"./model.xml\" by default)");
     // dllName, name, displayName, category
-    opt.registerArg({"-d", "--dllName"}, "Set dllName(\"cq_interpreter\" by default)");
+    opt.registerArg({"-dl", "--dllName"}, "Set dllName(\"cq_interpreter\" by default)");
     opt.registerArg({"-n", "--name"}, "Set name(\"UnnamedBehaviourModel\" by default)");
-    opt.registerArg({"-D", "--displayName"}, "Set displayName(same as dllName by default)");
+    opt.registerArg({"-ds", "--displayName"}, "Set displayName(same as dllName by default)");
     opt.registerArg({"-c", "--category"}, "Set category(\"ATOMIC_ENTITY\" by default)");
 
     int cnt = opt.build(argc, argv);
@@ -47,9 +47,9 @@ int main(int argc, const char **argv) {
     }
 
     std::string output = opt.getArg("./model.xml", "-o");
-    gen.dllName = opt.getArg("cq_interpreter", "-d");
+    gen.dllName = opt.getArg("cq_interpreter", "-dl");
     gen.name = opt.getArg("UnnamedBehaviourModel", "-n");
-    gen.displayName = opt.getArg(gen.dllName, "-D");
+    gen.displayName = opt.getArg(gen.dllName, "-ds");
     gen.category = opt.getArg("ATOMIC_ENTITY", "-c");
 
     std::string in;
