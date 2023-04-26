@@ -1,11 +1,11 @@
 /**
  * @file mygetopt.hpp
  * @author djw
- * @brief 
+ * @brief
  * @date 2023-04-26
- * 
+ *
  * @details tools to create command line tools
- * 
+ *
  * @par history
  * <table>
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
@@ -23,8 +23,8 @@
 #include <string_view>
 #include <tuple>
 
-#include "stringprocess.hpp"
 #include "myassert.hpp"
+#include "stringprocess.hpp"
 
 namespace tools::myopt {
 
@@ -34,7 +34,7 @@ struct CommandLineOpt {
 
     /**
      * @brief register a argument(a string)
-     * 
+     *
      * @param param name set of the parameter
      * @param info description of the parameter
      */
@@ -44,7 +44,7 @@ struct CommandLineOpt {
 
     /**
      * @brief register a flag(a bool)
-     * 
+     *
      * @param param name set of the parameter
      * @param info description of the parameter
      */
@@ -59,38 +59,17 @@ struct CommandLineOpt {
      * @param argv
      * @return int
      */
-    int build(int argc, const char **argv) {
-        int cnt = 0;
-        for (int i = 1; i < argc; ++i) {
-            std::string s{argv[i]};
-            auto it = std::ranges::find_if(paramNum, [&](const auto &p) { return p.first.contains(s); });
-            cnt++;
-            if (it == paramNum.end()) {
-                unspecifiedValue.insert(s);
-            } else {
-                if (std::get<0>(it->second)) {
-                    ++i;
-                    if (i == argc) {
-                        std::cout << "No value specified for " << s << std::endl;
-                        return -1;
-                    }
-                    valueMap[std::get<2>(it->second)] = argv[i];
-                }
-                valueMap[std::get<2>(it->second)] = "";
-            }
-        }
-        return cnt;
-    }
+    int build(int argc, const char **argv) { return innerBuild(std::vector<std::string>(argv + 1, argv + argc)); }
 
     /**
      * @brief return number of arguments, or -1 if error
      *
      * @param args debug inputs
      */
-    int debugBuild(std::vector<std::string> &args) {
+    int innerBuild(const std::vector<std::string> &args) {
         int cnt = 0;
         for (auto i = args.begin(); i != args.end(); ++i) {
-            auto& s = *i;
+            auto &s = *i;
             auto it = std::ranges::find_if(paramNum, [&](const auto &p) { return p.first.contains(s); });
             cnt++;
             if (it == paramNum.end()) {
@@ -103,8 +82,9 @@ struct CommandLineOpt {
                         return -1;
                     }
                     valueMap[std::get<2>(it->second)] = *i;
+                } else {
+                    valueMap[std::get<2>(it->second)] = "";
                 }
-                valueMap[std::get<2>(it->second)] = "";
             }
         }
         return cnt;
@@ -112,7 +92,7 @@ struct CommandLineOpt {
 
     /**
      * @brief get the input value of a flag
-     * 
+     *
      * @param defaultValue default value
      * @param param name of the flag
      * @return bool value of the flag
@@ -132,7 +112,7 @@ struct CommandLineOpt {
 
     /**
      * @brief get the input value of a argument
-     * 
+     *
      * @param defaultValue default value
      * @param param name of the argument
      * @return const std::string& value of the argument
@@ -169,36 +149,37 @@ struct CommandLineOpt {
             return p.first + mystr::repeat(" ", maxIdent - p.first.size()) +
                    (std::get<0>(p.second) ? "<value>  " : "         ") + std::string(std::get<1>(p.second));
         };
-        return head + std::format(
-            "Options:\n\n{}\n\nFlags:\n\n{}\n",
-            (param | filter([](auto &p) { return std::get<0>(p.second); }) | transform(printLine) | mystr::join("\n")),
-            (param | filter([](auto &p) { return !std::get<0>(p.second); }) | transform(printLine) |
-             mystr::join("\n")));
+        return "\n" + head +
+               std::format("Options:\n\n{}\n\nFlags:\n\n{}\n",
+                           (param | filter([](auto &p) { return std::get<0>(p.second); }) | transform(printLine) |
+                            mystr::join("\n")),
+                           (param | filter([](auto &p) { return !std::get<0>(p.second); }) | transform(printLine) |
+                            mystr::join("\n")));
     }
 
     /**
      * @brief ask usr if continue
-     * 
-     * @param info 
-     * @return true 
-     * @return false 
+     *
+     * @param info
+     * @return true
+     * @return false
      */
-    bool askIfContinue(const std::string& info){
-        std::cout << info << "[Y/n]" << std::endl;
+    bool askIfContinue(const std::string &info, bool defaultValue = true) {
+        std::cout << info << (defaultValue ? "[Y/n]" : "[y/N]") << std::endl;
         std::string input;
-        std::cin >> input;
+        std::getline(std::cin, input);
         if (input == "n" || input == "N") {
             return false;
-        } else if (input != "" && input != "y" && input != "Y") {
-            std::cout << "invalid input, abort." << std::endl;
-            return false;
+        } else if (input == "y" || input == "Y") {
+            return true;
+        } else {
+            return defaultValue;
         }
-        return true;
     }
 
     /**
      * @brief describe the usage of the program, will be the first line of help
-     * 
+     *
      */
     std::string head;
     std::map<size_t, std::string> valueMap;

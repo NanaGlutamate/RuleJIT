@@ -14,7 +14,6 @@
  */
 #include <filesystem>
 #include <iostream>
-#include <fstream>
 
 #include "tools/mygetopt.hpp"
 #include "xmlgen.hpp"
@@ -22,12 +21,20 @@
 int main(int argc, const char **argv) {
     using namespace tools::myopt;
     CommandLineOpt opt;
+    rulejit::xmlgen::ModelXMLGenerator gen;
+
     opt.head = "Usage: cq_modelxmlgen <input file name> [options] [flags]\n";
 
-    opt.registerFlag({"-h", "--help", "-?"}, "Show this help message.");
-    opt.registerArg({"-o", "--output"}, "Set output file path(\"./model.xml\" by default).");
+    opt.registerFlag({"-h", "--help", "-?"}, "Show this help message");
+    opt.registerArg({"-o", "--output"}, "Set output file path(\"./model.xml\" by default)");
+    // dllName, name, displayName, category
+    opt.registerArg({"-d", "--dllName"}, "Set dllName(\"cq_interpreter\" by default)");
+    opt.registerArg({"-n", "--name"}, "Set name(\"UnnamedBehaviourModel\" by default)");
+    opt.registerArg({"-D", "--displayName"}, "Set displayName(same as dllName by default)");
+    opt.registerArg({"-c", "--category"}, "Set category(\"ATOMIC_ENTITY\" by default)");
 
     int cnt = opt.build(argc, argv);
+    // int cnt = opt.innerBuild({"-o", "test.xml", "D:\\Desktop\\FinalProj\\Code\\RuleJIT\\doc\\test_xml\\car_rule.xml"});
 
     if (cnt < 0) {
         return 1;
@@ -40,14 +47,40 @@ int main(int argc, const char **argv) {
     }
 
     std::string output = opt.getArg("./model.xml", "-o");
+    gen.dllName = opt.getArg("cq_interpreter", "-d");
+    gen.name = opt.getArg("UnnamedBehaviourModel", "-n");
+    gen.displayName = opt.getArg(gen.dllName, "-D");
+    gen.category = opt.getArg("ATOMIC_ENTITY", "-c");
+
+    std::string in;
+    for (auto s : opt.unspecifiedValue) {
+        if(!in.empty()){
+            std::cout << "too many input files specified." << std::endl;
+            return 1;
+        }
+        in = s;
+    }
+    if (in.empty()) {
+        std::cout << "No input file specified." << std::endl;
+        return 1;
+    }
+    if (!std::filesystem::exists(in)){
+        std::cout << "input file " << in << " not exists." << std::endl;
+        return 1;
+    }
+
     if (std::filesystem::exists(output)) {
         // if already exists, ask user if continue
-        if (!opt.askIfContinue("file " + output + " already exists, continue?")) {
+        if (!opt.askIfContinue("file " + output + " already exists, continue?", false)) {
             return 0;
         }
-        std::string path = output.find_last_of('/') == std::string::npos ? output.substr(0, output.find_last_of('\\'))
-                                                                         : output.substr(0, output.find_last_of('/'));
-        std::filesystem::create_directory(path);
+    } else {
+        if (auto index = output.find_last_of('/'); index != std::string::npos) {
+            std::filesystem::create_directory(output.substr(0, index));
+        } else if (index = output.find_last_of('\\'); index != std::string::npos) {
+            std::filesystem::create_directory(output.substr(0, index));
+        }
+
     }
-    std::ofstream ofs(output);
+    gen.gen(output, in);
 }

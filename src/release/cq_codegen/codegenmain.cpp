@@ -62,6 +62,10 @@ int main(int argc, const char **argv) {
         std::cout << "No input file specified." << std::endl;
         return 1;
     }
+    if (!std::filesystem::exists(in)){
+        std::cout << "input file " << in << " not exists." << std::endl;
+        return 1;
+    }
     if (!std::filesystem::exists(codegen.outputPath)) {
         // check if codegen.outputPath exists, if not, create it.
         std::filesystem::create_directories(codegen.outputPath);
