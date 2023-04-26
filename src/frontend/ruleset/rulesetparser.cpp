@@ -273,13 +273,13 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             auto it = std::find(topoSorted.begin(), topoSorted.end(), k);
             if (it == topoSorted.end()) {
                 errorMsg += "\t" + k + " -> ";
-                errorMsg += v | mystr::join(", ");
+                errorMsg += v | tools::mystr::join(", ");
                 errorMsg += k + ";\n";
             }
         }
         error(errorMsg);
     }
-    debugMsg("Topo sorted: " + (topoSorted | mystr::join(", ")));
+    debugMsg("Topo sorted: " + (topoSorted | tools::mystr::join(", ")));
     std::string valueAssignment = "{\n";
     // parse preprocessOriginal, get returned real function name
     for (auto &&o_ : topoSorted) {

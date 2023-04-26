@@ -1,2 +1,3 @@
 add_subdirectory(cq_interpreter)
 add_subdirectory(cq_codegen)
+add_subdirectory(cq_modelxmlgen)

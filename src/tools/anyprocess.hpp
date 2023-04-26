@@ -22,7 +22,7 @@
 
 #include "tools/seterror.hpp"
 
-namespace rulejit::myany {
+namespace tools::myany {
 
 /**
  * @brief simple functor to call when meet unknown type

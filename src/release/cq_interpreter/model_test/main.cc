@@ -36,7 +36,6 @@
 #include "tools/printcsvaluemap.hpp"
 
 int main() {
-    using namespace rulejit;
     using CSValueMap = std::unordered_map<std::string, std::any>;
     std::string lib_path_ = "cq_interpreter.dll";
 
@@ -166,7 +165,7 @@ int main() {
         std::cout << e.what();
         return 0;
     }
-    printCSValueMap(*(engine->GetOutput()));
+    tools::myany::printCSValueMap(*(engine->GetOutput()));
 
     return 0;
 }

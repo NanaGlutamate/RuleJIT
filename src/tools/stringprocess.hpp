@@ -18,9 +18,9 @@
 #include <string>
 #include <vector>
 
-namespace rulejit::mystr {
+namespace tools::mystr {
 
-template <std::ranges::range _Range> inline std::string join(_Range &&range, const std::string &middle) {
+template <std::ranges::range _Range> inline constexpr std::string join(_Range &&range, const std::string &middle) {
     std::string result;
     bool first = true;
     for (auto &&item : range) {
@@ -40,7 +40,7 @@ template <std::ranges::range _Range> inline std::string join(_Range &&range, con
 }
 
 struct StringJoinner {
-    template <std::ranges::range Ty> friend std::string operator|(Ty &&tar, const StringJoinner &j) {
+    template <std::ranges::range Ty> friend constexpr std::string operator|(Ty &&tar, const StringJoinner &j) {
         return join(std::forward<Ty>(tar), j.middle);
     }
     std::string middle;
@@ -55,7 +55,7 @@ struct StringJoinner {
  */
 template <typename S>
     requires requires(S s) { std::string(s); }
-inline StringJoinner join(S &&middle) {
+inline constexpr StringJoinner join(S &&middle) {
     return StringJoinner{std::forward<S>(middle)};
 }
 
@@ -66,12 +66,17 @@ inline StringJoinner join(S &&middle) {
  * @param times repeat times
  * @return std::string generated string
  */
-inline std::string repeat(const std::string &str, size_t times) {
+inline constexpr std::string repeat(std::string_view str, size_t times) {
+    if(str.size() == 1) {
+        return std::string(times, str[0]);
+    }
     std::string result;
+    result.reserve(str.size() * times);
     for (size_t i = 0; i < times; i++) {
         result += str;
     }
-    return result;
+    // RVO is not guaranteed due to pre return
+    return std::move(result);
 }
 
 /**
@@ -84,7 +89,7 @@ inline std::string repeat(const std::string &str, size_t times) {
  * @return std::string string with indent
  */
 inline std::string autoIdent(const std::string &s, size_t ident = 0) {
-    std::string ret = repeat("    ", ident);
+    std::string ret = repeat(" ", ident * 4);
     bool inString = false;
     for (char c : s | std::views::filter([&](char c) { return !isspace(c); })) {
         if (!inString && (c == '{' || c == '(' || c == '[')) {

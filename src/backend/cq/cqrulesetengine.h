@@ -149,7 +149,7 @@ struct RuleSetEngine {
                 } catch (std::logic_error &e) {
                     using namespace std::views;
                     using namespace std::literals;
-                    using namespace rulejit::mystr;
+                    using namespace tools::mystr;
                     std::string name = ruleset == &preprocess ? "pre processing"
                                                               : "sub ruleset " + std::to_string(cnt) + "(zero-based)";
                     std::string info = e.what() + "\n\nin "s + name + " when try to execute expression:    ";
@@ -157,7 +157,7 @@ struct RuleSetEngine {
                                       filter([&](auto curr) { return debugInfo[cnt].contains(curr); }) | take(5)) {
                         info +=
                             ("    at context: "s + debugInfo[cnt][p] |
-                             transform([](char c) { return c == '\n' ? std::string("\\n") : ""s + c; }) | join("")) +
+                             transform([](char c) { return c == '\n' ? std::string("\\n") : ""s + c; }) | tools::mystr::join("")) +
                             "\n";
                         if (debugInfo[cnt][p].back() == '\n' || debugInfo[cnt][p].back() == ';') {
                             break;

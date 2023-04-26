@@ -17,7 +17,7 @@
 #include <memory>
 #include <type_traits>
 
-namespace rulejit {
+namespace tools::myunique {
 
 /**
  * @brief cast a unique_ptr to another unique_ptr

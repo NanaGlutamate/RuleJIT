@@ -26,7 +26,7 @@
 #include "tools/anyprocess.hpp"
 #include "tools/stringprocess.hpp"
 
-namespace rulejit {
+namespace tools::myany {
 
 std::string printCSValueMapToString(const std::unordered_map<std::string, std::any> &v);
 

@@ -206,7 +206,7 @@ struct ExpressionSemantic : public ASTVisitor {
             auto [isMemberFunc, realFuncName] = seekMemberFunc(p1->value, paramType);
             if (!isMember && isMemberFunc) {
                 // exactly member func, transform
-                v.params.insert(v.params.begin(), unique_cast<ExprAST>(p->baseVar));
+                v.params.insert(v.params.begin(), tools::myunique::unique_cast<ExprAST>(p->baseVar));
                 v.functionIdent = std::make_unique<LiteralExprAST>(
                     std::make_unique<TypeInfo>(c.getRealFunctionType(realFuncName)), realFuncName);
                 // after change, continue to process v, not return
@@ -225,7 +225,7 @@ struct ExpressionSemantic : public ASTVisitor {
                     std::map<std::string, TypeInfo> spec{{"T", p->baseVar->type->getElementType()}};
                     if (auto it = arrayMemberFunc.find(p1->value); it != arrayMemberFunc.end()) {
                         auto specType = it->second | TypeInfo::where(spec);
-                        v.params.insert(v.params.begin(), unique_cast<ExprAST>(p->baseVar));
+                        v.params.insert(v.params.begin(), tools::myunique::unique_cast<ExprAST>(p->baseVar));
                         v.functionIdent =
                             std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(specType), p1->value);
                     } else {
@@ -257,16 +257,16 @@ struct ExpressionSemantic : public ASTVisitor {
                         auto templateParamList =
                             it->second.paramNames |
                             std::views::transform([&](const std::string &param) { return matched[param].toString(); }) |
-                            mystr::join(",");
+                            tools::mystr::join(",");
                         auto name = std::format("<{}>{}", templateParamList, instantiated->name);
                         auto realName = c.generateUniqueName(reservedPrefix, name + instantiated->funcType->toString());
                         globalInfo().realFuncDefinition.emplace(realName, std::move(instantiated));
                         funcDependencyRealName.insert(realName);
                         it->second.instantiationRealName.emplace(std::move(paramType), std::move(realName));
                     } else {
-                        setError(
-                            std::format("No template function match: {}({})", p->name,
-                                        paramType | std::views::transform(&TypeInfo::toString) | mystr::join(", ")));
+                        setError(std::format("No template function match: {}({})", p->name,
+                                             paramType | std::views::transform(&TypeInfo::toString) |
+                                                 tools::mystr::join(", ")));
                     }
                 }
             }
@@ -666,16 +666,16 @@ struct ExpressionSemantic : public ASTVisitor {
         switch (p->funcDefType) {
         case FunctionDefAST::FuncDefType::NORMAL:
             globalInfo().templateFuncDef.emplace(
-                name,
-                ContextGlobal::TemplateFunctionInfo{{}, std::move(v.tparams), unique_cast<FunctionDefAST>(v.def)});
+                name, ContextGlobal::TemplateFunctionInfo{
+                          {}, std::move(v.tparams), tools::myunique::unique_cast<FunctionDefAST>(v.def)});
             break;
         case FunctionDefAST::FuncDefType::MEMBER:
             globalInfo().templateMemberFuncDef[name].push_back(
-                {{}, std::move(v.tparams), unique_cast<FunctionDefAST>(v.def)});
+                {{}, std::move(v.tparams), tools::myunique::unique_cast<FunctionDefAST>(v.def)});
             break;
         case FunctionDefAST::FuncDefType::SYMBOLIC:
             globalInfo().templateSymbolicFuncDef[name].push_back(
-                {{}, std::move(v.tparams), unique_cast<FunctionDefAST>(v.def)});
+                {{}, std::move(v.tparams), tools::myunique::unique_cast<FunctionDefAST>(v.def)});
             break;
         default:
             setError("Template not supported");
@@ -1017,14 +1017,14 @@ struct ExpressionSemantic : public ASTVisitor {
                 auto templateParamList =
                     tmp.paramNames |
                     std::views::transform([&](const std::string &param) { return matched[param].toString(); }) |
-                    mystr::join(",");
+                    tools::mystr::join(",");
                 auto name = std::format("<{}>{}", templateParamList, instantiated->name);
-                alreadyMatch[name] = unique_cast<FunctionDefAST>(instantiated);
+                alreadyMatch[name] = tools::myunique::unique_cast<FunctionDefAST>(instantiated);
             }
             if (alreadyMatch.empty()) {
                 return {false, ""};
             } else if (alreadyMatch.size() != 1) {
-                setError("ambiguous template instantiation: " + (std::views::keys(alreadyMatch) | mystr::join(", ")));
+                setError("ambiguous template instantiation: " + (std::views::keys(alreadyMatch) | tools::mystr::join(", ")));
             }
             // 1 match, add to realfuncdef
             auto [matchName, funcAST] = std::move(*alreadyMatch.begin());

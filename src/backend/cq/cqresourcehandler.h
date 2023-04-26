@@ -48,13 +48,14 @@ struct DataStore {
 
     /**
      * @brief generate core dump
-     * 
+     *
      * @return std::string core dump
      */
     std::string dump() {
-        return std::format(
-            "Input:\n{}\n\nOutput:\n{}\n\nCache:\n{}\n", mystr::autoIdent(printCSValueMapToString(input), 1),
-            mystr::autoIdent(printCSValueMapToString(output), 1), mystr::autoIdent(printCSValueMapToString(cache), 1));
+        return std::format("Input:\n{}\n\nOutput:\n{}\n\nCache:\n{}\n",
+                           tools::mystr::autoIdent(tools::myany::printCSValueMapToString(input), 1),
+                           tools::mystr::autoIdent(tools::myany::printCSValueMapToString(output), 1),
+                           tools::mystr::autoIdent(tools::myany::printCSValueMapToString(cache), 1));
     }
 
     /**
@@ -330,7 +331,7 @@ struct ResourceHandler {
                 // may access cache without access to it, so use the same method in cpp-backend to
                 // determine whether to write back
                 auto &now = assemble(ind);
-                if (!myany::anyEqual(now, originalValue[name])) {
+                if (!tools::myany::anyEqual(now, originalValue[name])) {
                     it->second = now;
                 }
             }
