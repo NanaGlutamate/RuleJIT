@@ -36,6 +36,7 @@ int main(int argc, const char **argv) {
     bool help = opt.getFlag(false, "-h");
     if (help || cnt == 0) {
         std::cout << opt.getHelp() << std::endl;
+        return 0;
     }
 
     std::string output = opt.getArg("./model.xml", "-o");
