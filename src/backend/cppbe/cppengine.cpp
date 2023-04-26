@@ -23,6 +23,7 @@
 #include "cppengine.h"
 #include "rapidxml-1.13/rapidxml.hpp"
 #include "tools/seterror.hpp"
+#include "defines/marco.hpp"
 
 namespace {
 
@@ -42,7 +43,7 @@ std::string CppStyleType(const TypeInfo &type) {
     }
     if (type.isBaseType()) {
         auto tmp = type.getBaseTypeString();
-        if (rulesetxml::baseData.contains(tmp)) {
+        if (rulesetxml::baseNumericalData.contains(tmp)) {
             return "typedReal<" + tmp + ">";
         } else {
             return tmp;
@@ -73,7 +74,7 @@ std::string CppStyleParamType(const TypeInfo &type) {
     
     if (type.isBaseType()) {
         auto tmp = type.getBaseTypeString();
-        if (rulesetxml::baseData.contains(tmp)) {
+        if (rulesetxml::baseNumericalData.contains(tmp)) {
             return "typedReal<" + tmp + ">";
         } else {
             return "const " + tmp + "&";
@@ -120,7 +121,11 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
 
     // discard statements in preDefines
     // TODO: execute preDefines once(in RuleSet::Init()) to handle init value?
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+    auto [preDefines, preProcess, subRuleSets, _] = RuleSetParser::readSource(srcXML, context, data);
+#else
     auto [preDefines, preProcess, subRuleSets] = RuleSetParser::readSource(srcXML, context, data);
+#endif
 
     std::set<std::string> notGenerate{preProcess.begin(), preProcess.end()};
     notGenerate.emplace(preDefines);
@@ -131,6 +136,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     for (auto astName : preProcess) {
         notGenerate.insert(astName);
         auto &ast = context.global.realFuncDefinition[astName]->returnValue;
+        std::cout << (ast | codegen);
         subs += std::format(subRulesetDef, id++, ast | codegen);
     }
     size_t preID = id;
@@ -169,7 +175,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
                 pre += "std::vector<";
                 suf += ">";
             }
-            if (baseData.contains(type) && type != "float64") {
+            if (baseNumericalData.contains(type)) {
                 pre += "typedReal<";
                 suf += ">";
             }
@@ -226,14 +232,13 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         size_t param_cnt = type.getParamCount();
         auto& subTypes = type.getSubTypes();
         for (size_t i = 0; i < param_cnt; ++i) {
-            // TODO: array param?
-            // TODO: use CStypeType instead
             params += CppStyleType(subTypes[i]) + ", ";
         }
         if (!params.empty()) {
             params.erase(params.size() - 2, 2);
         }
-        externDefs += std::format(externFuncDef, CppStyleType(type.getReturnedType()), name, params);
+        // TODO: extern func may have bugs, do not support for now
+        // externDefs += std::format(externFuncDef, CppStyleType(type.getReturnedType()), name, params);
     }
 
     // generate ruleset.hpp

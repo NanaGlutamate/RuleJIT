@@ -30,6 +30,12 @@ inline static std::set<std::string> baseData{
     "int64", "uint64", "float32", "float64", "float128", "string",
 };
 
+/// @brief Supported numerical data types in ruleset XML
+inline static std::set<std::string> baseNumericalData{
+    "bool",  "int8",   "uint8",   "int16",   "uint16",   "int32",  "uint32",
+    "int64", "uint64", "float32", "float64", "float128",
+};
+
 /// @brief rule set meta-informations, collected from <MetaInfo> node
 struct RuleSetMetaInfo {
     RuleSetMetaInfo() = default;
@@ -54,6 +60,9 @@ struct RuleSetParseInfo {
     std::vector<std::string> preprocess;
     /// @brief real function names of subrulesets
     std::vector<std::string> subRuleSets;
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+    std::vector<std::map<ExprAST*, std::string>> debugInfo;
+#endif // __RULEJIT_DEBUG_IN_RUNTIME
 };
 
 /// @brief static class which contains tool functions for parsing ruleset XML

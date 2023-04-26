@@ -110,7 +110,7 @@ void ExpressionLexer::extend(Guidence guidence) {
         next++;
     } else if (charEqual(';')) {
         // endline
-        linePointer.push_back(next);
+        // linePointer.push_back(next);
         type = TokenType::ENDLINE;
         next++;
         begin = next;

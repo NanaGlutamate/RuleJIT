@@ -30,6 +30,8 @@
 #include "defines/marco.hpp"
 #include "tools/seterror.hpp"
 
+#define setErrorWhenFailed(cond, info) if(!(cond))error((info))
+
 /**
  * @brief front declaration of main function, used for repl_main.cpp
  *
@@ -73,7 +75,7 @@ struct CQInterpreter : public ASTVisitor {
 #ifdef __RULEJIT_INTERPRETER_DEBUG
         interpreter.ruleCnt = 1;
 #endif
-        expr->accept(&interpreter);
+        interpreter.callAccept(expr);
     }
 
   protected:
@@ -95,7 +97,7 @@ struct CQInterpreter : public ASTVisitor {
         }
     }
     VISIT_FUNCTION(MemberAccessExprAST) {
-        v.baseVar->accept(this);
+        callAccept(v.baseVar);
         auto base = returned;
         if (returned.type != Value::TOKEN) {
             setError("number have no members");
@@ -104,9 +106,10 @@ struct CQInterpreter : public ASTVisitor {
             returned.token =
                 handler.memberAccess(base.token, dynamic_cast<LiteralExprAST *>(v.memberToken.get())->value);
         } else if (*(v.memberToken->type) == RealType) {
-            v.memberToken->accept(this);
+            callAccept(v.memberToken);
             getReturnedValue();
-            setErrorWhenFailed(returned.value == (double)floor(returned.value), "array index out of range (should can be cast to int)");
+            setErrorWhenFailed(returned.value == (double)floor(returned.value),
+                               "array index out of range (should can be cast to int)");
             returned.token = handler.arrayAccess(base.token, (size_t)returned.value);
         } else {
             setError("member access only accept string or int");
@@ -150,7 +153,7 @@ struct CQInterpreter : public ASTVisitor {
         }
         if (funcName == "print") {
             setErrorWhenFailed(v.params.size() == 1, "\"print\" only accept 1 param");
-            v.params[0]->accept(this);
+            callAccept(v.params[0]);
             if (returned.type == Value::TOKEN) {
                 if (handler.isString(returned.token)) {
                     std::cout << handler.readString(returned.token) << std::endl;
@@ -163,46 +166,56 @@ struct CQInterpreter : public ASTVisitor {
             returned.type = Value::EMPTY;
         } else if (funcName == "length") {
             setErrorWhenFailed(v.params.size() == 1, "\"length\" only accept 1 param");
-            v.params[0]->accept(this);
+            callAccept(v.params[0]);
             setErrorWhenFailed(returned.type == Value::TOKEN, "expect array as receiver of \"length\"");
             returned.type = Value::VALUE;
             returned.value = static_cast<double>(handler.arrayLength(returned.token));
         } else if (funcName == "push") {
             setErrorWhenFailed(v.params.size() == 2, "\"push\" only accept 2 param");
-            v.params[0]->accept(this);
+            callAccept(v.params[0]);
             auto arg1 = returned;
-            v.params[1]->accept(this);
+            callAccept(v.params[1]);
             auto arg2 = returned;
             setErrorWhenFailed(arg1.type == Value::TOKEN, "expect array as receiver of \"push\"");
-            if(arg2.type == Value::VALUE){
+            if (arg2.type == Value::VALUE) {
                 handler.arrayExtend(arg1.token, arg2.value);
-            }else if(arg2.type == Value::TOKEN){
+            } else if (arg2.type == Value::TOKEN) {
                 handler.arrayExtend(arg1.token, arg2.token);
-            }else{
+            } else {
                 setError("arg2 of \"push\" has no return");
             }
         } else if (funcName == "resize") {
             setErrorWhenFailed(v.params.size() == 2, "\"resize\" only accept 2 param");
-            v.params[0]->accept(this);
+            callAccept(v.params[0]);
             auto arg1 = returned;
-            v.params[1]->accept(this);
+            callAccept(v.params[1]);
             getReturnedValue();
             auto arg2 = returned.value;
             setErrorWhenFailed(arg1.type == Value::TOKEN, "expect array as receiver of \"resize\"");
             setErrorWhenFailed(arg2 == (double)floor(arg2), "array index out of range (should can be cast to int)");
             handler.arrayResize(arg1.token, static_cast<size_t>(arg2));
+        } else if (funcName == "strEqual") {
+            callAccept(v.params[0]);
+            returned.type == Value::TOKEN &&handler.isString(returned.token);
+            auto tmp = returned.token;
+            callAccept(v.params[1]);
+            if (returned.type != Value::TOKEN || !handler.isString(returned.token)) {
+                setError("can't compare string with non-string");
+            }
+            returned.type = Value::VALUE;
+            returned.value = handler.stringComp(tmp, returned.token);
         } else if (auto it = oneParamFunc.find(funcName); it != oneParamFunc.end()) {
             setErrorWhenFailed(v.params.size() == 1, std::format("\"{}\" only accept 1 param", funcName));
-            v.params[0]->accept(this);
+            callAccept(v.params[0]);
             getReturnedValue();
             returned.value = it->second(returned.value);
             returned.type = Value::VALUE;
         } else if (auto it = twoParamFunc.find(funcName); it != twoParamFunc.end()) {
             setErrorWhenFailed(v.params.size() == 2, std::format("\"{}\" only accept 2 param", funcName));
-            v.params[0]->accept(this);
+            callAccept(v.params[0]);
             getReturnedValue();
             double tmp = returned.value;
-            v.params[1]->accept(this);
+            callAccept(v.params[1]);
             getReturnedValue();
             returned.value = it->second(tmp, returned.value);
             returned.type = Value::VALUE;
@@ -216,7 +229,7 @@ struct CQInterpreter : public ASTVisitor {
             for (size_t i = 0; i < callee->params.size(); i++) {
                 auto &param = callee->params[i];
                 auto &arg = v.params[i];
-                arg->accept(this);
+                callAccept(arg);
                 if (isNumericalType(*(param->type))) {
                     getReturnedValue();
                 }
@@ -224,7 +237,7 @@ struct CQInterpreter : public ASTVisitor {
             }
             symbolStack.push_back(std::move(frame));
             returned.type = Value::EMPTY;
-            callee->returnValue->accept(this);
+            callAccept(callee->returnValue);
             symbolStack.pop_back();
         }
     }
@@ -244,10 +257,10 @@ struct CQInterpreter : public ASTVisitor {
         };
         if (v.op == "=") {
             if (isType<IdentifierExprAST>(v.lhs.get())) {
-                v.rhs->accept(this);
+                callAccept(v.rhs);
                 auto rhs = returned;
                 auto p = dynamic_cast<IdentifierExprAST *>(v.lhs.get());
-                p->accept(this);
+                callAccept(v.lhs);
                 auto lhs = returned;
                 if (lhs.type == Value::TOKEN) {
                     if (rhs.type == Value::TOKEN) {
@@ -268,9 +281,9 @@ struct CQInterpreter : public ASTVisitor {
                     }
                 }
             } else if (isType<MemberAccessExprAST>(v.lhs.get())) {
-                v.lhs->accept(this);
+                callAccept(v.lhs);
                 auto lhs = returned;
-                v.rhs->accept(this);
+                callAccept(v.rhs);
                 auto rhs = returned;
                 if (returned.type == Value::VALUE) {
                     handler.writeValue(lhs.token, rhs.value);
@@ -283,25 +296,14 @@ struct CQInterpreter : public ASTVisitor {
             }
             returned.type = Value::EMPTY;
         } else if (auto it = normalBinOp.find(v.op); it != normalBinOp.end()) {
-            v.lhs->accept(this);
-            // TODO: compare between complex object
-            if (v.op == "==" && returned.type == Value::TOKEN && handler.isString(returned.token)) {
-                auto tmp = returned.token;
-                v.rhs->accept(this);
-                if (returned.type != Value::TOKEN || !handler.isString(returned.token)) {
-                    setError("can't compare string with non-string");
-                }
-                returned.type = Value::VALUE;
-                returned.value = handler.stringComp(tmp, returned.token);
-                return;
-            }
+            callAccept(v.lhs);
             getReturnedValue();
             auto tmp = returned.value;
-            v.rhs->accept(this);
+            callAccept(v.rhs);
             getReturnedValue();
             returned.value = it->second(tmp, returned.value);
         } else if (auto it = shortCutBinOp.find(v.op); it != shortCutBinOp.end()) {
-            v.lhs->accept(this);
+            callAccept(v.lhs);
             getReturnedValue();
             auto tmp = returned.value;
 #ifdef __RULEJIT_INTERPRETER_DEBUG
@@ -309,7 +311,7 @@ struct CQInterpreter : public ASTVisitor {
             double tmp1;
 #endif
             if (it->second(tmp, 0) != it->second(tmp, 1)) {
-                v.rhs->accept(this);
+                callAccept(v.rhs);
                 getReturnedValue();
 #ifdef __RULEJIT_INTERPRETER_DEBUG
                 rhsEvaluate = true;
@@ -346,7 +348,7 @@ struct CQInterpreter : public ASTVisitor {
         if (!unaryFunc.contains(v.op)) {
             setError(std::format("unary op \"{}\" not support for now", v.op));
         }
-        v.rhs->accept(this);
+        callAccept(v.rhs);
         getReturnedValue();
         returned.value = unaryFunc[v.op](returned.value);
     }
@@ -356,15 +358,15 @@ struct CQInterpreter : public ASTVisitor {
         std::cout << "[Check Rule No." << ruleCnt++ << "]" << std::endl;
 #endif
         returned.type = Value::EMPTY;
-        v.condition->accept(this);
+        callAccept(v.condition);
         getReturnedValue();
 #ifdef __RULEJIT_INTERPRETER_DEBUG
-        std::cout << std::format("Evaluate: {}", returned.value?"true":"false") << std::endl;
+        std::cout << std::format("Evaluate: {}", returned.value ? "true" : "false") << std::endl;
 #endif
         if (returned.value != 0) {
-            v.trueExpr->accept(this);
+            callAccept(v.trueExpr);
         } else {
-            v.falseExpr->accept(this);
+            callAccept(v.falseExpr);
         }
     }
     VISIT_FUNCTION(ComplexLiteralExprAST) {
@@ -375,7 +377,7 @@ struct CQInterpreter : public ASTVisitor {
             if (p == nullptr || !(*(p->type) == StringType)) {
                 setError("only allow string literal as key for now");
             }
-            value->accept(this);
+            callAccept(value);
             auto memberToken = handler.memberAccess(tmp, p->value);
             if (returned.type == Value::VALUE) {
                 handler.writeValue(memberToken, returned.value);
@@ -389,9 +391,9 @@ struct CQInterpreter : public ASTVisitor {
     VISIT_FUNCTION(LoopAST) {
         returned.type = Value::EMPTY;
         symbolStack.back().emplace_back();
-        v.init->accept(this);
-        while (v.condition->accept(this), getReturnedValue(), returned.value != 0) {
-            v.body->accept(this);
+        callAccept(v.init);
+        while (callAccept(v.condition), getReturnedValue(), returned.value != 0) {
+            callAccept(v.body);
         }
         symbolStack.back().pop_back();
     }
@@ -399,7 +401,7 @@ struct CQInterpreter : public ASTVisitor {
         returned.type = Value::EMPTY;
         symbolStack.back().emplace_back();
         for (auto it = v.exprs.begin(); it != v.exprs.end();) {
-            (*it)->accept(this);
+            callAccept((*it));
             it++;
         }
         symbolStack.back().pop_back();
@@ -433,7 +435,7 @@ struct CQInterpreter : public ASTVisitor {
         if (auto it = symbolStack.back().back().find(v.name); it != symbolStack.back().back().end()) {
             setError("redefine variable: " + v.name);
         }
-        v.definedValue->accept(this);
+        callAccept(v.definedValue);
         if (returned.type == Value::TOKEN) {
             auto tmp = handler.makeInstanceAs(returned.token);
             handler.assign(tmp, returned.token);
@@ -451,7 +453,23 @@ struct CQInterpreter : public ASTVisitor {
     VISIT_FUNCTION(FunctionDefAST) { setError("function def should never be visit directly"); }
     VISIT_FUNCTION(SymbolDefAST) { setError("symbol def should never be visit directly"); }
 
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+  public:
+    std::vector<ExprAST*> currentExpr;
+#endif
   private:
+    void callAccept(std::unique_ptr<ExprAST>& v) {
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+        currentExpr.push_back(v.get());
+#endif
+        if (v != nullptr) {
+            v->accept(this);
+        }
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+        currentExpr.pop_back();
+#endif
+    }
+
     /**
      * @brief Value type passes through visit functions,
      * may be a double or a token which indicate a variable hold by CQResourceHandler
@@ -538,7 +556,6 @@ struct CQInterpreter : public ASTVisitor {
     Value returned;
 
     SET_ERROR_MEMBER("(Interpreter)Runtime", void)
-    CONDITIONAL_SET_ERROR_MEMBER("(Interpreter)Runtime", void)
 
 #ifdef __RULEJIT_INTERPRETER_DEBUG
     size_t ruleCnt;

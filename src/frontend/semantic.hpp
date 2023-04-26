@@ -535,7 +535,8 @@ struct ExpressionSemantic : public ASTVisitor {
                 return setError(std::format("unnamed type \"{}\" is not allowed", t.toString()));
             }
             processType(t);
-            if (t != RealType && t != IntType && t.isBaseType() && !globalInfo().typeDef.contains(t.toString())) {
+            if (!BuildInType.contains(t) && t != IntType && t.isBaseType() &&
+                !globalInfo().typeDef.contains(t.toString())) {
                 // TODO: process each type
                 // TODO: array member/func member/pointer member?
                 return setError(std::format("type \"{}\" is not defined", t.toString()));
@@ -798,7 +799,7 @@ struct ExpressionSemantic : public ASTVisitor {
             c.pop();
         }
     }
-    
+
     rulejit::ContextGlobal &globalInfo() { return c.global; }
 
     SET_ERROR_MEMBER("Semantic Check", void)

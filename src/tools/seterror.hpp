@@ -36,7 +36,7 @@
                                                const std::source_location location =                                   \
                                                    std::source_location::current()) {                                  \
         if (!condition)                                                                                                \
-            error(std::format(src " Error{}: {}", location.line(), msg));                                              \
+            return error(std::format(src " Error{}: {}", location.line(), msg));                                       \
     }
 
 #ifndef __RULEJIT_DISABLE_EXCEPTION

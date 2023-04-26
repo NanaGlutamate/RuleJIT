@@ -295,8 +295,8 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
         if (lexer->top() == ".") {
             // member access
             lexer->pop(IGNORE_BREAK);
-            if (lexer->tokenType() != TokenType::IDENT) {
-                return setError("expected ident after \".\", found: " + lexer->topCopy());
+            if (lexer->tokenType() != TokenType::IDENT && !KEYWORDS.contains(lexer->top())) {
+                return setError("expected member name after \".\", found: " + lexer->topCopy());
             }
             std::string ident = lexer->popCopy();
             lhs = std::make_unique<MemberAccessExprAST>(

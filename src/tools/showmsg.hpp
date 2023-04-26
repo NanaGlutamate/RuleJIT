@@ -22,7 +22,7 @@
 
 namespace rulejit{
 
-void showMsg(const std::string& msg){
+void debugMsg(const std::string& msg){
 #ifndef __RULEJIT_NO_MSG
     std::cout << msg << std::endl;
 #endif // __RULEJIT_NO_MSG

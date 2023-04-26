@@ -30,6 +30,7 @@ inline constexpr auto typeDefHpp = R"(#pragma once
 #include <type_traits>
 
 namespace {0}{{
+using std::string;
 
 using f32 = float;
 using f64 = double;
@@ -156,10 +157,22 @@ inline constexpr auto funcDefHpp = R"(#pragma once
 #include "{1}typedef.hpp"
 
 extern "C" {{
+using namespace {0};
 {3}
 }}
 
 namespace {0}{{
+
+template <typename V>
+size_t length(V&& v){{ return v.size(); }}
+
+template <typename V, typename Op>
+void push(V& v, Op&& op){{ v.push_back(std::forward<Op>(op)); }}
+
+template <typename V>
+void resize(V& v, size_t size){{ v.resize(size); }}
+
+bool strEqual(const string& lhs, const string& rhs){{ return lhs == rhs; }}
 {2}
 
 }}

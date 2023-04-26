@@ -15,6 +15,7 @@
  */
 #include "rulesetparser.h"
 #include "ast/escapedanalyzer.hpp"
+#include "defines/marco.hpp"
 #include "frontend/errorinfo.hpp"
 #include "frontend/lexer.h"
 #include "frontend/parser.h"
@@ -60,12 +61,27 @@ std::string innerType(std::string type) {
         type.pop_back();
         tmp += "[]";
     }
-    if (baseData.contains(type)) {
+    if (baseNumericalData.contains(type)) {
         tmp += "f64";
     } else {
+        if (tmp == "type") {
+            error("Donot support type named \"type\"");
+        }
         tmp += type;
     }
     return tmp;
+}
+
+/**
+ * @brief tool function to skip space
+ *
+ * @param s char pointer to start of string
+ * @return const char* char pointer to first non-space char
+ */
+const char *skipIdent(const char *s) {
+    while (*s && isspace(*s))
+        s++;
+    return s;
 }
 
 /**
@@ -83,18 +99,20 @@ extern func asin(a f64)->f64
 extern func acos(a f64)->f64
 extern func fabs(a f64)->f64
 extern func exp(a f64)->f64
-extern func abs(a f64)->f64
 extern func floor(a f64)->f64
 extern func sqrt(a f64)->f64
 extern func pow(a f64, b f64)->f64
 extern func atan2(a f64, b f64)->f64
+extern func strEqual(a string, b string)->f64
+func ==(a string, b string)->f64{strEqual(a, b)}
+func abs(a f64)->f64 fabs(a)
 const true f64 = 1.0
 const false f64 = 0.0
 )";
 
 } // namespace
 
-// TODO: collect debug info for interpreter; show more detailed info when lexer/parser/semantic error
+// show more detailed info when lexer/parser/semantic error
 RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextStack &context, RuleSetMetaInfo &data) {
     using namespace rapidxml;
 
@@ -136,7 +154,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
 
     // collect input/cache/output vars, and if element <Param> has sub element
     // named "InitValue", add assignment to initOriginal
-    std::string initOriginal = "{";
+    std::string initOriginal = "{\n";
     // when has sub element <Value>, add assignment to preprocessOriginal
     std::map<std::string, std::string> preprocessOriginal;
 
@@ -148,7 +166,8 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             }
             data.varType[name] = type;
             target.push_back(name);
-            context.scope.back().varDef.emplace(name, innerType(type) | lexer | TypeParser());
+            auto innertype = innerType(type);
+            context.scope.back().varDef.emplace(name, innertype | lexer | TypeParser());
             if (auto p = ele->first_node("Value"); p) {
                 // if contains <Value> node, add assignment to preprocessOriginal
                 auto ip = ele->first_attribute("name")->value();
@@ -156,11 +175,11 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                 //     ip++;
                 // }
                 preprocessOriginal.emplace(std::string(ip),
-                                           std::string("{") + p->first_node("Expression")->value() + "}");
+                                           std::string("{") + skipIdent(p->first_node("Expression")->value()) + "}");
             }
             if (auto p = ele->first_node("InitValue"); p) {
                 // TODO: add expression support?
-                std::string tar = p->value();
+                std::string tar = skipIdent(p->value());
                 if (tar == "true") {
                     tar = "1.0";
                 } else if (tar == "false") {
@@ -174,7 +193,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                     }
                 }
                 // if contains <InitValue> node, add assignment to initOriginal
-                initOriginal += std::string(ele->first_attribute("name")->value()) + "={" + tar + "};";
+                initOriginal += std::string(ele->first_attribute("name")->value()) + "={" + tar + "};\n";
             }
         }
     };
@@ -184,8 +203,15 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     load("Outputs", data.outputVar);
 
     initOriginal += "}";
-    // parse initOriginal, get returned real function name
-    ret.preDefines = (typeOriginal + "\n" + preDefines + "\n" + initOriginal) | lexer | parser | semantic;
+    try {
+        // parse initOriginal, get returned real function name
+        ret.preDefines = (typeOriginal + "\n" + preDefines + "\n" + initOriginal) | lexer | parser | semantic;
+    } catch (std::logic_error &e) {
+        auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer(),
+                                 lexer.nextPointer());
+        error(std::format("Error in preprocess pre-defines:\n\nwith information:\n\n{}\n\ndetails:\n\n{}", e.what(),
+                          info.concatenateIdentifier()));
+    }
 
     // topo-sort preprocessOriginal
     std::unordered_map<std::string, std::set<std::string>> valueDependency;
@@ -202,9 +228,11 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             }
             valueDependency.emplace(p.first, std::move(dependency));
         } catch (std::logic_error &e) {
-            error(
-                std::format("Error in preprocess intermediate variable assignment:\n    {} = {}\nwith information:\n{}",
-                            p.first, p.second, e.what()));
+            auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer(),
+                                     lexer.nextPointer());
+            error(std::format("Error in preprocess intermediate variable expression:\n\n    {} = {}\n\nwith "
+                              "information:\n\n{}\n\ndetails:\n\n{}",
+                              p.first, p.second, e.what(), info.concatenateIdentifier()));
         }
     }
     // 2. filter out false dependency
@@ -251,16 +279,24 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         }
         error(errorMsg);
     }
-    showMsg("Topo sorted: " + (topoSorted | mystr::join(", ")));
-    std::string valueAssignment = "{";
+    debugMsg("Topo sorted: " + (topoSorted | mystr::join(", ")));
+    std::string valueAssignment = "{\n";
     // parse preprocessOriginal, get returned real function name
     for (auto &&o_ : topoSorted) {
         auto &o = *preprocessOriginal.find(o_);
-        valueAssignment += (o.first + "=" + o.second + ";");
+        valueAssignment += (o.first + "=" + o.second + ";\n");
     }
     valueAssignment += "}";
 
-    ret.preprocess.push_back(valueAssignment | lexer | parser | semantic);
+    try {
+        ret.preprocess.push_back(valueAssignment | lexer | parser | semantic);
+    } catch (std::logic_error &e) {
+        auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer(),
+                                 lexer.nextPointer());
+        error(std::format("Error in process intermediate variable assignment in XML\n\nwith "
+                          "information:\n\n{}\n\ndetails:\n\n{}",
+                          e.what(), info.concatenateIdentifier()));
+    }
 
     // generate subruleset defs
     size_t id = 0;
@@ -271,29 +307,45 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         auto rules = subruleset->first_node("Rules");
         size_t act = 0;
         for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule"), act++) {
-            expr += std::string("if({") + rule->first_node("Condition")->first_node("Expression")->value() + "}){";
+            expr += std::string("if({\n") +
+                    skipIdent(rule->first_node("Condition")->first_node("Expression")->value()) + "\n}){\n";
             // TODO: add direct expression support
             for (auto assign = rule->first_node("Consequence")->first_node(); assign; assign = assign->next_sibling()) {
                 using namespace std::literals;
                 if (assign->name() == "Assignment"s) {
-                    expr += std::string(assign->first_node("Target")->value()) + "={" +
-                            assign->first_node("Value")->first_node("Expression")->value() + "};";
+                    expr += std::string(skipIdent(assign->first_node("Target")->value())) + "={" +
+                            skipIdent(assign->first_node("Value")->first_node("Expression")->value()) + "};\n";
                 } else if (assign->name() == "ArrayOperation"s) {
                     std::string value;
                     if (auto valueNode = assign->first_node("Args"); valueNode) {
-                        value = valueNode->first_node("Expression")->value();
+                        value = skipIdent(valueNode->first_node("Expression")->value());
                     }
-                    expr += std::format("{}.{}({});", assign->first_node("Target")->value(),
-                                        assign->first_node("Operation")->value(), value);
+                    expr += std::format("{}.{}({});", skipIdent(assign->first_node("Target")->value()),
+                                        skipIdent(assign->first_node("Operation")->value()), value);
                 } else {
                     error("Unknown Consequence type: "s + assign->name() + "");
                 }
             }
-            expr += std::to_string(act) + "}else ";
+            expr += std::to_string(act) + "\n}else ";
         }
         expr += "{-1}}";
-        auto astName = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
-        ret.subRuleSets.push_back(astName);
+        try {
+            auto astName = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
+            ret.subRuleSets.push_back(astName);
+        } catch (std::logic_error &e) {
+            auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer(),
+                                     lexer.nextPointer());
+            error(std::format("Error in process sub ruleset No.{}(zero-based) in XML\n\nwith "
+                              "information:\n\n{}\n\ndetails:\n\n{}",
+                              id, e.what(), info.concatenateIdentifier()));
+        }
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+        std::map<ExprAST *, std::string> table;
+        for (auto [p, s] : parser.AST2place) {
+            table.emplace(p, s);
+        }
+        ret.debugInfo.push_back(std::move(table));
+#endif // __RULEJIT_DEBUG_IN_RUNTIME
     }
 
     // check all defined function

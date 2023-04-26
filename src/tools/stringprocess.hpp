@@ -14,6 +14,7 @@
  */
 #pragma once
 
+#include <ranges>
 #include <string>
 #include <vector>
 
@@ -56,6 +57,58 @@ template <typename S>
     requires requires(S s) { std::string(s); }
 inline StringJoinner join(S &&middle) {
     return StringJoinner{std::forward<S>(middle)};
+}
+
+/**
+ * @brief return a string with input string repeated for times
+ *
+ * @param str input string
+ * @param times repeat times
+ * @return std::string generated string
+ */
+inline std::string repeat(const std::string &str, size_t times) {
+    std::string result;
+    for (size_t i = 0; i < times; i++) {
+        result += str;
+    }
+    return result;
+}
+
+/**
+ * @brief auto indent a string
+ * 
+ * @attention will remove all original ident, contains space or which in string
+ *
+ * @param s input string
+ * @param ident base ident
+ * @return std::string string with indent
+ */
+inline std::string autoIdent(const std::string &s, size_t ident = 0) {
+    std::string ret = repeat("    ", ident);
+    bool inString = false;
+    for (char c : s | std::views::filter([&](char c) { return !isspace(c); })) {
+        if (!inString && (c == '{' || c == '(' || c == '[')) {
+            ret += c;
+            ret += '\n';
+            ident++;
+            ret += repeat("    ", ident);
+        } else if (!inString && (c == '}' || c == ')' || c == ']')) {
+            ret += '\n';
+            ident--;
+            ret += repeat("    ", ident);
+            ret += c;
+        } else if (!inString && (c == ',' || c == ';')) {
+            ret += c;
+            ret += '\n';
+            ret += repeat("    ", ident);
+        } else {
+            ret += c;
+            if (c == '\"' || c == '\'') {
+                inString = !inString;
+            }
+        }
+    }
+    return ret;
 }
 
 // template <typename Mid> struct StringSplitter {

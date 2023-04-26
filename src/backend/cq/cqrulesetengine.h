@@ -13,8 +13,15 @@
  */
 #pragma once
 
+#include "defines/marco.hpp"
+
+#include <array>
 #include <fstream>
 #include <list>
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+#include "tools/stringprocess.hpp"
+#include <ranges>
+#endif // __RULEJIT_DEBUG_IN_RUNTIME
 #ifdef __RULEJIT_PARALLEL_ENGINE
 #include <algorithm>
 #include <execution>
@@ -102,41 +109,7 @@ struct RuleSetEngine {
      *
      * @return void.
      */
-    void tick() {
-#ifdef __RULEJIT_PARALLEL_ENGINE
-        std::foreach(
-            std::execution::par_unseq, 
-            preprocess.subRuleSets.begin(), 
-            preprocess.subRuleSets.end(), 
-            [](auto& s){s.subruleset | s.interpreter;}
-        );
-#else // __RULEJIT_PARALLEL_ENGINE
-        for (auto &s : preprocess.subRuleSets) {
-            s.subruleset | s.interpreter;
-        }
-#endif // __RULEJIT_PARALLEL_ENGINE
-        for (auto &s : preprocess.subRuleSets) {
-            s.handler.writeBack();
-            s.interpreter.reset();
-        }
-
-#ifdef __RULEJIT_PARALLEL_ENGINE
-        std::foreach(
-            std::execution::par_unseq, 
-            ruleset.subRuleSets.begin(), 
-            ruleset.subRuleSets.end(), 
-            [](auto& s){s.subruleset | s.interpreter;}
-        );
-#else // __RULEJIT_PARALLEL_ENGINE
-        for (auto &&s : ruleset.subRuleSets) {
-            s.subruleset | s.interpreter;
-        }
-#endif // __RULEJIT_PARALLEL_ENGINE
-        for (auto &&s : ruleset.subRuleSets) {
-            s.handler.writeBack();
-            s.interpreter.reset();
-        }
-    }
+    void tick() { execute(); }
 
     /**
      * @brief Set the input data for the rule set engine.
@@ -154,6 +127,61 @@ struct RuleSetEngine {
     std::unordered_map<std::string, std::any> *getOutput() { return dataStorage.GetOutput(); }
 
   private:
+    void execute() {
+        for (auto &ruleset : std::array<RuleSet *, 2>{&preprocess, &ruleset}) {
+#ifdef __RULEJIT_PARALLEL_ENGINE
+            std::foreach (std::execution::par_unseq, ruleset->subRuleSets.begin(), ruleset->subRuleSets.end(),
+                          [](auto &s) { s.subruleset | s.interpreter; });
+#else // __RULEJIT_PARALLEL_ENGINE
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+            size_t cnt = 0;
+#endif // __RULEJIT_DEBUG_IN_RUNTIME
+            for (auto &s : ruleset->subRuleSets) {
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+                try {
+                    try {
+                        s.subruleset | s.interpreter;
+                    } catch (std::logic_error &e) {
+                        throw e;
+                    } catch (...) {
+                        error("[Unhandled Exception]");
+                    }
+                } catch (std::logic_error &e) {
+                    using namespace std::views;
+                    using namespace std::literals;
+                    using namespace rulejit::mystr;
+                    std::string name = ruleset == &preprocess ? "pre processing"
+                                                              : "sub ruleset " + std::to_string(cnt) + "(zero-based)";
+                    std::string info = e.what() + "\n\nin "s + name + " when try to execute expression:    ";
+                    for (auto p : s.interpreter.currentExpr | reverse |
+                                      filter([&](auto curr) { return debugInfo[cnt].contains(curr); }) | take(5)) {
+                        info +=
+                            ("    at context: "s + debugInfo[cnt][p] |
+                             transform([](char c) { return c == '\n' ? std::string("\\n") : ""s + c; }) | join("")) +
+                            "\n";
+                        if (debugInfo[cnt][p].back() == '\n' || debugInfo[cnt][p].back() == ';') {
+                            break;
+                        }
+                    }
+                    info += "Core dump: \n\n";
+                    info += dataStorage.dump();
+                    info += "Type Check info: \n\n";
+                    info += dataStorage.genTypeCheckInfo();
+                    error(info);
+                }
+                cnt++;
+#else  // __RULEJIT_DEBUG_IN_RUNTIME
+                s.subruleset | s.interpreter;
+#endif // __RULEJIT_DEBUG_IN_RUNTIME
+            }
+#endif // __RULEJIT_PARALLEL_ENGINE
+            for (auto &s : ruleset->subRuleSets) {
+                s.handler.writeBack();
+                s.interpreter.reset();
+            }
+        }
+    }
+
     /// @brief data storage
     DataStore dataStorage;
     /// @brief rule set
@@ -162,6 +190,10 @@ struct RuleSetEngine {
     ContextStack context;
     /// @brief pre-process subruleset, which will called tick() and writeBack() before all subruleset
     RuleSet preprocess;
+
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
+    std::vector<std::map<ExprAST *, std::string>> debugInfo;
+#endif // __RULEJIT_DEBUG_IN_RUNTIME
 };
 
 } // namespace rulejit::cq
