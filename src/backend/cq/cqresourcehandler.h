@@ -59,6 +59,42 @@ struct DataStore {
     }
 
     /**
+     * @brief convert type name in XML to inner type name
+     * 
+     * @attention will lose infomation about specific numerical type
+     * 
+     * @param s xml type
+     * @return std::string 
+     */
+    static std::string XMLType2InnerType(const std::string& s){
+        if (s.ends_with("[]")){
+            return "[]" + XMLType2InnerType(s.substr(0, s.size() - 2));
+        }
+        if (rulesetxml::baseNumericalData.contains(s)){
+            return "f64";
+        } else {
+            return s;
+        }
+    }
+
+    /**
+     * @brief convert inner type name to XML type name
+     * 
+     * @param s inner type
+     * @return std::string xml type
+     */
+    static std::string innerType2XMLType(const std::string& s){
+        if (s.starts_with("[]")){
+            return innerType2XMLType(s.substr(2)) + "[]";
+        }
+        if (s == "f64"){
+            return "float64";
+        } else {
+            return s;
+        }
+    }
+
+    /**
      * @brief check all stored data to see if their type are as defined;
      *
      * @return std::string type check info
@@ -221,7 +257,11 @@ struct DataStore {
                 return std::string{};
         }
         CSValueMap tmp;
-        for (auto &&[name, type] : metaInfo.typeDefines[type]) {
+        auto it = metaInfo.typeDefines.find(type);
+        if (it == metaInfo.typeDefines.end()) {
+            error("undefined type: " + type);
+        }
+        for (auto &&[name, type] : it->second) {
             tmp[name] = makeTypeEmptyInstance(type);
         }
         return tmp;
@@ -349,9 +389,9 @@ struct ResourceHandler {
      * @param s type name
      * @return size_t
      */
-    size_t makeInstance(const std::string &s) {
-        // TODO: make array, array push back
-        buffer.emplace_back(data.makeTypeEmptyInstance(s), s);
+    size_t makeInstance(const std::string& s) {
+        auto xmlType = data.innerType2XMLType(s);
+        buffer.emplace_back(data.makeTypeEmptyInstance(xmlType), xmlType);
         return buffer.size() - 1;
     }
 
@@ -607,7 +647,7 @@ struct ResourceHandler {
                 tmp[std::stoi(name)] = assemble(ind);
             }
             relation[index].clear();
-            std::get<0>(buffer[index]) = tmp;
+            std::get<0>(buffer[index]) = std::move(tmp);
             return std::get<0>(buffer[index]);
         } else {
             auto tmp = std::any_cast<CSValueMap>(std::move(v));
@@ -615,7 +655,7 @@ struct ResourceHandler {
                 tmp[name] = assemble(ind);
             }
             relation[index].clear();
-            std::get<0>(buffer[index]) = tmp;
+            std::get<0>(buffer[index]) = std::move(tmp);
             return std::get<0>(buffer[index]);
         }
     }

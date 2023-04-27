@@ -27,6 +27,8 @@
                 <Value><Expression>Input1[0]+Input2</Expression></Value>
             </Param>
             <Param name="Cache2" type="float64[]" />
+            <Param name="Cache3" type="float64[]" />
+            <Param name="Cache4" type="float64[]" />
         </Caches>
     </MetaInfo>
     <SubRuleSets>
@@ -41,6 +43,38 @@
                             <Target>Cache2</Target>
                             <Value>
                                 <Expression>Input1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Cache3</Target>
+                            <Value>
+                                <Expression>
+                                []f64{
+                                    trimf(0.1, 0.5, 1, 2),
+                                    trimf(0.3, 0.5, 1, 2),
+                                    trimf(0.6, 0.5, 1, 2),
+                                    trimf(0.8, 0.5, 1, 2),
+                                    trimf(1.3, 0.5, 1, 2),
+                                    trimf(2, 0.5, 1, 2)
+                                }
+                                </Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Cache4</Target>
+                            <Value>
+                                <Expression>
+                                []f64{
+                                    trapmf(0.1, 0.5, 1, 2, 2.1),
+                                    trapmf(0.3, 0.5, 1, 2, 2.1),
+                                    trapmf(0.6, 0.5, 1, 2, 2.1),
+                                    trapmf(0.8, 0.5, 1, 2, 2.1),
+                                    trapmf(1.3, 0.5, 1, 2, 2.1),
+                                    trapmf(2, 0.5, 1, 2, 2.1),
+                                    trapmf(2.05, 0.5, 1, 2, 2.1),
+                                    trapmf(2.1, 0.5, 1, 2, 2.1),
+                                }
+                                </Expression>
                             </Value>
                         </Assignment>
                     </Consequence>

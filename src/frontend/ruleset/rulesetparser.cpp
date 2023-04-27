@@ -90,6 +90,7 @@ const char *skipIdent(const char *s) {
  *
  */
 const inline std::string preDefines = R"(
+// base
 extern func sin(a f64)->f64
 extern func cos(a f64)->f64
 extern func tan(a f64)->f64
@@ -108,6 +109,21 @@ func ==(a string, b string)->f64{strEqual(a, b)}
 func abs(a f64)->f64 fabs(a)
 const true f64 = 1.0
 const false f64 = 0.0
+
+// fuzzy logic
+func trimf(x f64, a f64, b f64, c f64)->f64
+    if(x < a)0
+    else if(x < b)(x - a) / (b - a)
+    else if(x < c)(c - x) / (c - b)
+    else 0
+
+func trapmf(x f64, a f64, b f64, c f64, d f64)->f64
+    if(x < a)0
+    else if(x < b)(x - a) / (b - a)
+    else if(x < c)1
+    else if(x < d)(d - x) / (d - c)
+    else 0
+
 )";
 
 } // namespace

@@ -120,11 +120,18 @@ struct RuleSetEngine {
     void setInput(const std::unordered_map<std::string, std::any> &input) { dataStorage.SetInput(input); }
 
     /**
-     * @brief Get the output data from the rule set engine.
+     * @brief get the output data from the rule set engine.
      *
      * @return The pointer of unordered map for output data.
      */
     std::unordered_map<std::string, std::any> *getOutput() { return dataStorage.GetOutput(); }
+
+    /**
+     * @brief get the cached data from the rule set engine.
+     * 
+     * @return const std::unordered_map<std::string, std::any>& 
+     */
+    const std::unordered_map<std::string, std::any>& getCache() { return dataStorage.cache; }
 
   private:
     void execute() {
@@ -152,7 +159,7 @@ struct RuleSetEngine {
                     using namespace tools::mystr;
                     std::string name = ruleset == &preprocess ? "pre processing"
                                                               : "sub ruleset " + std::to_string(cnt) + "(zero-based)";
-                    std::string info = e.what() + "\n\nin "s + name + " when try to execute expression:    ";
+                    std::string info = e.what() + "\n\nin "s + name + " when try to execute expression\n";
                     for (auto p : s.interpreter.currentExpr | reverse |
                                       filter([&](auto curr) { return debugInfo[cnt].contains(curr); }) | take(5)) {
                         info +=

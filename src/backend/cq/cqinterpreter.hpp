@@ -30,7 +30,9 @@
 #include "defines/marco.hpp"
 #include "tools/seterror.hpp"
 
-#define setErrorWhenFailed(cond, info) if(!(cond))error((info))
+#define setErrorWhenFailed(cond, info)                                                                                 \
+    if (!(cond))                                                                                                       \
+    error((info))
 
 /**
  * @brief front declaration of main function, used for repl_main.cpp
@@ -372,17 +374,41 @@ struct CQInterpreter : public ASTVisitor {
     VISIT_FUNCTION(ComplexLiteralExprAST) {
         auto typeName = v.type->toString();
         auto tmp = handler.makeInstance(typeName);
-        for (auto &&[name, value] : v.members) {
-            auto p = dynamic_cast<LiteralExprAST *>(name.get());
-            if (p == nullptr || !(*(p->type) == StringType)) {
-                setError("only allow string literal as key for now");
+        if (v.type->isArrayType()) {
+            for (auto &&[name, value] : v.members) {
+                if (name.get()) {
+                    error("do not support designated initializer for array");
+                }
+                callAccept(value);
+                switch(returned.type){
+                    case Value::VALUE:
+                        handler.arrayExtend(tmp, returned.value);
+                        break;
+                    case Value::TOKEN:
+                        handler.arrayExtend(tmp, returned.token);
+                        break;
+                    default:
+                        error("invalid value type");
+                }
             }
-            callAccept(value);
-            auto memberToken = handler.memberAccess(tmp, p->value);
-            if (returned.type == Value::VALUE) {
-                handler.writeValue(memberToken, returned.value);
-            } else {
-                handler.assign(memberToken, returned.token);
+        } else {
+            for (auto &&[name, value] : v.members) {
+                auto p = dynamic_cast<LiteralExprAST *>(name.get());
+                if (p == nullptr || !(*(p->type) == StringType)) {
+                    setError("only allow string literal as key for now");
+                }
+                callAccept(value);
+                auto memberToken = handler.memberAccess(tmp, p->value);
+                switch(returned.type){
+                    case Value::VALUE:
+                        handler.writeValue(memberToken, returned.value);
+                        break;
+                    case Value::TOKEN:
+                        handler.assign(memberToken, returned.token);
+                        break;
+                    default:
+                        error("invalid value type");
+                }
             }
         }
         returned.token = tmp;
@@ -455,10 +481,10 @@ struct CQInterpreter : public ASTVisitor {
 
 #ifdef __RULEJIT_DEBUG_IN_RUNTIME
   public:
-    std::vector<ExprAST*> currentExpr;
+    std::vector<ExprAST *> currentExpr;
 #endif
   private:
-    void callAccept(std::unique_ptr<ExprAST>& v) {
+    void callAccept(std::unique_ptr<ExprAST> &v) {
 #ifdef __RULEJIT_DEBUG_IN_RUNTIME
         currentExpr.push_back(v.get());
 #endif
