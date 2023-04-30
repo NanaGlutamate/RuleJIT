@@ -28,6 +28,7 @@
 #endif // __RULEJIT_PARALLEL_ENGINE
 
 #include "ast/context.hpp"
+#include "ast/decompiler.hpp"
 #include "backend/cq/cqinterpreter.hpp"
 #include "backend/cq/cqresourcehandler.h"
 
@@ -128,10 +129,10 @@ struct RuleSetEngine {
 
     /**
      * @brief get the cached data from the rule set engine.
-     * 
-     * @return const std::unordered_map<std::string, std::any>& 
+     *
+     * @return const std::unordered_map<std::string, std::any>&
      */
-    const std::unordered_map<std::string, std::any>& getCache() { return dataStorage.cache; }
+    const std::unordered_map<std::string, std::any> &getCache() { return dataStorage.cache; }
 
   private:
     void execute() {
@@ -140,11 +141,8 @@ struct RuleSetEngine {
             std::foreach (std::execution::par_unseq, ruleset->subRuleSets.begin(), ruleset->subRuleSets.end(),
                           [](auto &s) { s.subruleset | s.interpreter; });
 #else // __RULEJIT_PARALLEL_ENGINE
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
             size_t cnt = 0;
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
             for (auto &s : ruleset->subRuleSets) {
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
                 try {
                     try {
                         s.subruleset | s.interpreter;
@@ -157,29 +155,36 @@ struct RuleSetEngine {
                     using namespace std::views;
                     using namespace std::literals;
                     using namespace tools::mystr;
+                    Decompiler decompiler;
                     std::string name = ruleset == &preprocess ? "pre processing"
                                                               : "sub ruleset " + std::to_string(cnt) + "(zero-based)";
                     std::string info = e.what() + "\n\nin "s + name + " when try to execute expression\n";
+#ifdef __RULEJIT_DEBUG_IN_RUNTIME
                     for (auto p : s.interpreter.currentExpr | reverse |
                                       filter([&](auto curr) { return debugInfo[cnt].contains(curr); }) | take(5)) {
-                        info +=
-                            ("    at context: "s + debugInfo[cnt][p] |
-                             transform([](char c) { return c == '\n' ? std::string("\\n") : ""s + c; }) | tools::mystr::join("")) +
-                            "\n";
+                        info += ("    at context: "s + debugInfo[cnt][p] |
+                                 transform([](char c) { return c == '\n' ? std::string("\\n") : ""s + c; }) |
+                                 tools::mystr::join("")) +
+                                "\n";
                         if (debugInfo[cnt][p].back() == '\n' || debugInfo[cnt][p].back() == ';') {
                             break;
                         }
                     }
+#else  // __RULEJIT_DEBUG_IN_RUNTIME
+                    for (auto p : s.interpreter.currentExpr | reverse | take(5)) {
+                        info += ("    at context(decompiled): "s + decompiler.decompile(p) + "\n");
+                    }
+#endif // __RULEJIT_DEBUG_IN_RUNTIME
                     info += "Core dump: \n\n";
                     info += dataStorage.dump();
-                    info += "Type Check info: \n\n";
-                    info += dataStorage.genTypeCheckInfo();
+                    auto typeCheck = dataStorage.genTypeCheckInfo();
+                    if (!typeCheck.empty()) {
+                        info += "Type Check info: \n\n";
+                        info += std::move(typeCheck);
+                    }
                     error(info);
                 }
                 cnt++;
-#else  // __RULEJIT_DEBUG_IN_RUNTIME
-                s.subruleset | s.interpreter;
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
             }
 #endif // __RULEJIT_PARALLEL_ENGINE
             for (auto &s : ruleset->subRuleSets) {

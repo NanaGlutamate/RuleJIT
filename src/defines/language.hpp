@@ -47,7 +47,7 @@ static_assert(canCallBeforeDefine + allowUserDefinedInfix + allowUserDefinedUnar
 } // namespace config
 
 inline const std::set<std::string> BUILDIN_UNARY{
-    "-", "not", "!", "&", "*", "~", "or", "and", "*", "&", "<-", "->",
+    "-", "not", "!", "&", "*", "~", "or", "and", "->",
 };
 
 using Priority = int;

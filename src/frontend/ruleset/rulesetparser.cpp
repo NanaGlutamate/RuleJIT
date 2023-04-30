@@ -321,8 +321,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
 
         std::string expr = "{";
         auto rules = subruleset->first_node("Rules");
-        size_t act = 0;
-        for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule"), act++) {
+        for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule")) {
             expr += std::string("if({\n") +
                     skipIdent(rule->first_node("Condition")->first_node("Expression")->value()) + "\n}){\n";
             // TODO: add direct expression support
@@ -342,9 +341,9 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                     error("Unknown Consequence type: "s + assign->name() + "");
                 }
             }
-            expr += std::to_string(act) + "\n}else ";
+            expr += "\n}else ";
         }
-        expr += "{-1}}";
+        expr += "{}}";
         try {
             auto astName = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
             ret.subRuleSets.push_back(astName);

@@ -124,7 +124,10 @@ struct CQInterpreter : public ASTVisitor {
             returned.type = Value::VALUE;
         } else if (*(v.type) == StringType) {
             // TODO: check
-            returned.token = handler.take(v.value);
+            returned.token = handler.takeString(v.value);
+            returned.type = Value::TOKEN;
+        } else if (v.type->isFunctionType()) {
+            returned.token = handler.takeString(v.value);
             returned.type = Value::TOKEN;
         } else {
             returned.type = Value::EMPTY;

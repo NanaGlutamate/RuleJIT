@@ -257,10 +257,10 @@ inline constexpr auto subRulesetDef = R"(    struct {{
                 }});
             }}
         }}
-        int Tick(RuleSet& _base){{
+        void Tick(RuleSet& _base){{
             const auto& _in = _base.in;
             auto& _out = _base.out;
-            return {1};
+            {1};
         }}
         void writeBack(RuleSet& base){{
             for(auto&& [_, f] : modified){{
@@ -492,17 +492,19 @@ void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
             printCSValueMap(std::any_cast<std::unordered_map<std::string, std::any>>(v));
         } else if (v.type() == typeid(std::vector<std::any>)) {
             auto tmp = std::any_cast<std::vector<std::any>>(v);
-            cout << "{";
+            cout << "[";
             bool start_ = false;
+            size_t cnt = 0;
             for (auto &&item : tmp) {
                 if (!start_) {
                     start_ = true;
                 } else {
                     cout << ", ";
                 }
-                printCSValueMap(std::any_cast<std::unordered_map<std::string, std::any>>(item));
+                printCSValueMap({{{{std::to_string(cnt), item}}}});
+                cnt++;
             }
-            cout << "}";
+            cout << "]";
         } else {
             cout << "unknown";
         }

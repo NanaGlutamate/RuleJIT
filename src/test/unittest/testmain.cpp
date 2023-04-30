@@ -13,7 +13,7 @@
 
 TEST(TestStr, test_str_join) {
     using namespace std;
-    using namespace rulejit::mystr;
+    using namespace tools::mystr;
     using namespace std::literals;
 
     EXPECT_EQ("1,2,3"s,
@@ -35,7 +35,7 @@ TEST(TestStr, test_str_join) {
 // }
 
 TEST(TestAny, test_any_visit) {
-    using namespace rulejit::myany;
+    using namespace tools::myany;
 
     ASSERT_TRUE(visit<err>(
         [](const auto &x) {
@@ -84,7 +84,7 @@ TEST(TestAny, test_any_visit) {
 
 TEST(TestAny, test_any_equal) {
     using namespace std;
-    using namespace rulejit::myany;
+    using namespace tools::myany;
     using CSValueMap = std::unordered_map<std::string, std::any>;
 
     ASSERT_TRUE(anyEqual(std::any(1.0), std::any(1.0)));

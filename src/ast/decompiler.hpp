@@ -24,9 +24,12 @@ struct Decompiler : public ASTVisitor {
     virtual ~Decompiler() = default;
     std::string friend operator|(std::unique_ptr<ExprAST> &ast, const Decompiler& _) {
         static Decompiler u;
-        u.returned.clear();
-        ast->accept(&u);
-        return u.returned;
+        return u.decompile(ast.get());
+    }
+    std::string decompile(ExprAST* ast) {
+        returned.clear();
+        ast->accept(this);
+        return std::move(returned);
     }
     
   protected:

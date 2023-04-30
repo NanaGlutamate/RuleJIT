@@ -40,19 +40,20 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         e->accept(&t);
         return std::move(t.returned);
     }
+    
     /**
      * @brief generate legal C++ function name
-     * 
+     *
      * @param token original name
-     * @return std::string 
+     * @return std::string
      */
     std::string toLegalName(const std::string &token) {
-        std::string tmp = "___buildin_generated_function_";
+        std::string tmp = "_func_";
         for (auto c : token) {
             if (isalpha(c) || c == '_') {
                 tmp += c;
             } else {
-                tmp += "_" + std::to_string((size_t)c);
+                tmp += std::to_string((size_t)c);
             }
         }
         return tmp;
@@ -95,7 +96,13 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     VISIT_FUNCTION(LiteralExprAST) {
         if (v.type->isFunctionType()) {
-            returned += toLegalName(v.value);
+            if (c.global.realFuncDefinition.contains(v.value)) {
+                // user defined function
+                returned += toLegalName(v.value);
+            } else {
+                // external function
+                returned += v.value;
+            }
             return;
         }
         returned += "(";
@@ -142,10 +149,10 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             v.rhs->accept(this);
             returned += "))";
         } else {
+            // TODO: check if assign to cache, if so, add write func to modified
             v.lhs->accept(this);
-            returned += " = double(";
+            returned += " = ";
             v.rhs->accept(this);
-            returned += ")";
         }
     }
     VISIT_FUNCTION(UnaryOpExprAST) {
@@ -160,6 +167,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         v.rhs->accept(this);
         returned += ")";
     }
+    // extinguish normal branch from ruleset branch
     VISIT_FUNCTION(BranchExprAST) {
         if (*(v.type) != NoInstanceType) {
             returned += "(";
@@ -269,6 +277,32 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     VISIT_FUNCTION(FunctionDefAST) { return setError("FunctionDefAST not supported"); }
     VISIT_FUNCTION(SymbolDefAST) { return setError("SymbolDefAST not supported"); }
 
+  public:
+    /**
+     * @brief transform inner type string to cpp style string
+     *
+     * @param type inner type string
+     * @return std::string cpp style string
+     */
+    static std::string CppStyleType(const TypeInfo &type) {
+        // only support vector and base type
+        if (type == NoInstanceType) {
+            return "void";
+        }
+        if (type.isBaseType()) {
+            auto tmp = type.getBaseTypeString();
+            if (rulesetxml::baseNumericalData.contains(tmp) || tmp == "f64") {
+                return "typedReal<" + tmp + ">";
+            } else {
+                return tmp;
+            }
+        }
+        if (type.isArrayType()) {
+            return "std::vector<" + CppStyleType(type.getElementType()) + ">";
+        }
+        error(std::format("unsupported type: {}", type.toString()));
+    }
+
   private:
     // bool isSubRuleSet;
     std::set<std::string> loadedVar;
@@ -280,17 +314,6 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             name = std::format("__tmp{}", tmp++);
         }
         return name;
-    }
-    std::string CppStyleType(const TypeInfo &type) {
-        // only support vector and base type
-        if (type.isBaseType()) {
-            // TODO: typedReal?
-            return type.getBaseTypeString();
-        }
-        if (type.isArrayType()) {
-            return "std::vector<" + CppStyleType(type.getElementType()) + ">";
-        }
-        setError(std::format("unsupported type: {}", type.toString()));
     }
     SET_ERROR_MEMBER("CPP Code Generation", void)
     ContextStack &c;
