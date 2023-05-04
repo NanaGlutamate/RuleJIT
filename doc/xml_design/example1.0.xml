@@ -53,7 +53,7 @@
                                     trimf(0.1, 0.5, 1, 2),
                                     trimf(0.3, 0.5, 1, 2),
                                     trimf(0.6, 0.5, 1, 2),
-                                    trimf(0.8, 0.5, 1, Cache3[-1]),
+                                    trimf(0.8, 0.5, 1, 2),
                                     trimf(1.3, 0.5, 1, 2),
                                     trimf(2, 0.5, 1, 2)
                                 }
@@ -101,6 +101,12 @@
                                 <Expression>Cache2.length()</Expression>
                             </Args>
                         </ArrayOperation>
+                        <Assignment>
+                            <Target>Cache2[0]</Target>
+                            <Value>
+                                <Expression>Cache2[Cache2.length()-1]</Expression>
+                            </Value>
+                        </Assignment>
                     </Consequence>
                 </Rule>
             </Rules>

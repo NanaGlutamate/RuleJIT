@@ -100,16 +100,38 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     // collect subruleset defs
     std::string subs;
     size_t id = 0;
-    for (auto astName : preProcess) {
+    for (auto& astName : preProcess) {
         notGenerate.insert(astName);
         auto &ast = context.global.realFuncDefinition[astName]->returnValue;
-        subs += std::format(subRulesetDef, id++, ast | codegen);
+        std::string writeBacks;
+        for (size_t atom = 0; atom < data.modifiedValue[id].size(); ++atom){
+            std::string members;
+            for (auto& name : data.modifiedValue[id][atom]) {
+                if(std::ranges::find(data.cacheVar, name) == data.cacheVar.end()){
+                    continue;
+                }
+                members += std::format(subRulesetWriteCaseMember, name);
+            }
+            writeBacks += std::format(subRulesetWriteCase, atom, members);
+        }
+        subs += std::format(subRulesetDef, id++, ast | codegen, writeBacks);
     }
     size_t preID = id;
-    for (auto astName : subRuleSets) {
+    for (auto& astName : subRuleSets) {
         notGenerate.insert(astName);
         auto &ast = context.global.realFuncDefinition[astName]->returnValue;
-        subs += std::format(subRulesetDef, id++, ast | codegen);
+        std::string writeBacks;
+        for (size_t atom = 0; atom < data.modifiedValue[id].size(); ++atom){
+            std::string members;
+            for (auto& name : data.modifiedValue[id][atom]) {
+                if(std::ranges::find(data.cacheVar, name) == data.cacheVar.end()){
+                    continue;
+                }
+                members += std::format(subRulesetWriteCaseMember, name);
+            }
+            writeBacks += std::format(subRulesetWriteCase, atom, members);
+        }
+        subs += std::format(subRulesetDef, id++, ast | codegen, writeBacks);
     }
     std::string precall, prewrite, subcall, subwrite;
     for (size_t i = 0; i < preID; i++) {

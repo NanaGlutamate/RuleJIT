@@ -23,6 +23,29 @@ TEST(TestStr, test_str_join) {
     EXPECT_EQ("114514"s, (std::vector<std::string>{"114514"} | join(",")));
 }
 
+TEST(TestStr, test_remove_space) {
+    using namespace std;
+    using namespace tools::mystr;
+    using namespace std::literals;
+
+    EXPECT_EQ("114514"s, removeSpace("  114514  "sv));
+    EXPECT_EQ("114514"s, removeSpace("  114514  "s));
+    EXPECT_EQ("114514"s, removeSpace("114514"sv));
+    EXPECT_EQ("114514"s, removeSpace("114514"s));
+    EXPECT_EQ("114514"s, removeSpace("  114514"sv));
+    EXPECT_EQ("114514"s, removeSpace("  114514"s));
+    EXPECT_EQ("114514"s, removeSpace("114514  "sv));
+    EXPECT_EQ("114514"s, removeSpace("114514  "s));
+    EXPECT_EQ(""s, removeSpace(""s));
+    EXPECT_EQ(""s, removeSpace(""sv));
+    EXPECT_EQ(""s, removeSpace(" "s));
+    EXPECT_EQ(""s, removeSpace(" "sv));
+
+    EXPECT_EQ("114 514"s, removeSpace("114 514"s));
+    EXPECT_EQ("114 514"s, removeSpace("  114 514"s));
+    EXPECT_EQ("114 514"s, removeSpace("114 514  "s));
+}
+
 // TEST(TestStr, test_str_split) {
 //     using namespace std;
 //     using namespace rulejit::mystr;

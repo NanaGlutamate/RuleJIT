@@ -775,11 +775,7 @@ struct ExpressionSemantic : public ASTVisitor {
                                                  std::move(topLevelExpr));
         }
         auto type = std::make_unique<TypeInfo>("func");
-        if (*(tmp->type) != NoInstanceType) {
-            type->addParamType(*(tmp->type));
-        } else {
-            type->addParamType(NoInstanceType);
-        }
+        type->addParamType(*(tmp->type));
         auto name = c.generateUniqueName(reservedPrefix, "unnamedfunc()");
         globalInfo().funcDependency.emplace(name, std::move(funcDependencyRealName));
         funcDependencyRealName.clear();

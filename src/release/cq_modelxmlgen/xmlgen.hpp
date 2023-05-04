@@ -27,7 +27,13 @@ namespace rulejit::xmlgen {
 inline constexpr auto filetemplate = R"(
 <?xml version="1.0" encoding="UTF-8"?>
 <ModelInfo id="" name="{}" displayName="{}" dllName="{}" hasGeoInfo="false" category="{}" multiples="">
-	<Parameters>{}
+	<Parameters>
+		<Parameter name="ID" type="uint64" displayName="ID" usage="init,output" value="" unit=""/>
+		<Parameter name="InstanceName" type="string" displayName="名称" usage="init,output" value="" unit=""/>
+		<Parameter name="ForceSideID" type="uint16" displayName="所属阵营" usage="init,output" value="" unit=""/>
+		<Parameter name="ModelID" type="string" displayName="模型类型ID" usage="init,output" value="" unit=""/>
+		<Parameter name="KeyMessages" type="string[]" displayName="关键信息" usage="output" value="" unit=""/>
+		<Parameter name="State" type="uint16" displayName="模型状态" usage="output" value="" unit=""/>{}
     </Parameters>
 </ModelInfo>
 )";
