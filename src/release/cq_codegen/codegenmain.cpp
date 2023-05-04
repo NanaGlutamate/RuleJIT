@@ -17,54 +17,53 @@
 #include <string>
 
 #include "backend/cppbe/cppengine.h"
+#include "tools/mygetopt.hpp"
 
-int main(int argc, char **argv) {
-    if (argc == 1 || argc == 2 && argv[1] == std::string_view("--help")) {
-        std::cout << "Usage:  cq_codegen --help | cq_codegen [options]\n"
-                     "Options:\n"
-                     "        <input file>        Set the input file.\n"
-                     "\n"
-                     "        --outpath <path>    Set the output path.\n"
-                     "        --namespace <name>  Set the namespace name.\n"
-                     "        --prefix <prefix>   Set the prefix for generated file.\n"
-                     "\n";
+int main(int argc, const char **argv) {
+    using namespace tools::myopt;
+    CommandLineOpt opt;
+    opt.head = "Usage: cq_codegen <input file name> [options] [flags]\n";
+
+    opt.registerFlag({"-h", "--help", "-?"}, "Show this help message.");
+
+    opt.registerArg({"-o", "--outpath"}, "Set the output path(\"./src/\" by default)");
+    opt.registerArg({"-n", "--namespace"}, "Set the namespace name(\"ruleset\" by default)");
+    opt.registerArg({"-p", "--prefix"}, "Set the prefix for generated file(empty by default)");
+
+    int cnt = opt.build(argc, argv);
+
+    if(cnt < 0){
+        return 1;
+    }
+
+    bool help = opt.getFlag(false, "-h");
+    if (help || cnt == 0) {
+        std::cout << opt.getHelp() << std::endl;
         return 0;
     }
+
     rulejit::cppgen::CppEngine codegen;
+    std::string outpath = opt.getArg("./src/", "-o");
+    codegen.setOutputPath(outpath);
+    std::string ns = opt.getArg("ruleset", "-n");
+    codegen.setNamespaceName(ns);
+    std::string prefix = opt.getArg("", "-p");
+    codegen.setPrefix(prefix);
     std::string in;
-    // process command line arguments
-    for (int i = 1; i < argc; i++) {
-        if (argv[i] == std::string_view("--outpath")) {
-            i++;
-            if (i == argc) {
-                std::cout << "No output path specified." << std::endl;
-                return 1;
-            }
-            codegen.setOutputPath(argv[i]);
-        } else if (argv[i] == std::string_view("--namespace")) {
-            i++;
-            if (i == argc) {
-                std::cout << "No namespace specified." << std::endl;
-                return 1;
-            }
-            codegen.setNamespaceName(argv[i]);
-        } else if (argv[i] == std::string_view("--prefix")) {
-            i++;
-            if (i == argc) {
-                std::cout << "No prefix specified." << std::endl;
-                return 1;
-            }
-            codegen.setPrefix(argv[i]);
-        } else if (in.empty()) {
-            // only allow 1 input file specified
-            in = argv[i];
-        } else {
-            std::cout << "Unknown argument: " << argv[i] << std::endl;
+    for (auto s : opt.unspecifiedValue) {
+        if(!in.empty()){
+            std::cout << "too many input files specified." << std::endl;
             return 1;
         }
+        in = s;
     }
+    // process command line arguments
     if (in.empty()) {
         std::cout << "No input file specified." << std::endl;
+        return 1;
+    }
+    if (!std::filesystem::exists(in)){
+        std::cout << "input file " << in << " not exists." << std::endl;
         return 1;
     }
     if (!std::filesystem::exists(codegen.outputPath)) {
@@ -72,14 +71,8 @@ int main(int argc, char **argv) {
         std::filesystem::create_directories(codegen.outputPath);
     } else {
         // if already exists, ask user if continue
-        std::cout << "directory " << codegen.outputPath << " already exists, continue?[Y/n]" << std::endl;
-        std::string input;
-        std::cin >> input;
-        if (input == "n" || input == "N") {
+        if (!opt.askIfContinue("directory " + codegen.outputPath + " already exists, continue?")) {
             return 0;
-        } else if (input != "" && input != "y" && input != "Y") {
-            std::cout << "invalid input, abort." << std::endl;
-            return 1;
         }
     }
     // start code generation, catch exceptions while throwed, and print exception message.

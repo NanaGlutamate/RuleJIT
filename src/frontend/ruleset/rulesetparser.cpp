@@ -73,23 +73,12 @@ std::string innerType(std::string type) {
 }
 
 /**
- * @brief tool function to skip space
- *
- * @param s char pointer to start of string
- * @return const char* char pointer to first non-space char
- */
-const char *skipIdent(const char *s) {
-    while (*s && isspace(*s))
-        s++;
-    return s;
-}
-
-/**
  * @brief pre-defines which will be process before ruleset xml,
  * can add some tool functions and types
  *
  */
 const inline std::string preDefines = R"(
+// base
 extern func sin(a f64)->f64
 extern func cos(a f64)->f64
 extern func tan(a f64)->f64
@@ -108,6 +97,21 @@ func ==(a string, b string)->f64{strEqual(a, b)}
 func abs(a f64)->f64 fabs(a)
 const true f64 = 1.0
 const false f64 = 0.0
+
+// fuzzy logic
+func trimf(x f64, a f64, b f64, c f64)->f64
+    if(x < a)0
+    else if(x < b)(x - a) / (b - a)
+    else if(x < c)(c - x) / (c - b)
+    else 0
+
+func trapmf(x f64, a f64, b f64, c f64, d f64)->f64
+    if(x < a)0
+    else if(x < b)(x - a) / (b - a)
+    else if(x < c)1
+    else if(x < d)(d - x) / (d - c)
+    else 0
+
 )";
 
 } // namespace
@@ -115,6 +119,7 @@ const false f64 = 0.0
 // show more detailed info when lexer/parser/semantic error
 RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextStack &context, RuleSetMetaInfo &data) {
     using namespace rapidxml;
+    using namespace tools::mystr;
 
     static ExpressionLexer lexer;
     static ExpressionParser parser;
@@ -175,11 +180,11 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                 //     ip++;
                 // }
                 preprocessOriginal.emplace(std::string(ip),
-                                           std::string("{") + skipIdent(p->first_node("Expression")->value()) + "}");
+                                           std::string("{") + removeSpace(p->first_node("Expression")->value()) + "}");
             }
             if (auto p = ele->first_node("InitValue"); p) {
                 // TODO: add expression support?
-                std::string tar = skipIdent(p->value());
+                std::string tar = removeSpace(p->value());
                 if (tar == "true") {
                     tar = "1.0";
                 } else if (tar == "false") {
@@ -273,20 +278,22 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             auto it = std::find(topoSorted.begin(), topoSorted.end(), k);
             if (it == topoSorted.end()) {
                 errorMsg += "\t" + k + " -> ";
-                errorMsg += v | mystr::join(", ");
+                errorMsg += v | tools::mystr::join(", ");
                 errorMsg += k + ";\n";
             }
         }
         error(errorMsg);
     }
-    debugMsg("Topo sorted: " + (topoSorted | mystr::join(", ")));
+    debugMsg("Topo sorted: " + (topoSorted | tools::mystr::join(", ")));
     std::string valueAssignment = "{\n";
     // parse preprocessOriginal, get returned real function name
     for (auto &&o_ : topoSorted) {
         auto &o = *preprocessOriginal.find(o_);
         valueAssignment += (o.first + "=" + o.second + ";\n");
     }
-    valueAssignment += "}";
+    valueAssignment += "0}";
+    data.modifiedValue.emplace_back(
+        std::vector<std::set<std::string>>{std::set<std::string>{topoSorted.begin(), topoSorted.end()}});
 
     try {
         ret.preprocess.push_back(valueAssignment | lexer | parser | semantic);
@@ -303,30 +310,38 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     for (auto subruleset = root->first_node("SubRuleSets")->first_node("SubRuleSet"); subruleset;
          subruleset = subruleset->next_sibling("SubRuleSet"), id++) {
 
+        data.modifiedValue.emplace_back();
+        // std::vector<std::set<std::string>> singleModifiedValue;
         std::string expr = "{";
+        size_t cnt = 0;
         auto rules = subruleset->first_node("Rules");
-        size_t act = 0;
-        for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule"), act++) {
+        for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule"), cnt++) {
+            data.modifiedValue.back().emplace_back();
             expr += std::string("if({\n") +
-                    skipIdent(rule->first_node("Condition")->first_node("Expression")->value()) + "\n}){\n";
-            // TODO: add direct expression support
+                    removeSpace(rule->first_node("Condition")->first_node("Expression")->value()) + "\n}){\n";
             for (auto assign = rule->first_node("Consequence")->first_node(); assign; assign = assign->next_sibling()) {
                 using namespace std::literals;
+                std::string target = removeSpace(assign->first_node("Target")->value());
+                auto baseName = target.substr(
+                    0, std::ranges::find_if(target, [](char c) { return c == '.' || c == '['; }) - target.begin());
+                data.modifiedValue.back().back().emplace(baseName);
+
                 if (assign->name() == "Assignment"s) {
-                    expr += std::string(skipIdent(assign->first_node("Target")->value())) + "={" +
-                            skipIdent(assign->first_node("Value")->first_node("Expression")->value()) + "};\n";
+                    expr += target + "={" +
+                            removeSpace(assign->first_node("Value")->first_node("Expression")->value()) + "};\n";
                 } else if (assign->name() == "ArrayOperation"s) {
                     std::string value;
                     if (auto valueNode = assign->first_node("Args"); valueNode) {
-                        value = skipIdent(valueNode->first_node("Expression")->value());
+                        value = removeSpace(valueNode->first_node("Expression")->value());
                     }
-                    expr += std::format("{}.{}({});", skipIdent(assign->first_node("Target")->value()),
-                                        skipIdent(assign->first_node("Operation")->value()), value);
+                    expr +=
+                        std::format("{}.{}({});", target, removeSpace(assign->first_node("Operation")->value()), value);
                 } else {
                     error("Unknown Consequence type: "s + assign->name() + "");
                 }
+
             }
-            expr += std::to_string(act) + "\n}else ";
+            expr += "\n" + std::to_string(cnt) + "\n}else ";
         }
         expr += "{-1}}";
         try {

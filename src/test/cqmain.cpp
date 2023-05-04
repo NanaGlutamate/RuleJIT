@@ -31,8 +31,8 @@ int main() {
     RuleSetEngine engine;
 
     try {
-        engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/test_xml/car_rule.xml");
-        // engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/xml_design/example1.0.xml");
+        // engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/test_xml/car_rule.xml");
+        engine.buildFromFile(__PROJECT_ROOT_PATH "/doc/xml_design/example1.0.xml");
         engine.init();
     } catch (std::logic_error(e)) {
         std::cout << e.what() << std::endl;
@@ -49,7 +49,8 @@ int main() {
             std::cout << e.what() << std::endl;
             return 0;
         }
-        printCSValueMap(*(engine.getOutput()));
+        tools::myany::printCSValueMap(engine.getCache());
+        tools::myany::printCSValueMap(*(engine.getOutput()));
         // printCSValueMap(engine.data.cache);
         std::cout << std::endl;
     }

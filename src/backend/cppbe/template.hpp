@@ -193,8 +193,7 @@ inline {0} {1}({2}) {{
 // namespace, prefix, subrulesetcall, subrulesetwrite, subrulesetdef, inits, precall, prewrite
 inline constexpr auto rulesetHpp = R"(#pragma once
 
-#include <vector>
-#include <functional>
+#include <set>
 
 #include "{1}typedef.hpp"
 #include "{1}funcdef.hpp"
@@ -237,39 +236,41 @@ inline constexpr auto subRulesetCall = "        subRuleSet{0}.Tick(*this);\n";
 inline constexpr auto subRulesetWrite = "        subRuleSet{0}.writeBack(*this);\n";
 
 // TODO: use double-buffer / copy-on-write to replace unconditional buffer copy
-// id, func
+// id, func, writeback
 inline constexpr auto subRulesetDef = R"(    struct {{
         _Cache cache;
-        std::unordered_map<size_t, std::function<void(_Cache*, _Cache*)>> modified;
+        std::set<size_t> loaded;
+        int actived;
         template <typename T>
         void loadCache(RuleSet& base, T p, size_t name){{
-            if(auto it = modified.find(name); it == modified.end()){{
-                auto origin = base.cache.*p;
+            if(auto it = loaded.find(name); it == loaded.end()){{
                 cache.*p = base.cache.*p;
-                modified.emplace(name, [origin, p](_Cache* src, _Cache* dst){{
-                    // only 1 write back to a same cached value valid through each subruleset,
-                    // so if src->*p == tmp, there must no write back by this subruleset,
-                    // or may write back same value.
-                    // in the second case, assume no other write back requires to this value,
-                    // so no need to write back in any case.
-                    if(src->*p == origin)return;
-                    dst->*p = src->*p;
-                }});
             }}
         }}
-        int Tick(RuleSet& _base){{
+        void Tick(RuleSet& _base){{
             const auto& _in = _base.in;
             auto& _out = _base.out;
-            return {1};
+            actived = {1};
         }}
         void writeBack(RuleSet& base){{
-            for(auto&& [_, f] : modified){{
-                f(&cache, &base.cache);
+            switch(actived){{
+                case -1:
+                    break;{2}
             }}
-            modified.clear();
+            loaded.clear();
         }}
     }}subRuleSet{0};
 )";
+
+// id, member
+inline constexpr auto subRulesetWriteCase = R"(
+                case {0}:{1}
+                    break;
+)";
+
+// member name
+inline constexpr auto subRulesetWriteCaseMember = R"(
+                    base.cache.{0} = std::move(cache.{0});)";
 
 // namespace, prefix
 inline constexpr auto CMakeListsTxt = R"(cmake_minimum_required(VERSION 3.6)
@@ -492,17 +493,19 @@ void printCSValueMap(const std::unordered_map<std::string, std::any> &v) {
             printCSValueMap(std::any_cast<std::unordered_map<std::string, std::any>>(v));
         } else if (v.type() == typeid(std::vector<std::any>)) {
             auto tmp = std::any_cast<std::vector<std::any>>(v);
-            cout << "{";
+            cout << "[";
             bool start_ = false;
+            size_t cnt = 0;
             for (auto &&item : tmp) {
                 if (!start_) {
                     start_ = true;
                 } else {
                     cout << ", ";
                 }
-                printCSValueMap(std::any_cast<std::unordered_map<std::string, std::any>>(item));
+                printCSValueMap({{std::to_string(cnt), item}});
+                cnt++;
             }
-            cout << "}";
+            cout << "]";
         } else {
             cout << "unknown";
         }

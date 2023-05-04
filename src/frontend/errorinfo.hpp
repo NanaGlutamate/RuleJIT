@@ -28,7 +28,7 @@ struct ErrorLocation {
     std::string_view preline;
     std::string_view line;
     size_t start, length;
-    std::string genIdentifier() const { return mystr::repeat(" ", start) + mystr::repeat("^", length); }
+    std::string genIdentifier() const { return tools::mystr::repeat(" ", start) + tools::mystr::repeat("^", length); }
     std::string concatenateIdentifier(size_t maxCharPerLine = 80, size_t ident = 4) const {
         std::string line1, line2, ret;
         size_t totalCnt = 0;

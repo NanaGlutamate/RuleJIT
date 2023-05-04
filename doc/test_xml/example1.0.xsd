@@ -88,7 +88,7 @@
             </xs:element>
             <xs:element name="Consequence">
                 <xs:complexType>
-                    <xs:sequence>
+                    <xs:choice>
                         <xs:element name="Assignment" minOccurs="0" maxOccurs="unbounded">
                             <xs:complexType>
                                 <xs:sequence>
@@ -118,7 +118,7 @@
                                 </xs:sequence>
                             </xs:complexType>
                         </xs:element>
-                    </xs:sequence>
+                    </xs:choice>
                 </xs:complexType>
             </xs:element>
         </xs:sequence>

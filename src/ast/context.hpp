@@ -72,7 +72,7 @@ struct ContextGlobal {
             auto instantiation = funcDef->copy();
             TemplateInstantiator instantiator{TypeInfo::where(matched)};
             instantiation | instantiator;
-            return {unique_cast<FunctionDefAST>(instantiation), std::move(matched)};
+            return {tools::myunique::unique_cast<FunctionDefAST>(instantiation), std::move(matched)};
         }
     };
 
@@ -284,22 +284,6 @@ struct ContextStack {
         return top();
     }
 
-    /**
-     * @brief function to seek var def in context stack
-     *
-     * @param s variable name
-     * @return (find, type)
-     */
-    auto seekVarDef(const std::string &s) { return seek(&ContextFrame::varDef, s); }
-
-    /**
-     * @brief function to seek const def in context stack
-     *
-     * @param s variable name
-     * @return (find, (type, value))
-     */
-    auto seekConstDef(const std::string &s) { return seek(&ContextFrame::constDef, s); }
-
   private:
     /**
      * @brief template function to seek def in context stack
@@ -324,6 +308,24 @@ struct ContextStack {
         }
         return seek(p, ind, top - 1);
     }
+
+  public:
+
+    /**
+     * @brief function to seek var def in context stack
+     *
+     * @param s variable name
+     * @return (find, type)
+     */
+    auto seekVarDef(const std::string &s) { return seek(&ContextFrame::varDef, s); }
+
+    /**
+     * @brief function to seek const def in context stack
+     *
+     * @param s variable name
+     * @return (find, (type, value))
+     */
+    auto seekConstDef(const std::string &s) { return seek(&ContextFrame::constDef, s); }
 };
 
 } // namespace rulejit

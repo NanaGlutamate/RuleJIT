@@ -22,7 +22,7 @@
 
 #include "tools/seterror.hpp"
 
-namespace rulejit::myany {
+namespace tools::myany {
 
 /**
  * @brief simple functor to call when meet unknown type
@@ -110,14 +110,13 @@ inline auto visit(Func &&func, Any &&v) {
  * @brief check if data in two std::any is equal
  * 
  * @attention func fit invocable_on_legal_type must allowed to be called on data in input std::any
- *
+ * 
  * @param lhs first std::any
  * @param rhs second std::any
  * @return bool
  */
 inline bool anyEqual(const std::any &lhs, const std::any &rhs) {
     if (lhs.type() != rhs.type()) {
-        // type mismatch is unacceptable, use error() instead
         return false;
     }
     return myany::visit<myany::err>(

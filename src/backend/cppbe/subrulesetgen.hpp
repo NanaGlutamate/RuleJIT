@@ -34,25 +34,27 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     SubRuleSetCodeGen(ContextStack &context, rulesetxml::RuleSetMetaInfo &metaInfo) : c(context), m(metaInfo){};
     std::string friend operator|(std::unique_ptr<ExprAST> &e, SubRuleSetCodeGen &t) {
         // t.isSubRuleSet = true;
-        t.loadedVar.clear();
         t.returned.clear();
         t.tmp = 0;
+        t.loaded.clear();
+        t.loadedtmp.clear();
         e->accept(&t);
         return std::move(t.returned);
     }
+
     /**
      * @brief generate legal C++ function name
-     * 
+     *
      * @param token original name
-     * @return std::string 
+     * @return std::string
      */
     std::string toLegalName(const std::string &token) {
-        std::string tmp = "___buildin_generated_function_";
+        std::string tmp = "_func_";
         for (auto c : token) {
             if (isalpha(c) || c == '_') {
                 tmp += c;
             } else {
-                tmp += "_" + std::to_string((size_t)c);
+                tmp += std::to_string((size_t)c);
             }
         }
         return tmp;
@@ -69,13 +71,13 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             // cannot remove loadCache, cause assign will evaluate rhs befor lhs
             // TODO: name string & member pointer -> index & boost::pfr
 
-            // if (!loadedVar.contains(v.name)) {
-            auto cnt = std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) - m.cacheVar.begin();
-            returned += std::format("(loadCache(_base, &_Cache::{0}, {1}), cache.{0})", v.name, cnt);
-            //     loadedVar.emplace(v.name);
-            // }else{
-            //     returned += std::format("(cache.{})", v.name);
-            // }
+            if (!loaded.contains(v.name)) {
+                auto cnt = std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) - m.cacheVar.begin();
+                returned += std::format("(loadCache(_base, &_Cache::{0}, {1}), cache.{0})", v.name, cnt);
+                loadedtmp.emplace(v.name);
+            }else{
+                returned += std::format("(cache.{})", v.name);
+            }
         } else {
             returned += std::format(" {} ", v.name);
         }
@@ -95,7 +97,13 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     VISIT_FUNCTION(LiteralExprAST) {
         if (v.type->isFunctionType()) {
-            returned += toLegalName(v.value);
+            if (c.global.realFuncDefinition.contains(v.value)) {
+                // user defined function
+                returned += toLegalName(v.value);
+            } else {
+                // external function
+                returned += v.value;
+            }
             return;
         }
         returned += "(";
@@ -132,20 +140,22 @@ struct SubRuleSetCodeGen : public ASTVisitor {
                 {"and", "&&"},
                 {"xor", "^"},
             };
-            returned += "(double(";
+            // returned += "(double(";
             v.lhs->accept(this);
             auto tmp = v.op;
             if (auto it = opTrans.find(tmp); it != opTrans.end()) {
                 tmp = it->second;
             }
-            returned += ") " + tmp + " double(";
+            // returned += ") " + tmp + " double(";
+            returned += " " + tmp + " ";
             v.rhs->accept(this);
-            returned += "))";
+            // returned += "))";
         } else {
+            // TODO: check if assign to cache, if so, add write func to modified
+            // Assign to local var whose name is same as cache?
             v.lhs->accept(this);
-            returned += " = double(";
+            returned += " = ";
             v.rhs->accept(this);
-            returned += ")";
         }
     }
     VISIT_FUNCTION(UnaryOpExprAST) {
@@ -160,23 +170,28 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         v.rhs->accept(this);
         returned += ")";
     }
+    // extinguish normal branch from ruleset branch
     VISIT_FUNCTION(BranchExprAST) {
         if (*(v.type) != NoInstanceType) {
             returned += "(";
             v.condition->accept(this);
             returned += " ? ";
+            mergeLoaded();
             v.trueExpr->accept(this);
             returned += " : ";
             v.falseExpr->accept(this);
             returned += ")";
+            mergeLoaded();
         } else {
             returned += "if(";
             v.condition->accept(this);
             returned += "){";
+            mergeLoaded();
             v.trueExpr->accept(this);
             returned += ";}else{";
             v.falseExpr->accept(this);
             returned += ";}";
+            mergeLoaded();
         }
     }
     VISIT_FUNCTION(ComplexLiteralExprAST) {
@@ -218,31 +233,37 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         // only support while
         returned += "while(";
         v.condition->accept(this);
+        mergeLoaded();
         returned += "){";
         v.body->accept(this);
         returned += ";}";
+        mergeLoaded();
     }
     VISIT_FUNCTION(BlockExprAST) {
         if (*(v.type) == NoInstanceType) {
             returned += "{";
             for (auto &&expr : v.exprs) {
                 expr->accept(this);
+                mergeLoaded();
                 returned += ";";
             }
             returned += "}";
         } else if (v.exprs.size() == 1) {
             // returned += "(";
             v.exprs[0]->accept(this);
+            mergeLoaded();
             // returned += ")";
         } else {
             returned += "([&](){";
             if (v.exprs.size() != 0) {
                 for (size_t i = 0; i < v.exprs.size() - 1; ++i) {
                     v.exprs[i]->accept(this);
+                    mergeLoaded();
                     returned += ";";
                 }
                 returned += "return ";
                 v.exprs.back()->accept(this);
+                mergeLoaded();
                 returned += ";";
             }
             returned += "}())";
@@ -269,9 +290,48 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     VISIT_FUNCTION(FunctionDefAST) { return setError("FunctionDefAST not supported"); }
     VISIT_FUNCTION(SymbolDefAST) { return setError("SymbolDefAST not supported"); }
 
+  public:
+    /**
+     * @brief transform inner type string to cpp style string
+     *
+     * @param type inner type string
+     * @return std::string cpp style string
+     */
+    static std::string CppStyleType(const TypeInfo &type) {
+        // only support vector and base type
+        if (type == NoInstanceType) {
+            return "void";
+        }
+        if (type.isBaseType()) {
+            auto tmp = type.getBaseTypeString();
+            if (rulesetxml::baseNumericalData.contains(tmp) || tmp == "f64") {
+                return "typedReal<" + tmp + ">";
+            } else {
+                return tmp;
+            }
+        }
+        if (type.isArrayType()) {
+            return "std::vector<" + CppStyleType(type.getElementType()) + ">";
+        }
+        error(std::format("unsupported type: {}", type.toString()));
+    }
+
   private:
     // bool isSubRuleSet;
-    std::set<std::string> loadedVar;
+    std::set<std::string> loaded, loadedtmp;
+    void mergeLoaded(){
+        loaded.merge(loadedtmp);
+        loadedtmp.clear();
+    }
+    std::string getLValueBase(ExprAST *expr) {
+        if (auto p = dynamic_cast<IdentifierExprAST *>(expr)) {
+            return p->name;
+        } else if (auto p = dynamic_cast<MemberAccessExprAST *>(expr)) {
+            return getLValueBase(p->baseVar.get());
+        } else {
+            return "";
+        }
+    }
     std::string returned;
     std::size_t tmp;
     std::string getTmpVarName() {
@@ -280,17 +340,6 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             name = std::format("__tmp{}", tmp++);
         }
         return name;
-    }
-    std::string CppStyleType(const TypeInfo &type) {
-        // only support vector and base type
-        if (type.isBaseType()) {
-            // TODO: typedReal?
-            return type.getBaseTypeString();
-        }
-        if (type.isArrayType()) {
-            return "std::vector<" + CppStyleType(type.getElementType()) + ">";
-        }
-        setError(std::format("unsupported type: {}", type.toString()));
     }
     SET_ERROR_MEMBER("CPP Code Generation", void)
     ContextStack &c;

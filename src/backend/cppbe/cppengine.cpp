@@ -5,9 +5,7 @@
  * @date 2023-03-27
  *
  * @details Includes main logic of cpp-backend, such as
- * XML-parsering and code generate.
- * 
- * TODO: move to src/release
+ * XML-parsering and code generation.
  *
  * @par history
  * <table>
@@ -15,6 +13,7 @@
  * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
  * <tr><td>djw</td><td>2023-03-29</td><td>Move XML-Parsering to frontend/ruleset</td></tr>
  * <tr><td>djw</td><td>2023-04-18</td><td>make every <Value> a single subruleset</td></tr>
+ * <tr><td>djw</td><td>2023-04-18</td><td>make <Value> a single subruleset</td></tr>
  * </table>
  */
 #include <iostream>
@@ -29,35 +28,6 @@ namespace {
 
 using namespace rulejit;
 using namespace rulejit::cppgen;
-
-/**
- * @brief transform inner type string to cpp style string
- *
- * @param type inner type string
- * @return std::string cpp style string
- */
-std::string CppStyleType(const TypeInfo &type) {
-    // only support vector and base type
-    if (type == NoInstanceType) {
-        return "void";
-    }
-    if (type.isBaseType()) {
-        auto tmp = type.getBaseTypeString();
-        if (rulesetxml::baseNumericalData.contains(tmp)) {
-            return "typedReal<" + tmp + ">";
-        } else {
-            return tmp;
-        }
-    }
-    if (type.isArrayType()) {
-        auto tmp = type.getElementType();
-        if(!tmp.isBaseType()){
-            error("Donot support nested array");
-        }
-        return "std::vector<" + tmp.getBaseTypeString() + ">";
-    }
-    error(std::format("unsupported type: {}", type.toString()));
-}
 
 /**
  * @brief transform inner param type string to cpp style string
@@ -82,10 +52,7 @@ std::string CppStyleParamType(const TypeInfo &type) {
     }
     if (type.isArrayType()) {
         auto tmp = type.getElementType();
-        if(!tmp.isBaseType()){
-            error("Donot support nested array");
-        }
-        return "const std::vector<" + tmp.getBaseTypeString() + ">&";
+        return "const " + SubRuleSetCodeGen::CppStyleType(type) + "&";
     }
     error(std::format("unsupported type: {}", type.toString()));
 }
@@ -133,17 +100,38 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     // collect subruleset defs
     std::string subs;
     size_t id = 0;
-    for (auto astName : preProcess) {
+    for (auto& astName : preProcess) {
         notGenerate.insert(astName);
         auto &ast = context.global.realFuncDefinition[astName]->returnValue;
-        std::cout << (ast | codegen);
-        subs += std::format(subRulesetDef, id++, ast | codegen);
+        std::string writeBacks;
+        for (size_t atom = 0; atom < data.modifiedValue[id].size(); ++atom){
+            std::string members;
+            for (auto& name : data.modifiedValue[id][atom]) {
+                if(std::ranges::find(data.cacheVar, name) == data.cacheVar.end()){
+                    continue;
+                }
+                members += std::format(subRulesetWriteCaseMember, name);
+            }
+            writeBacks += std::format(subRulesetWriteCase, atom, members);
+        }
+        subs += std::format(subRulesetDef, id++, ast | codegen, writeBacks);
     }
     size_t preID = id;
-    for (auto astName : subRuleSets) {
+    for (auto& astName : subRuleSets) {
         notGenerate.insert(astName);
         auto &ast = context.global.realFuncDefinition[astName]->returnValue;
-        subs += std::format(subRulesetDef, id++, ast | codegen);
+        std::string writeBacks;
+        for (size_t atom = 0; atom < data.modifiedValue[id].size(); ++atom){
+            std::string members;
+            for (auto& name : data.modifiedValue[id][atom]) {
+                if(std::ranges::find(data.cacheVar, name) == data.cacheVar.end()){
+                    continue;
+                }
+                members += std::format(subRulesetWriteCaseMember, name);
+            }
+            writeBacks += std::format(subRulesetWriteCase, atom, members);
+        }
+        subs += std::format(subRulesetDef, id++, ast | codegen, writeBacks);
     }
     std::string precall, prewrite, subcall, subwrite;
     for (size_t i = 0; i < preID; i++) {
@@ -199,9 +187,9 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         auto& subTypes = type.getSubTypes();
         auto& tokens = type.getTokens();
         for (size_t i = 0; i < subTypes.size(); ++i) {
-            member += std::format(typeMember, CppStyleType(subTypes[i]), tokens[i + 1]);
-            serialize += std::format(typeSerialize, CppStyleType(subTypes[i]), tokens[i + 1]);
-            deserialize += std::format(typeDeserialize, CppStyleType(subTypes[i]), tokens[i + 1]);
+            member += std::format(typeMember, SubRuleSetCodeGen::CppStyleType(subTypes[i]), tokens[i + 1]);
+            serialize += std::format(typeSerialize, SubRuleSetCodeGen::CppStyleType(subTypes[i]), tokens[i + 1]);
+            deserialize += std::format(typeDeserialize, SubRuleSetCodeGen::CppStyleType(subTypes[i]), tokens[i + 1]);
         }
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
@@ -223,7 +211,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
             params.erase(params.size() - 2, 2);
         }
         funcDefs +=
-            std::format(funcDef, CppStyleType(func->funcType->getReturnedType()), codegen.toLegalName(name), params,
+            std::format(funcDef, SubRuleSetCodeGen::CppStyleType(func->funcType->getReturnedType()), codegen.toLegalName(name), params,
                         (func->funcType->isReturnedFunctionType() ? "return" : "") + (func->returnValue | codegen));
     }
     // collect extern func type
@@ -232,7 +220,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         size_t param_cnt = type.getParamCount();
         auto& subTypes = type.getSubTypes();
         for (size_t i = 0; i < param_cnt; ++i) {
-            params += CppStyleType(subTypes[i]) + ", ";
+            params += SubRuleSetCodeGen::CppStyleType(subTypes[i]) + ", ";
         }
         if (!params.empty()) {
             params.erase(params.size() - 2, 2);

@@ -29,10 +29,7 @@ namespace rulejit::cppgen {
  * 
  */
 struct CppEngine {
-    CppEngine() : context(), data(), semantic(context), codegen(context, data) {
-        namespaceName = "ruleset";
-        outputPath = "./src/";
-    };
+    CppEngine() : context(), data(), semantic(context), codegen(context, data), prefix() {};
     CppEngine(const CppEngine &) = delete;
     CppEngine(CppEngine &&) = delete;
     CppEngine &operator=(const CppEngine &) = delete;

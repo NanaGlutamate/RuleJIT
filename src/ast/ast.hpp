@@ -508,7 +508,7 @@ struct TemplateDefAST : public NoReturnExprAST {
         : NoReturnExprAST(), tparams(std::forward<V1>(tparams)), def(std::move(def)) {}
     std::unique_ptr<ExprAST> copy() override {
         auto tmp = def->copy();
-        std::unique_ptr<DefAST> newDef = unique_cast<DefAST>(tmp);
+        std::unique_ptr<DefAST> newDef = tools::myunique::unique_cast<DefAST>(tmp);
         return std::make_unique<TemplateDefAST>(tparams, std::move(newDef));
     }
 };

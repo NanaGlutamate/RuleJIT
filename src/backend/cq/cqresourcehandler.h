@@ -48,19 +48,56 @@ struct DataStore {
 
     /**
      * @brief generate core dump
-     * 
+     *
      * @return std::string core dump
      */
     std::string dump() {
-        return std::format(
-            "Input:\n{}\n\nOutput:\n{}\n\nCache:\n{}\n", mystr::autoIdent(printCSValueMapToString(input), 1),
-            mystr::autoIdent(printCSValueMapToString(output), 1), mystr::autoIdent(printCSValueMapToString(cache), 1));
+        return std::format("Input:\n{}\n\nOutput:\n{}\n\nCache:\n{}\n",
+                           tools::mystr::autoIdent(tools::myany::printCSValueMapToString(input), 1),
+                           tools::mystr::autoIdent(tools::myany::printCSValueMapToString(output), 1),
+                           tools::mystr::autoIdent(tools::myany::printCSValueMapToString(cache), 1));
+    }
+
+    /**
+     * @brief convert type name in XML to inner type name
+     *
+     * @attention will lose infomation about specific numerical type
+     *
+     * @param s xml type
+     * @return std::string
+     */
+    static std::string XMLType2InnerType(const std::string &s) {
+        if (s.ends_with("[]")) {
+            return "[]" + XMLType2InnerType(s.substr(0, s.size() - 2));
+        }
+        if (rulesetxml::baseNumericalData.contains(s)) {
+            return "f64";
+        } else {
+            return s;
+        }
+    }
+
+    /**
+     * @brief convert inner type name to XML type name
+     *
+     * @param s inner type
+     * @return std::string xml type
+     */
+    static std::string innerType2XMLType(const std::string &s) {
+        if (s.starts_with("[]")) {
+            return innerType2XMLType(s.substr(2)) + "[]";
+        }
+        if (s == "f64") {
+            return "float64";
+        } else {
+            return s;
+        }
     }
 
     /**
      * @brief check all stored data to see if their type are as defined;
      *
-     * @return std::string type check info
+     * @return std::string type check info, empty if no error
      */
     std::string genTypeCheckInfo() {
         std::string ret;
@@ -117,9 +154,9 @@ struct DataStore {
                 auto varTypeIt = metaInfo.varType.find(varName);
                 if (varTypeIt == metaInfo.varType.end()) {
                     detail += std::format("    undefined variable \"{}\" found in {}\n", varName, name);
-                    continue;
+                } else {
+                    detail += typeChecker.check(varName, varTypeIt->second, varValue);
                 }
-                detail += typeChecker.check(varName, varTypeIt->second, varValue);
             }
             if (!detail.empty()) {
                 ret += "Runtime Error in " + name + " Vars:\n" + detail;
@@ -220,7 +257,11 @@ struct DataStore {
                 return std::string{};
         }
         CSValueMap tmp;
-        for (auto &&[name, type] : metaInfo.typeDefines[type]) {
+        auto it = metaInfo.typeDefines.find(type);
+        if (it == metaInfo.typeDefines.end()) {
+            error("undefined type: " + type);
+        }
+        for (auto &&[name, type] : it->second) {
             tmp[name] = makeTypeEmptyInstance(type);
         }
         return tmp;
@@ -248,13 +289,24 @@ struct ResourceHandler {
      * @param s string need to be managed
      * @return size_t
      */
-    size_t take(const std::string &s) {
+    size_t takeString(const std::string &s) {
         if (managedString.contains(s)) {
             return managedString[s];
         }
         buffer.emplace_back(s, "string");
         managedString[s] = buffer.size() - 1;
         return buffer.size() - 1;
+    }
+
+    /**
+     * @brief get managed string through index
+     *
+     * @param index index of string
+     * @return const std::string&
+     */
+    std::string getString(size_t index) {
+        my_assert(isString(index), "not a string");
+        return std::any_cast<std::string>(std::get<1>(buffer[index]));
     }
 
     /**
@@ -330,7 +382,7 @@ struct ResourceHandler {
                 // may access cache without access to it, so use the same method in cpp-backend to
                 // determine whether to write back
                 auto &now = assemble(ind);
-                if (!myany::anyEqual(now, originalValue[name])) {
+                if (!tools::myany::anyEqual(now, originalValue[name])) {
                     it->second = now;
                 }
             }
@@ -349,8 +401,8 @@ struct ResourceHandler {
      * @return size_t
      */
     size_t makeInstance(const std::string &s) {
-        // TODO: make array, array push back
-        buffer.emplace_back(data.makeTypeEmptyInstance(s), s);
+        auto xmlType = data.innerType2XMLType(s);
+        buffer.emplace_back(data.makeTypeEmptyInstance(xmlType), xmlType);
         return buffer.size() - 1;
     }
 
@@ -606,7 +658,7 @@ struct ResourceHandler {
                 tmp[std::stoi(name)] = assemble(ind);
             }
             relation[index].clear();
-            std::get<0>(buffer[index]) = tmp;
+            std::get<0>(buffer[index]) = std::move(tmp);
             return std::get<0>(buffer[index]);
         } else {
             auto tmp = std::any_cast<CSValueMap>(std::move(v));
@@ -614,7 +666,7 @@ struct ResourceHandler {
                 tmp[name] = assemble(ind);
             }
             relation[index].clear();
-            std::get<0>(buffer[index]) = tmp;
+            std::get<0>(buffer[index]) = std::move(tmp);
             return std::get<0>(buffer[index]);
         }
     }

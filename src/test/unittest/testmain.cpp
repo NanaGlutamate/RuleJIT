@@ -13,7 +13,7 @@
 
 TEST(TestStr, test_str_join) {
     using namespace std;
-    using namespace rulejit::mystr;
+    using namespace tools::mystr;
     using namespace std::literals;
 
     EXPECT_EQ("1,2,3"s,
@@ -21,6 +21,29 @@ TEST(TestStr, test_str_join) {
     EXPECT_EQ(""s, (std::vector<int>{} | views::transform([](int x) { return std::to_string(x); }) | join(",")));
     EXPECT_EQ(""s, (std::vector<std::string>{} | join(",")));
     EXPECT_EQ("114514"s, (std::vector<std::string>{"114514"} | join(",")));
+}
+
+TEST(TestStr, test_remove_space) {
+    using namespace std;
+    using namespace tools::mystr;
+    using namespace std::literals;
+
+    EXPECT_EQ("114514"s, removeSpace("  114514  "sv));
+    EXPECT_EQ("114514"s, removeSpace("  114514  "s));
+    EXPECT_EQ("114514"s, removeSpace("114514"sv));
+    EXPECT_EQ("114514"s, removeSpace("114514"s));
+    EXPECT_EQ("114514"s, removeSpace("  114514"sv));
+    EXPECT_EQ("114514"s, removeSpace("  114514"s));
+    EXPECT_EQ("114514"s, removeSpace("114514  "sv));
+    EXPECT_EQ("114514"s, removeSpace("114514  "s));
+    EXPECT_EQ(""s, removeSpace(""s));
+    EXPECT_EQ(""s, removeSpace(""sv));
+    EXPECT_EQ(""s, removeSpace(" "s));
+    EXPECT_EQ(""s, removeSpace(" "sv));
+
+    EXPECT_EQ("114 514"s, removeSpace("114 514"s));
+    EXPECT_EQ("114 514"s, removeSpace("  114 514"s));
+    EXPECT_EQ("114 514"s, removeSpace("114 514  "s));
 }
 
 // TEST(TestStr, test_str_split) {
@@ -35,7 +58,7 @@ TEST(TestStr, test_str_join) {
 // }
 
 TEST(TestAny, test_any_visit) {
-    using namespace rulejit::myany;
+    using namespace tools::myany;
 
     ASSERT_TRUE(visit<err>(
         [](const auto &x) {
@@ -84,7 +107,7 @@ TEST(TestAny, test_any_visit) {
 
 TEST(TestAny, test_any_equal) {
     using namespace std;
-    using namespace rulejit::myany;
+    using namespace tools::myany;
     using CSValueMap = std::unordered_map<std::string, std::any>;
 
     ASSERT_TRUE(anyEqual(std::any(1.0), std::any(1.0)));
