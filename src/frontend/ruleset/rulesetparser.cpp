@@ -15,7 +15,6 @@
  */
 #include <deque>
 
-#include "rulesetparser.h"
 #include "ast/escapedanalyzer.hpp"
 #include "defines/marco.hpp"
 #include "frontend/errorinfo.hpp"
@@ -23,6 +22,7 @@
 #include "frontend/parser.h"
 #include "frontend/semantic.hpp"
 #include "rapidxml-1.13/rapidxml.hpp"
+#include "rulesetparser.h"
 #include "tools/myassert.hpp"
 #include "tools/seterror.hpp"
 #include "tools/showmsg.hpp"
@@ -31,7 +31,7 @@
 namespace {
 
 using namespace rulejit;
-using namespace rulejit::rulesetxml;
+using namespace rulejit::ruleset;
 
 /**
  * @brief writable c style string used for rapidxml to process
@@ -180,11 +180,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
             context.scope.back().varDef.emplace(name, innertype | lexer | TypeParser());
             if (auto p = ele->first_node("Value"); p) {
                 // if contains <Value> node, add assignment to preprocessOriginal
-                auto ip = ele->first_attribute("name")->value();
-                // while (isspace(*ip)) {
-                //     ip++;
-                // }
-                preprocessOriginal.emplace(std::string(ip),
+                preprocessOriginal.emplace(name,
                                            std::string("{") + removeSpace(p->first_node("Expression")->value()) + "}");
             }
             if (auto p = ele->first_node("InitValue"); p) {
@@ -265,7 +261,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         }
     }
     while (!openSet.empty()) {
-        auto& cur = openSet.front();
+        auto &cur = openSet.front();
         topoSorted.push_back(cur);
         for (auto &&[k, v] : valueDependency) {
             if (auto it = v.find(cur); it != v.end()) {
@@ -297,8 +293,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         valueAssignment += (o.first + "=" + o.second + ";\n");
     }
     valueAssignment += "0}";
-    data.modifiedValue.emplace_back(
-        std::vector<std::set<std::string>>{std::set<std::string>{topoSorted.begin(), topoSorted.end()}});
+    data.modifiedValue.push_back({std::set<std::string>{topoSorted.begin(), topoSorted.end()}});
 
     try {
         ret.preprocess.push_back(valueAssignment | lexer | parser | semantic);
@@ -334,23 +329,28 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                 if (assign->name() == "Assignment"s) {
                     expr += target + "={" +
                             removeSpace(assign->first_node("Value")->first_node("Expression")->value()) + "};\n";
-                } else if (assign->name() == "ArrayOperation"s) {
-                    std::string value;
-                    if (auto valueNode = assign->first_node("Args"); valueNode) {
-                        value = removeSpace(valueNode->first_node("Expression")->value());
+                } else if (assign->name() == "ArrayOperation"s || assign->name() == "Operation"s) {
+                    std::string operation = removeSpace(assign->first_node("Operation")->value());
+                    if (operation == "assign") {
+                        expr += target + "={" +
+                                removeSpace(assign->first_node("Args")->first_node("Expression")->value()) + "};\n";
+                    } else {
+                        std::string value;
+                        if (auto valueNode = assign->first_node("Args"); valueNode) {
+                            value = removeSpace(valueNode->first_node("Expression")->value());
+                        }
+                        expr += std::format("{}.{}({});", target, removeSpace(assign->first_node("Operation")->value()),
+                                            value);
                     }
-                    expr +=
-                        std::format("{}.{}({});", target, removeSpace(assign->first_node("Operation")->value()), value);
                 } else {
                     error("Unknown Consequence type: "s + assign->name() + "");
                 }
-
             }
             expr += "\n" + std::to_string(cnt) + "\n}else ";
         }
         expr += "{-1}}";
         try {
-            auto astName = std::unique_ptr<rulejit::ExprAST>(expr | lexer | parser) | semantic;
+            auto astName = (expr | lexer | parser).getNextExpr() | semantic;
             ret.subRuleSets.push_back(astName);
         } catch (std::logic_error &e) {
             auto info = genErrorInfo(semantic.getCallStack(), parser.AST2place, lexer.linePointer, lexer.beginPointer(),
@@ -359,13 +359,6 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                               "information:\n\n{}\n\ndetails:\n\n{}",
                               id, e.what(), info.concatenateIdentifier()));
         }
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
-        std::map<ExprAST *, std::string> table;
-        for (auto [p, s] : parser.AST2place) {
-            table.emplace(p, s);
-        }
-        ret.debugInfo.push_back(std::move(table));
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
     }
 
     // check all defined function

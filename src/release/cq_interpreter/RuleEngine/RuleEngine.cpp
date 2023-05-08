@@ -59,6 +59,8 @@ string getLibDir() {
     return library_dir_;
 }
 
+std::vector<std::unordered_map<std::string, std::any>> input, output;
+
 } // namespace
 
 bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {

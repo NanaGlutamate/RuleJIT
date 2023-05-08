@@ -83,7 +83,7 @@ struct ExpressionSemantic : public ASTVisitor {
     std::string friend operator|(ExpressionParser &parser, ExpressionSemantic &semantic) {
         std::vector<std::unique_ptr<ExprAST>> topLevelExprs;
         std::unique_ptr<ExprAST> tmp;
-        while ((tmp = parser) != nullptr) {
+        while ((tmp = parser.getNextExpr()) != nullptr) {
             topLevelExprs.push_back(std::move(tmp));
         }
         return semantic.addUnnamedFunction(std::move(topLevelExprs));

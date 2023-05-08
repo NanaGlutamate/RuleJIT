@@ -93,7 +93,8 @@
                     <xs:sequence>
                         <xs:choice minOccurs="0" maxOccurs="unbounded">
                             <xs:element name="Assignment" type="Assignment" />
-                            <xs:element name="ArrayOperation" type="ArrayOperation" />
+                            <xs:element name="ArrayOperation" type="Operation" />
+                            <xs:element name="Operation" type="Operation" />
                         </xs:choice>
                     </xs:sequence>
                 </xs:complexType>
@@ -114,11 +115,19 @@
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="ArrayOperation">
+    <xs:complexType name="Operation">
         <xs:sequence>
             <xs:element name="Target" type="xs:string" />
-            <xs:element name="Operation" type="xs:string" />
-            <xs:element name="Args" minOccurs="0">
+            <xs:element name="Operation">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:enumeration value="resize" />
+                        <xs:enumeration value="push" />
+                        <xs:enumeration value="assign" />
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="Args" minOccurs="1">
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element name="Expression" type="Expression" />

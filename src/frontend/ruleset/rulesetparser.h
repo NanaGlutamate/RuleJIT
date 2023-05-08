@@ -22,7 +22,7 @@
 
 #include "ast/context.hpp"
 
-namespace rulejit::rulesetxml {
+namespace rulejit::ruleset {
 
 /// @brief Supported data types in ruleset XML
 inline static std::set<std::string> baseData{
@@ -54,6 +54,48 @@ struct RuleSetMetaInfo {
     std::vector<std::vector<std::set<std::string>>> modifiedValue;
 };
 
+/// @brief rule set structure, collected from xml or whatever
+struct RuleSetStructure {
+    /// @brief store vars which has init value
+    struct InitValue{
+        std::string name;
+        std::string_view value;
+    };
+    /// @brief store vars which is intermediate var
+    struct IntermediateValue{
+        std::string name;
+        std::string_view value;
+    };
+    /// @brief store subruleset
+    struct SubRuleSet{
+        /// @brief store atom rules
+        struct AtomRule{
+            struct Consequence{
+                std::string target;
+                std::string operation;
+                std::vector<std::string_view> args;
+            };
+            std::string_view condition;
+            std::vector<Consequence> consequences;
+        };
+        std::vector<AtomRule> atomRules;
+    };
+
+    std::vector<char> source;
+    std::vector<size_t> lineBreaks;
+
+    /// @brief Stored input/output/cache variable names
+    std::vector<std::string> inputVar, outputVar, cacheVar;
+    /// @brief Stored variable types, name -> type
+    std::unordered_map<std::string, std::string> varType;
+    /// @brief Stored type defines, type -> member name, member type
+    std::unordered_map<std::string, std::vector<std::tuple<std::string, std::string>>> typeDefines;
+
+    std::vector<InitValue> initValues;
+    std::vector<IntermediateValue> intermediateValues;
+    std::vector<SubRuleSet> subRuleSets;
+};
+
 /// @brief returned information of readSource()
 struct RuleSetParseInfo {
     /// @brief real function name of predefines
@@ -62,9 +104,6 @@ struct RuleSetParseInfo {
     std::vector<std::string> preprocess;
     /// @brief real function names of subrulesets
     std::vector<std::string> subRuleSets;
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
-    std::vector<std::map<ExprAST*, std::string>> debugInfo;
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
 };
 
 /// @brief static class which contains tool functions for parsing ruleset XML

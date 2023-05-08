@@ -49,8 +49,8 @@ struct ModelXMLGenerator {
         ofstream out(dst);
         ifstream in(src);
         ContextStack context;
-        rulesetxml::RuleSetMetaInfo data;
-        rulesetxml::RuleSetParser::readSource(
+        ruleset::RuleSetMetaInfo data;
+        ruleset::RuleSetParser::readSource(
             std::string{std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()}, context, data);
         string params;
         for (auto &[usage, varTable] : std::array<std::pair<std::string, std::vector<std::string> *>, 2>{

@@ -44,7 +44,7 @@ std::string CppStyleParamType(const TypeInfo &type) {
     
     if (type.isBaseType()) {
         auto tmp = type.getBaseTypeString();
-        if (rulesetxml::baseNumericalData.contains(tmp)) {
+        if (ruleset::baseNumericalData.contains(tmp)) {
             return "typedReal<" + tmp + ">";
         } else {
             return "const " + tmp + "&";
@@ -67,7 +67,7 @@ std::string CppStyleParamType(const TypeInfo &type) {
  * @return std::vector<std::tuple<std::string, std::string>> assembled type which can used in type defines
  */
 std::vector<std::tuple<std::string, std::string>> assembleType(const std::vector<std::string> &src,
-                                                               rulesetxml::RuleSetMetaInfo &m) {
+                                                               ruleset::RuleSetMetaInfo &m) {
     std::vector<std::tuple<std::string, std::string>> ret;
     for (auto &&name : src) {
         if (auto it = m.varType.find(name); it != m.varType.end()) {
@@ -84,15 +84,11 @@ namespace rulejit::cppgen {
 void CppEngine::buildFromSource(const std::string &srcXML) {
 
     using namespace rulejit::cppgen::templates;
-    using namespace rulejit::rulesetxml;
+    using namespace rulejit::ruleset;
 
     // discard statements in preDefines
     // TODO: execute preDefines once(in RuleSet::Init()) to handle init value?
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
-    auto [preDefines, preProcess, subRuleSets, _] = RuleSetParser::readSource(srcXML, context, data);
-#else
     auto [preDefines, preProcess, subRuleSets] = RuleSetParser::readSource(srcXML, context, data);
-#endif
 
     std::set<std::string> notGenerate{preProcess.begin(), preProcess.end()};
     notGenerate.emplace(preDefines);

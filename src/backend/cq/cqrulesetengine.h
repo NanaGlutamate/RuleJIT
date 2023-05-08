@@ -18,10 +18,8 @@
 #include <array>
 #include <fstream>
 #include <list>
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
 #include "tools/stringprocess.hpp"
 #include <ranges>
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
 #ifdef __RULEJIT_PARALLEL_ENGINE
 #include <algorithm>
 #include <execution>
@@ -177,20 +175,8 @@ struct RuleSetEngine {
                     std::string name = ruleset == &preprocess ? "pre processing"
                                                               : "sub ruleset " + std::to_string(cnt) + "(zero-based)";
                     std::string info = e.what() + "\n\nin "s + name + " when try to execute expression\n";
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
-                    for (auto p : s.interpreter.currentExpr | reverse |
-                                      filter([&](auto curr) { return debugInfo[cnt].contains(curr); }) | take(5)) {
-                        info += ("    at context: "s + debugInfo[cnt][p] |
-                                 transform([](char c) { return c == '\n' ? std::string("\\n") : ""s + c; }) |
-                                 tools::mystr::join("")) +
-                                "\n";
-                        if (debugInfo[cnt][p].back() == '\n' || debugInfo[cnt][p].back() == ';') {
-                            break;
-                        }
-                    }
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
                     info += "decompiled context:\n";
-                    for (auto p : s.interpreter.currentExpr | reverse | take(5)) {
+                    for (auto p : s.interpreter.currentExpr | reverse | take(7)) {
                         info += ("    at context(decompiled): "s + decompiler.decompile(p) + "\n");
                     }
                     info += "Core dump: \n\n";
@@ -220,10 +206,6 @@ struct RuleSetEngine {
     ContextStack context;
     /// @brief pre-process subruleset, which will called tick() and writeBack() before all subruleset
     RuleSet preprocess;
-
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
-    std::vector<std::map<ExprAST *, std::string>> debugInfo;
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
 };
 
 } // namespace rulejit::cq

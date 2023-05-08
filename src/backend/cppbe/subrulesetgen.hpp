@@ -31,7 +31,7 @@
 namespace rulejit::cppgen {
 
 struct SubRuleSetCodeGen : public ASTVisitor {
-    SubRuleSetCodeGen(ContextStack &context, rulesetxml::RuleSetMetaInfo &metaInfo) : c(context), m(metaInfo){};
+    SubRuleSetCodeGen(ContextStack &context, ruleset::RuleSetMetaInfo &metaInfo) : c(context), m(metaInfo){};
     std::string friend operator|(std::unique_ptr<ExprAST> &e, SubRuleSetCodeGen &t) {
         // t.isSubRuleSet = true;
         t.returned.clear();
@@ -304,7 +304,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         }
         if (type.isBaseType()) {
             auto tmp = type.getBaseTypeString();
-            if (rulesetxml::baseNumericalData.contains(tmp) || tmp == "f64") {
+            if (ruleset::baseNumericalData.contains(tmp) || tmp == "f64") {
                 return "typedReal<" + tmp + ">";
             } else {
                 return tmp;
@@ -343,7 +343,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     }
     SET_ERROR_MEMBER("CPP Code Generation", void)
     ContextStack &c;
-    rulesetxml::RuleSetMetaInfo &m;
+    ruleset::RuleSetMetaInfo &m;
 };
 
 } // namespace rulejit::cppgen

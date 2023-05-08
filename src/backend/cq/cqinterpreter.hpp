@@ -77,6 +77,7 @@ struct CQInterpreter : public ASTVisitor {
 #ifdef __RULEJIT_INTERPRETER_DEBUG
         interpreter.ruleCnt = 1;
 #endif
+        interpreter.currentExpr.clear();
         interpreter.callAccept(expr);
     }
 
@@ -482,25 +483,19 @@ struct CQInterpreter : public ASTVisitor {
     VISIT_FUNCTION(FunctionDefAST) { setError("function def should never be visit directly"); }
     VISIT_FUNCTION(SymbolDefAST) { setError("symbol def should never be visit directly"); }
 
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
   public:
     std::vector<ExprAST *> currentExpr;
     int getReturned() {
         my_assert(returned.type == Value::VALUE);
         return returned.value;
     }
-#endif
   private:
     void callAccept(std::unique_ptr<ExprAST> &v) {
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
         currentExpr.push_back(v.get());
-#endif
         if (v != nullptr) {
             v->accept(this);
         }
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
         currentExpr.pop_back();
-#endif
     }
 
     /**

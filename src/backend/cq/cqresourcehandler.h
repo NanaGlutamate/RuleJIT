@@ -44,7 +44,7 @@ struct DataStore {
     CSValueMap input;
     CSValueMap output;
     CSValueMap cache;
-    rulesetxml::RuleSetMetaInfo metaInfo;
+    ruleset::RuleSetMetaInfo metaInfo;
 
     /**
      * @brief generate core dump
@@ -70,7 +70,7 @@ struct DataStore {
         if (s.ends_with("[]")) {
             return "[]" + XMLType2InnerType(s.substr(0, s.size() - 2));
         }
-        if (rulesetxml::baseNumericalData.contains(s)) {
+        if (ruleset::baseNumericalData.contains(s)) {
             return "f64";
         } else {
             return s;
@@ -103,10 +103,10 @@ struct DataStore {
         std::string ret;
         // use inner class act as a recursible lambda to avoid private function used only once / y-combinator
         struct TypeChecker {
-            rulesetxml::RuleSetMetaInfo &metaInfo;
+            ruleset::RuleSetMetaInfo &metaInfo;
             DataStore &dataStore;
             std::string check(const std::string &name, const std::string &type, std::any &real) {
-                if (rulesetxml::baseData.contains(type)) {
+                if (ruleset::baseData.contains(type)) {
                     // base type
                     if (dataStore.makeTypeEmptyInstance(type).type() != real.type()) {
                         return std::format("    variable \"{}\" is not of type \"{}\"\n", name, type);
@@ -230,7 +230,7 @@ struct DataStore {
         if (isArray(type)) {
             return std::vector<std::any>();
         }
-        if (rulesetxml::baseData.contains(type)) {
+        if (ruleset::baseData.contains(type)) {
             if (type == "bool")
                 return bool(false);
             if (type == "int8")
@@ -438,7 +438,7 @@ struct ResourceHandler {
      */
     void assign(size_t dst, size_t src) {
         // TODO: allow assign base type to base type
-        if (rulesetxml::baseNumericalData.contains(std::get<1>(buffer[dst])) && rulesetxml::baseNumericalData.contains(std::get<1>(buffer[src]))) {
+        if (ruleset::baseNumericalData.contains(std::get<1>(buffer[dst])) && ruleset::baseNumericalData.contains(std::get<1>(buffer[src]))) {
             auto v = readValue(src);
             writeValue(dst, v);
             return;
@@ -563,7 +563,7 @@ struct ResourceHandler {
      * @return bool
      */
     bool isBaseType(size_t index) {
-        return rulesetxml::baseData.contains(std::get<1>(buffer[index]));
+        return ruleset::baseData.contains(std::get<1>(buffer[index]));
     }
 
     /**
@@ -654,7 +654,7 @@ struct ResourceHandler {
 
     std::any &assemble(size_t index) {
         auto &[v, type] = buffer[index];
-        if (rulesetxml::baseData.contains(type)) {
+        if (ruleset::baseData.contains(type)) {
             return v;
         }
         if (data.isArray(type)) {
