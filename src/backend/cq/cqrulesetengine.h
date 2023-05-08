@@ -134,6 +134,24 @@ struct RuleSetEngine {
      */
     const std::unordered_map<std::string, std::any> &getCache() { return dataStorage.cache; }
 
+    /**
+     * @brief get the input data from the rule set engine.
+     *
+     * @return const std::unordered_map<std::string, std::any>&
+     */
+    const std::unordered_map<std::string, std::any>& getInput() { return dataStorage.input; }
+
+    std::vector<int> hitRules() {
+        std::vector<int> ret;
+        for (auto& ruleset : preprocess.subRuleSets) {
+            ret.push_back(ruleset.interpreter.getReturned());
+        }
+        for (auto& ruleset : ruleset.subRuleSets) {
+            ret.push_back(ruleset.interpreter.getReturned());
+        }
+        return ret;
+    }
+
   private:
     void execute() {
         for (auto &ruleset : std::array<RuleSet *, 2>{&preprocess, &ruleset}) {
@@ -170,11 +188,11 @@ struct RuleSetEngine {
                             break;
                         }
                     }
-#else  // __RULEJIT_DEBUG_IN_RUNTIME
+#endif // __RULEJIT_DEBUG_IN_RUNTIME
+                    info += "decompiled context:\n";
                     for (auto p : s.interpreter.currentExpr | reverse | take(5)) {
                         info += ("    at context(decompiled): "s + decompiler.decompile(p) + "\n");
                     }
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
                     info += "Core dump: \n\n";
                     info += dataStorage.dump();
                     auto typeCheck = dataStorage.genTypeCheckInfo();

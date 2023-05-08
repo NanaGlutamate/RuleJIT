@@ -159,7 +159,7 @@ int main() {
     try {
         // engine->Init(CSValueMap{ {"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/rule_err.xml")} });
         engine->Init(CSValueMap{ {"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/car_rule.xml")} });
-        engine->SetInput(tmp);
+        engine->SetInput(CSValueMap{});
         engine->Tick(0.02);
     } catch (std::logic_error& e) {
         std::cout << e.what();

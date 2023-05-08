@@ -119,9 +119,9 @@ struct Decompiler : public ASTVisitor {
     VISIT_FUNCTION(TypeDefAST) { returned += "[TYPE DEF]"; }
     VISIT_FUNCTION(VarDefAST) {
         returned += "var ";
-        returned += v.type->toString();
-        returned += " ";
         returned += v.name;
+        returned += " ";
+        returned += v.valueType->toString();
         returned += " = ";
         v.definedValue->accept(this);
     }

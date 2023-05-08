@@ -13,6 +13,8 @@
  * <tr><td>djw</td><td>2023-04-24</td><td>Add more error info.</td></tr>
  * </table>
  */
+#include <deque>
+
 #include "rulesetparser.h"
 #include "ast/escapedanalyzer.hpp"
 #include "defines/marco.hpp"
@@ -98,18 +100,21 @@ func abs(a f64)->f64 fabs(a)
 const true f64 = 1.0
 const false f64 = 0.0
 
+func min(a f64, b f64)->f64 if(a>b) b else a
+func max(a f64, b f64)->f64 if(a<b) b else a
+
 // fuzzy logic
 func trimf(x f64, a f64, b f64, c f64)->f64
     if(x < a)0
-    else if(x < b)(x - a) / (b - a)
-    else if(x < c)(c - x) / (c - b)
+    else if(x < b) (x - a) / (b - a)
+    else if(x < c) (c - x) / (c - b)
     else 0
 
 func trapmf(x f64, a f64, b f64, c f64, d f64)->f64
     if(x < a)0
-    else if(x < b)(x - a) / (b - a)
-    else if(x < c)1
-    else if(x < d)(d - x) / (d - c)
+    else if(x < b) (x - a) / (b - a)
+    else if(x < c) 1
+    else if(x < d) (d - x) / (d - c)
     else 0
 
 )";
@@ -252,25 +257,25 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         }
     }
     // 3. topo sort
-    std::set<std::string> openSet;
+    std::deque<std::string> openSet;
     std::vector<std::string> topoSorted;
     for (auto &&[k, v] : valueDependency) {
         if (v.empty()) {
-            openSet.insert(k);
+            openSet.push_back(k);
         }
     }
     while (!openSet.empty()) {
-        auto &cur = *openSet.begin();
+        auto& cur = openSet.front();
         topoSorted.push_back(cur);
         for (auto &&[k, v] : valueDependency) {
             if (auto it = v.find(cur); it != v.end()) {
                 v.erase(it);
                 if (v.empty()) {
-                    openSet.insert(k);
+                    openSet.push_back(k);
                 }
             }
         }
-        openSet.erase(openSet.begin());
+        openSet.pop_front();
     }
     if (topoSorted.size() != valueDependency.size()) {
         std::string errorMsg = "Cyclic dependency detected in preprocess intermediate variable assignment: \n";
@@ -288,7 +293,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
     std::string valueAssignment = "{\n";
     // parse preprocessOriginal, get returned real function name
     for (auto &&o_ : topoSorted) {
-        auto &o = *preprocessOriginal.find(o_);
+        auto &o = preprocessOriginal.find(o_).operator*();
         valueAssignment += (o.first + "=" + o.second + ";\n");
     }
     valueAssignment += "0}";
