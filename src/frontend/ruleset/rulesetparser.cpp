@@ -339,8 +339,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
                         if (auto valueNode = assign->first_node("Args"); valueNode) {
                             value = removeSpace(valueNode->first_node("Expression")->value());
                         }
-                        expr += std::format("{}.{}({});", target, removeSpace(assign->first_node("Operation")->value()),
-                                            value);
+                        expr += std::format("{}.{}({});", target, operation, value);
                     }
                 } else {
                     error("Unknown Consequence type: "s + assign->name() + "");

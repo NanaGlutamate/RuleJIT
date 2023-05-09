@@ -437,29 +437,7 @@ struct CQInterpreter : public ASTVisitor {
         symbolStack.back().pop_back();
     }
     VISIT_FUNCTION(ControlFlowAST) { setError("ControlFlowAST should never be visit directly"); }
-    VISIT_FUNCTION(TypeDefAST) {
-        if (!v.definedType->isComplexType()) {
-            setError("only allow complex type define for now");
-        }
-        auto name = v.name;
-        if (!v.definedType->isComplexType() || v.definedType->getIdent() != "struct") {
-            setError("only allow struct type (no reference type support) define for now");
-        }
-        std::unordered_map<std::string, std::string> t;
-        for (int i = 0; i < v.definedType->getSubTypes().size(); ++i) {
-            static std::unordered_map<std::string, std::string> typeAlias{
-                {"i8", "int8"},    {"u8", "uint8"},  {"i16", "int16"},  {"u16", "uint16"},  {"i32", "int32"},
-                {"u32", "uint32"}, {"i64", "int64"}, {"u64", "uint64"}, {"f32", "float32"}, {"f64", "float64"},
-            };
-            auto tmp = v.definedType->getSubTypes()[i].toString();
-            if (typeAlias.contains(tmp)) {
-                tmp = typeAlias[tmp];
-            }
-            t[v.definedType->getTokens()[i]] = tmp;
-        }
-        handler.defineType(name, t);
-        returned.type = Value::EMPTY;
-    }
+    VISIT_FUNCTION(TypeDefAST) { setError("TypeDefAST should never be visit directly"); }
     VISIT_FUNCTION(VarDefAST) {
         returned.type = Value::EMPTY;
         if (auto it = symbolStack.back().back().find(v.name); it != symbolStack.back().back().end()) {

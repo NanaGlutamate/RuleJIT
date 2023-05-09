@@ -390,18 +390,19 @@ struct DefAST : public NoReturnExprAST {
  */
 struct TypeDefAST : public DefAST {
     ACCEPT_FUNCTION;
-    std::unique_ptr<TypeInfo> definedType;
+    std::vector<std::tuple<std::string, TypeInfo>> definedType;
     enum class TypeDefType {
         NORMAL,
+        // CLASSTYPE,
         ALIAS,
     } typeDefType;
 
     // TODO: typeclass support? or interface like go?
-    template <typename S>
-    TypeDefAST(S &&name, std::unique_ptr<TypeInfo> definedType, TypeDefType typeDefType = TypeDefType::NORMAL)
-        : DefAST(std::forward<S>(name)), definedType(std::move(definedType)), typeDefType(typeDefType) {}
+    template <typename V, typename S>
+    TypeDefAST(S &&name, V&& definedType, TypeDefType typeDefType = TypeDefType::NORMAL)
+        : DefAST(std::forward<S>(name)), definedType(std::forward<V>(definedType)), typeDefType(typeDefType) {}
     std::unique_ptr<ExprAST> copy() override {
-        return std::make_unique<TypeDefAST>(name, std::make_unique<TypeInfo>(*definedType), typeDefType);
+        return std::make_unique<TypeDefAST>(name, definedType, typeDefType);
     }
 };
 
