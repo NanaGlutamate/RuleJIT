@@ -486,7 +486,7 @@ struct ExpressionSemantic : public ASTVisitor {
         }
     }
     VISIT_FUNCTION(LoopAST) {
-        c.push();
+        ContextStack::ScopeGuard scope(c);
         callAccept(v.init);
         callAccept(v.condition);
         if (*(v.condition->type) != RealType || *(v.condition->type) != IntType) {
@@ -498,11 +498,10 @@ struct ExpressionSemantic : public ASTVisitor {
         } else {
             v.type = std::make_unique<TypeInfo>(*(v.body->type));
         }
-        c.pop();
         processType(*v.type);
     }
     VISIT_FUNCTION(BlockExprAST) {
-        c.push();
+        ContextStack::ScopeGuard scope(c);
         TypeInfo *last = nullptr;
         for (auto &stmt : v.exprs) {
             callAccept(stmt);
@@ -513,7 +512,6 @@ struct ExpressionSemantic : public ASTVisitor {
         } else {
             v.type = std::make_unique<TypeInfo>(NoInstanceType);
         }
-        c.pop();
         processType(*v.type);
     }
     VISIT_FUNCTION(ControlFlowAST) {
@@ -545,6 +543,7 @@ struct ExpressionSemantic : public ASTVisitor {
             }
         }
         globalInfo().typeDef.emplace(v.name, std::move(v.definedType));
+        globalInfo().typeType.emplace(v.name, "struct");
         needChange = nop();
         return;
     }
@@ -682,7 +681,7 @@ struct ExpressionSemantic : public ASTVisitor {
         needChange = nop();
     }
     VISIT_FUNCTION(ClosureExprAST) {
-        c.push();
+        ContextStack::ScopeGuard scope(c);
         for (auto &&p : v.params) {
             my_assert(c.addVarDef(p->name, *(p->type)));
         }
@@ -727,9 +726,7 @@ struct ExpressionSemantic : public ASTVisitor {
         funcDefAST->captures = std::move(v.captures);
         globalInfo().realFuncDefinition.emplace(name, std::move(funcDefAST));
         globalInfo().checkedFunc.emplace(name);
-        // TODO: add to real func
-        c.pop();
-        needChange = std::make_unique<LiteralExprAST>(std::move(v.type), name);
+        needChange = std::make_unique<LiteralExprAST>(std::move(v.type), std::move(name));
     }
 
   private:
@@ -843,7 +840,7 @@ struct ExpressionSemantic : public ASTVisitor {
         }
         auto &func = globalInfo().realFuncDefinition.find(name)->second;
         my_assert(funcDependencyRealName.empty());
-        c.push();
+        ContextStack::ScopeGuard scope(c);
         for (auto &&param : func->params) {
             // TODO: var name conflit with func?
             processType(*(param->type));
@@ -855,7 +852,6 @@ struct ExpressionSemantic : public ASTVisitor {
             setError(std::format("function \"{}\" declared return \"{}\", but return \"{}\" actually", func->name,
                                  returnedType.toString(), func->returnValue->type->toString()));
         }
-        c.pop();
         if (auto it = globalInfo().funcDependency.find(name); it != globalInfo().funcDependency.end()) {
             my_assert(funcDependencyRealName == it->second);
         }

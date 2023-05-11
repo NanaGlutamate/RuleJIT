@@ -54,7 +54,7 @@ struct RuleSetMetaInfo {
     std::vector<std::vector<std::set<std::string>>> modifiedValue;
 };
 
-/// @brief rule set structure, collected from xml or whatever
+/// @brief rule set structure, intermediate representation collected from xml or whatever
 struct RuleSetStructure {
     /// @brief store vars which has init value
     struct InitValue{
@@ -71,8 +71,11 @@ struct RuleSetStructure {
         /// @brief store atom rules
         struct AtomRule{
             struct Consequence{
+                /// @brief target of operation, must be lvalue
                 std::string target;
+                /// @brief operations, assign / push / resize
                 std::string operation;
+                /// @brief arguments of operation
                 std::vector<std::string_view> args;
             };
             std::string_view condition;

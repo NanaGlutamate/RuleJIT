@@ -22,6 +22,6 @@ int main() {
     engine.setNamespaceName("ruleset");
     engine.setPrefix("");
     
-    engine.buildFromFile(__PROJECT_ROOT_PATH"/doc/xml_design/example1.0.xml");
+    engine.buildFromFile(__PROJECT_ROOT_PATH"/doc/test_xml/rule.xml");
     return 0;
 }

@@ -83,20 +83,11 @@ struct CQInterpreter : public ASTVisitor {
 
   protected:
     VISIT_FUNCTION(IdentifierExprAST) {
-        returned.type = Value::EMPTY;
-        if (v.name == "true") {
-            returned.value = 1.;
-            returned.type = Value::VALUE;
-        } else if (v.name == "false") {
-            returned.value = 0.;
-            returned.type = Value::VALUE;
-        } else {
-            auto find = seekValue(v.name);
-            if (!find) {
-                // !find means its a variable hold by CQResourceHandler, so read it
-                returned.token = handler.readIn(v.name);
-                returned.type = Value::TOKEN;
-            }
+        auto find = seekValue(v.name);
+        if (!find) {
+            // !find means its a variable hold by CQResourceHandler, so read it
+            returned.token = handler.readIn(v.name);
+            returned.type = Value::TOKEN;
         }
     }
     VISIT_FUNCTION(MemberAccessExprAST) {

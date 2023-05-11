@@ -63,21 +63,25 @@ struct SubRuleSetCodeGen : public ASTVisitor {
   protected:
     VISIT_FUNCTION(IdentifierExprAST) {
         // only thing differs from common cppcodegen
+        auto [find, _] = c.seekVarDef(v.name);
+        if (find) {
+            returned += v.name;
+            return;
+        }
         if (std::find(m.inputVar.begin(), m.inputVar.end(), v.name) != m.inputVar.end()) {
             returned += std::format("(_in.{})", v.name);
         } else if (std::find(m.outputVar.begin(), m.outputVar.end(), v.name) != m.outputVar.end()) {
             returned += std::format("(_out.{})", v.name);
         } else if (std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) != m.cacheVar.end()) {
             // cannot remove loadCache, cause assign will evaluate rhs befor lhs
-            // TODO: name string & member pointer -> index & boost::pfr
-
-            if (!loaded.contains(v.name)) {
-                auto cnt = std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) - m.cacheVar.begin();
-                returned += std::format("(loadCache(_base, &_Cache::{0}, {1}), cache.{0})", v.name, cnt);
-                loadedtmp.emplace(v.name);
-            }else{
-                returned += std::format("(cache.{})", v.name);
-            }
+            // TODO: use a stack as loaded
+            // if (!loaded.contains(v.name)) {
+            auto cnt = std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) - m.cacheVar.begin();
+            returned += std::format("(loadCache(_base, &_Cache::{0}, {1}), cache.{0})", v.name, cnt);
+            loadedtmp.emplace(v.name);
+            //} else {
+            //    returned += std::format("(cache.{})", v.name);
+            //}
         } else {
             returned += std::format(" {} ", v.name);
         }
@@ -108,7 +112,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         }
         returned += "(";
         if (*(v.type) == RealType) {
-            returned += v.value.data();
+            returned += v.value;
         } else if (*(v.type) == NoInstanceType) {
             returned += "NoInstanceType{}";
         } else if (*(v.type) == StringType) {
@@ -173,14 +177,15 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     // extinguish normal branch from ruleset branch
     VISIT_FUNCTION(BranchExprAST) {
         if (*(v.type) != NoInstanceType) {
-            returned += "(";
+            auto type = CppStyleType(*v.type);
+            returned += "((";
             v.condition->accept(this);
-            returned += " ? ";
+            returned += ") ? (" + type + ")(";
             mergeLoaded();
             v.trueExpr->accept(this);
-            returned += " : ";
+            returned += ") : (" + type + ")(";
             v.falseExpr->accept(this);
-            returned += ")";
+            returned += "))";
             mergeLoaded();
         } else {
             returned += "if(";
@@ -211,9 +216,8 @@ struct SubRuleSetCodeGen : public ASTVisitor {
             for (auto &[ident, value] : v.members) {
                 tmp.emplace(dynamic_cast<LiteralExprAST *>(ident.get())->value, value.get());
             }
-            auto tokens = def.getTokens();
-            for (size_t i = 0; i < tokens.size(); ++i) {
-                auto it = tmp.find(tokens[i]);
+            for (auto& [name, type] : def) {
+                auto it = tmp.find(name);
                 if (it == tmp.end()) {
                     returned += "{}";
                 } else {
@@ -227,6 +231,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         returned += "})";
     }
     VISIT_FUNCTION(LoopAST) {
+        ContextStack::ScopeGuard scope(c);
         if (*(v.type) != NoInstanceType) {
             return setError("loop with returned value not supported");
         }
@@ -240,6 +245,7 @@ struct SubRuleSetCodeGen : public ASTVisitor {
         mergeLoaded();
     }
     VISIT_FUNCTION(BlockExprAST) {
+        ContextStack::ScopeGuard scope(c);
         if (*(v.type) == NoInstanceType) {
             returned += "{";
             for (auto &&expr : v.exprs) {
@@ -272,16 +278,19 @@ struct SubRuleSetCodeGen : public ASTVisitor {
     VISIT_FUNCTION(ControlFlowAST) { return setError("ControlFlowAST not supported"); }
     VISIT_FUNCTION(TypeDefAST) { return setError("TypeDefAST not supported"); }
     VISIT_FUNCTION(VarDefAST) {
-        if (std::find(m.inputVar.begin(), m.inputVar.end(), v.name) != m.inputVar.end() ||
-            std::find(m.outputVar.begin(), m.outputVar.end(), v.name) != m.outputVar.end() ||
-            std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) != m.cacheVar.end()) {
-            return setError("Variable redefined(already a input/output/cache): " + v.name);
-        }
+        c.top().varDef.emplace(v.name, *v.type);
+        //if (std::find(m.inputVar.begin(), m.inputVar.end(), v.name) != m.inputVar.end() ||
+        //    std::find(m.outputVar.begin(), m.outputVar.end(), v.name) != m.outputVar.end() ||
+        //    std::find(m.cacheVar.begin(), m.cacheVar.end(), v.name) != m.cacheVar.end()) {
+        //    return setError("Variable redefined(already a input/output/cache): " + v.name);
+        //}
         if (*(v.valueType) == RealType) {
             returned += "double ";
-        } else if (*(v.valueType) == IntType) {
-            returned += "size_t ";
-        } else {
+        }else if (*(v.valueType) == IntType) {
+            returned += "int64_t ";
+        }else if (*(v.valueType) == UIntType) {
+            returned += "uint64_t ";
+        }else {
             returned += "auto ";
         }
         returned += v.name + " = ";

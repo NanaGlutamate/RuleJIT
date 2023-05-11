@@ -25,9 +25,11 @@
 #include <format>
 #include <string>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 
 #include "RuleEngine.h"
+#include "defines/marco.hpp"
 #include "tools/seterror.hpp"
 #include "tools/showmsg.hpp"
 
@@ -59,8 +61,6 @@ string getLibDir() {
     return library_dir_;
 }
 
-std::vector<std::unordered_map<std::string, std::any>> input, output;
-
 } // namespace
 
 bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
@@ -84,8 +84,8 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
     try {
         engine.buildFromFile(filePath);
     } catch (std::exception &e) {
-         WriteLog(std::string("Init RuleEngine Error: \n") + e.what(), 4);
-         return false;
+        WriteLog(std::string("Init RuleEngine Error: \n") + e.what(), 5);
+        return false;
     }
     for (auto& msg : rulejit::debugMessages) {
         WriteLog(std::move(msg), 1);
@@ -103,6 +103,26 @@ bool RuleEngine::Tick(double time) {
         WriteLog(std::string("RuleEngine Tick Error: \n") + e.what(), 4);
         return false;
     }
+
+#ifdef __RULEENGINE_LOG
+    static RuleEngine& logger = *this;
+    static size_t cnt = 0;
+    static std::vector<std::any> input, output;
+    if(&logger == this){
+        cnt++;
+        input.push_back(engine.getInput());
+        output.push_back(*engine.getOutput());
+        if(cnt%500==0){
+            ofstream f{__PROJECT_ROOT_PATH"/bin/collected/data.hpp"};
+            f << "#include <unordered_map>\n#include <any>\n#include <string>\n#include <vector>\nusing CSValueMap = std::unordered_map<std::string, std::any>;\n";
+            f << "inline auto inputdata=";
+            f << tools::myany::printAnyToString<tools::myany::CppFormat>(input) << ";";
+            f << "inline auto outputdata=";
+            f << tools::myany::printAnyToString<tools::myany::CppFormat>(output) << ";";
+        }
+    }
+#endif // __RULEENGINE_LOG
+
     std::string info = "RuleEngine model Hit rules: " + (engine.hitRules() | std::views::transform([](int x) {return std::to_string(x); }) | tools::mystr::join(", ")) + "\n\n";
     info += std::format("RuleEngine model Cache: {}\n\n", tools::myany::printCSValueMapToString(engine.getCache()));
     info += std::format("RuleEngine model Input: {}\n\n",

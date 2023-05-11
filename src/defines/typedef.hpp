@@ -30,6 +30,8 @@ inline const TypeInfo NoInstanceType{std::string(typeident::NoInstanceTypeIdent)
 inline const TypeInfo StringType{std::string(typeident::StringTypeIdent)};
 /// @brief type for integer, same as RealType for now
 inline const TypeInfo IntType{std::string(typeident::IntTypeIdent)};
+/// @brief type for unsignhed integer, same as RealType for now
+inline const TypeInfo UIntType{ std::string(typeident::UIntTypeIdent) };
 /// @brief type for real number
 inline const TypeInfo RealType{std::string(typeident::RealTypeIdent)};
 /// @brief auto type for type inference in var-def expression, auto generate only and cannot use by user

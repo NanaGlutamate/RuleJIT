@@ -285,12 +285,12 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         }
         error(errorMsg);
     }
-    debugMsg("Topo sorted: " + (topoSorted | tools::mystr::join(", ")));
+    // debugMsg("Topo sorted: " + (topoSorted | tools::mystr::join(", ")));
     std::string valueAssignment = "{\n";
     // parse preprocessOriginal, get returned real function name
     for (auto &&o_ : topoSorted) {
         auto &o = preprocessOriginal.find(o_).operator*();
-        valueAssignment += (o.first + "=" + o.second + ";\n");
+        valueAssignment += ("{" + o.first + "=" + o.second + "};\n");
     }
     valueAssignment += "0}";
     data.modifiedValue.push_back({std::set<std::string>{topoSorted.begin(), topoSorted.end()}});

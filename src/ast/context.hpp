@@ -286,6 +286,17 @@ struct ContextStack {
         return top();
     }
 
+    struct ScopeGuard {
+        ScopeGuard(ContextStack& c) :c(c) {
+            c.push();
+        }
+        ~ScopeGuard() {
+            c.pop();
+        }
+    private:
+        ContextStack& c;
+    };
+
   private:
     /**
      * @brief template function to seek def in context stack

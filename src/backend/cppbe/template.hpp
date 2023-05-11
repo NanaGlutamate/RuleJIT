@@ -59,7 +59,7 @@ constexpr inline bool is_base_v =
     std::is_same_v<T, bool> || std::is_same_v<T, int8_t> || std::is_same_v<T, uint8_t> || std::is_same_v<T, int16_t> ||
     std::is_same_v<T, uint16_t> || std::is_same_v<T, int32_t> || std::is_same_v<T, uint32_t> ||
     std::is_same_v<T, int64_t> || std::is_same_v<T, uint64_t> || std::is_same_v<T, float> ||
-    std::is_same_v<T, double>;// || std::is_same_v<T, std::string>;
+    std::is_same_v<T, double> || std::is_same_v<T, std::string>;
 
 template <typename T>
 struct typedReal{{
@@ -149,7 +149,7 @@ inline constexpr auto typeDeserialize = R"(
         }})";
 inline constexpr auto typeSerialize = "        tmp.emplace(\"{1}\", toAny({1}));\n";
 
-// namespace, prefix, defs, externs
+// namespace, prefix, predefs, defs, externs
 inline constexpr auto funcDefHpp = R"(#pragma once
 
 #include <cmath>
@@ -158,7 +158,7 @@ inline constexpr auto funcDefHpp = R"(#pragma once
 
 extern "C" {{
 using namespace {0};
-{3}
+{4}
 }}
 
 namespace {0}{{
@@ -174,6 +174,7 @@ void resize(V& v, size_t size){{ v.resize(size); }}
 
 bool strEqual(const string& lhs, const string& rhs){{ return lhs == rhs; }}
 {2}
+{3}
 
 }}
 
@@ -188,6 +189,10 @@ inline constexpr auto funcDef = R"(
 inline {0} {1}({2}) {{
     {3};
 }}
+)";
+// returntype, funcname, params
+inline constexpr auto funcPreDef = R"(
+inline {0} {1}({2});
 )";
 
 // namespace, prefix, subrulesetcall, subrulesetwrite, subrulesetdef, inits, precall, prewrite
@@ -245,6 +250,7 @@ inline constexpr auto subRulesetDef = R"(    struct {{
         void loadCache(RuleSet& base, T p, size_t name){{
             if(auto it = loaded.find(name); it == loaded.end()){{
                 cache.*p = base.cache.*p;
+                loaded.emplace(name);
             }}
         }}
         void Tick(RuleSet& _base){{
