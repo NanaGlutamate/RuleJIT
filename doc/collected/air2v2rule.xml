@@ -1,0 +1,2513 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="rule.xsd"?>
+<RuleSet version="1.0">
+	<TypeDefines>
+		<TypeDefine type="output_info_">
+			<Variable name="Longitude" type="float64"/>
+			<Variable name="Latitude" type="float64"/>
+			<Variable name="Altitude" type="float64"/>
+			<Variable name="vx" type="float64"/>
+			<Variable name="vy" type="float64"/>
+			<Variable name="vz" type="float64"/>
+			<Variable name="Speed" type="float64"/>
+			<Variable name="Roll" type="float64"/>
+			<Variable name="Pitch" type="float64"/>
+			<Variable name="Yaw" type="float64"/>
+		</TypeDefine>
+		<TypeDefine type="MissileRange">
+			<Variable name="DRmax" type="float64"/>
+			<Variable name="phiRmax" type="float64"/>
+			<Variable name="DMmax" type="float64"/>
+			<Variable name="DMmin" type="float64"/>
+			<Variable name="phiMmax" type="float64"/>
+			<Variable name="DMKmax" type="float64"/>
+			<Variable name="DMKmin" type="float64"/>
+			<Variable name="phiMK" type="float64"/>
+			<Variable name="DNmax" type="float64"/>
+			<Variable name="DNmin" type="float64"/>
+			<Variable name="DNok" type="float64"/>
+			<Variable name="phiNmax" type="float64"/>
+		</TypeDefine>
+	</TypeDefines>
+	<MetaInfo>
+		<Inputs>
+			<Param name="A1_output" type="output_info_" display_name="我长机实体信息"/>
+            <Param name="A2_output" type="output_info_" display_name="我僚机实体信息"/>
+			<Param name="T1_output" type="output_info_" display_name="敌长机实体信息"/>
+            <Param name="T2_output" type="output_info_" display_name="敌僚机实体信息"/>
+			<Param name="radar_flag" type="bool" display_name="敌机雷达探测参数"/>
+			<Param name="missile_flag" type="bool" display_name="敌机导弹发射参数"/>
+            <Param name="radar_state" type="bool" display_name="我机雷达扫描状态"/>
+			<Param name="missile_state" type="bool" display_name="我机导弹发射状态"/>
+			<Param name="DT" type="MissileRange" display_name="敌机打击参数"/>
+			<Param name="DA" type="MissileRange" display_name="我机打击参数"/>
+            <Param name="BTS" type="uint64" display_name="超视距几何优势"/>
+			<!--<Param name="flag" type="bool" display_name="战术结束标志"/>-->
+		</Inputs>
+		<Outputs>
+			<Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+            <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+		</Outputs>
+		<Caches>
+			<Param name="ax" type="float64">
+				<Value>
+					<Expression>
+						(A2_output.Latitude - A1_output.Latitude) * 111000
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="ay" type="float64">
+				<Value>
+					<Expression>
+						A2_output.Altitude - A1_output.Altitude
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="az" type="float64">
+				<Value>
+					<Expression>
+						(A2_output.Longitude - A1_output.Longitude) * 111000 * cos(A1_output.Latitude / 180 * 3.1415926)
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="x11" type="float64">
+				<Value>
+					<Expression>
+						(T1_output.Latitude - A1_output.Latitude) * 111000
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="y11" type="float64">
+				<Value>
+					<Expression>
+						T1_output.Altitude - A1_output.Altitude
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="z11" type="float64">
+				<Value>
+					<Expression>
+						(T1_output.Longitude - A1_output.Longitude) * 111000 * cos(A1_output.Latitude / 180 * 3.1415926)
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="x12" type="float64">
+				<Value>
+					<Expression>
+						(T1_output.Latitude - A2_output.Latitude) * 111000
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="y12" type="float64">
+				<Value>
+					<Expression>
+						T1_output.Altitude - A2_output.Altitude
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="z12" type="float64">
+				<Value>
+					<Expression>
+						(T1_output.Longitude - A2_output.Longitude) * 111000 * cos(A2_output.Latitude / 180 * 3.1415926)
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="x21" type="float64">
+				<Value>
+					<Expression>
+						(T2_output.Latitude - A1_output.Latitude) * 111000
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="y21" type="float64">
+				<Value>
+					<Expression>
+						T2_output.Altitude - A1_output.Altitude
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="z21" type="float64">
+				<Value>
+					<Expression>
+						(T2_output.Longitude - A1_output.Longitude) * 111000 * cos(A1_output.Latitude / 180 * 3.1415926)
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="x22" type="float64">
+				<Value>
+					<Expression>
+						(T2_output.Latitude - A2_output.Latitude) * 111000
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="y22" type="float64">
+				<Value>
+					<Expression>
+						T2_output.Altitude - A2_output.Altitude
+					</Expression>
+				</Value>
+			</Param>
+			<Param name="z22" type="float64">
+				<Value>
+					<Expression>
+						(T2_output.Longitude - A2_output.Longitude) * 111000 * cos(A2_output.Latitude / 180 * 3.1415926)
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="d11" type="float64">
+				<Value>
+					<Expression>
+						pow((x11*x11 + y11*y11 + z11*z11),0.5)
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="d12" type="float64">
+				<Value>
+					<Expression>
+						pow((x12*x12 + y12*y12 + z12*z12),0.5)
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="d21" type="float64">
+				<Value>
+					<Expression>
+						pow((x21*x21 + y21*y21 + z21*z21),0.5)
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="d22" type="float64">
+				<Value>
+					<Expression>
+						pow((x22*x22 + y22*y22 + z22*z22),0.5)
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="FD" type="uint64">
+				<Value>
+					<Expression>
+						if      ((radar_flag==0)and(missile_flag==0)) 1
+                        else if ((radar_flag==1)and(missile_flag==0)) 2
+                        else                                          3
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="DM" type="uint64">
+				<Value>
+					<Expression>
+						if      ((d11&gt;DT.DMmax)and(d12&gt;DT.DMmax)and(d21&gt;DT.DMmax)and(d22&gt;DT.DMmax))     1
+                        else if ((d11&lt;DT.DMmax)or(d12&lt;DT.DMmax)or(d21&lt;DT.DMmax)or(d22&lt;DT.DMmax))        2
+                        else    0
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="HT" type="uint64">
+				<Value>
+					<Expression>
+						if      ((T1_output.Altitude&gt;1000)and(T2_output.Altitude&gt;1000))                1
+                        else    2
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="FA" type="uint64">
+				<Value>
+					<Expression>
+						if      ((abs(ay)&lt;4000)and(abs(ax*cos((A2_output.Yaw-A1_output.Yaw)/180*3.1415926)+az*sin((A2_output.Yaw-A1_output.Yaw)/180*3.1415926))&lt;8000))         1
+                        else    2
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="AW" type="uint64">
+				<Value>
+					<Expression>
+						if      (radar_flag==0)         1
+                        else    2
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="TM" type="uint64">
+				<Value>
+					<Expression>
+						if      (missile_flag==0)       1
+                        else    2
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="MS" type="uint64">
+				<Value>
+					<Expression>
+						if           ((FD==1)
+						         or  ((FD==2)and(BTS==1)))                               1
+						else if     (((FD==2)and(BTS==0)and(DM==0)and(HT==2))
+						         or  ((FD==2)and(BTS==0)and(DM==0)and(HT==1)and(FA==1))) 2
+						else if      ((FD==2)and(BTS==0)and(DM==0)and(HT==1)and(FA==2))  3
+						else if      ((FD==2)and(BTS==0)and(DM==2))                      4
+						else if      ((FD==2)and(BTS==0)and(DM==1))                      5
+						else if     (((FD==2)and(BTS==2)and(DM==1)and(HT==2))
+						         or  ((FD==2)and(BTS==2)and(DM==1)and(HT==1)and(FA==1))
+						         or  ((FD==2)and(BTS==2)and(DM==0)and(AW==2)and(HT==2))
+						         or  ((FD==2)and(BTS==2)and(DM==0)and(AW==2)and(HT==1)and(FA==1))
+						         or  ((FD==3)and(DM==1)and(HT==2))
+								 or  ((FD==3)and(DM==1)and(HT==1)and(FA==1))
+						         or  ((FD==3)and(DM==0)and(AW==2)and(HT==2))
+								 or  ((FD==3)and(DM==0)and(AW==2)and(HT==1)and(FA==1)))           6
+						else if     (((FD==2)and(BTS==2)and(DM==1)and(HT==1)and(FA==2))
+						         or  ((FD==2)and(BTS==2)and(DM==0)and(AW==2)and(HT==1)and(FA==2))
+						         or  ((FD==3)and(DM==1)and(HT==1)and(FA==2))
+						         or  ((FD==3)and(DM==0)and(AW==2)and(HT==1)and(FA==2)))           7
+						else if     (((FD==2)and(BTS==2)and(DM==0)and(AW==1))
+						         or  ((FD==2)and(BTS==2)and(DM==2)and(AW==1)and(TM==1))
+						         or  ((FD==3)and(DM==0)and(AW==1))
+								 or  ((FD==3)and(DM==2)and(AW==1)and(TM==1)))                     8
+						else if     (((FD==2)and(BTS==2)and(DM==2)and(AW==1)and(TM==2))
+						         or  ((FD==3)and(DM==2)and(AW==1)and(TM==2)))                     9
+						else if     (((FD==2)and(BTS==2)and(DM==2)and(AW==2))
+						         or  ((FD==3)and(DM==2)and(AW==2)))                               10
+						else    11
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="BA" type="uint64">
+				<Value>
+					<Expression>
+						if      ((d11&gt;DA.DRmax)or(abs((acos((T1_output.vx * x11 + T1_output.vy * y11 + T1_output.vz * z11) / (d11 * T1_output.Speed)))/3.1415926*180)&gt;DA.phiRmax))                        1 
+                        else if (((d11&gt;DA.DMmax)and(d11&lt;DA.DRmax))or(abs((acos((T1_output.vx * x11 + T1_output.vy * y11 + T1_output.vz * z11) / (d11 * T1_output.Speed)))/3.1415926*180)&gt;DA.phiMmax))  2 
+                        else if (((d11&gt;DA.DMKmin)and(d11&lt;DA.DMKmax))or(abs((acos((T1_output.vx * x11 + T1_output.vy * y11 + T1_output.vz * z11) / (d11 * T1_output.Speed)))/3.1415926*180)&lt;DA.phiMK))  4
+                        else    3
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="BT" type="uint64">
+				<Value>
+					<Expression>
+						if      ((d11&gt;DT.DRmax)or(abs((acos((-A1_output.vx * x11 - A1_output.vy * y11 - A1_output.vz * z11) / (d11 * A1_output.Speed)))/3.1415926*180)&gt;DT.phiRmax))                        1 
+                        else if (((d11&gt;DT.DMmax)and(d11&lt;DT.DRmax))or(abs((-acos((A1_output.vx * x11 - A1_output.vy * y11 - A1_output.vz * z11) / (d11 * A1_output.Speed)))/3.1415926*180)&gt;DT.phiMmax))  2 
+                        else if (((d11&gt;DT.DMKmin)and(d11&lt;DT.DMKmax))or(abs((acos((-A1_output.vx * x11 - A1_output.vy * y11 - A1_output.vz * z11) / (d11 * A1_output.Speed)))/3.1415926*180)&lt;DT.phiMK))  4
+                        else    3
+					</Expression>
+				</Value>
+			</Param>
+            <Param name="BF" type="uint64">
+				<Value>
+					<Expression>
+						if      ((radar_flag==0)and(missile_flag==0))  0
+                        else    1
+					</Expression>
+				</Value>
+			</Param>
+		</Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+                    <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==1) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==1) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==1) and (BA==4) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+								<Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==2) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+			          </Rule>
+								<Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==2) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+								<Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==2) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==2) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==2) and (BA==4) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==2) and (BA==4) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==3) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==3) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==3) and (BA==4) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==3) and (BA==4) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==1) and (BT==4) and (BA==4) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+			</Rules>
+        </SubRuleSet>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+                    <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==2) and (BT==2) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==2) and (BT==2) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==2) and (BT==3) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==2) and (BT==3) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+			</Rules>
+        </SubRuleSet>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+                    <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==3) and (BT==2) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==3) and (BT==2) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==3) and (BT==3) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==3) and (BT==3) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+			</Rules>
+        </SubRuleSet>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+                    <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==4) and (BT==3) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==4) and (BT==3) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==4) and (BT==4) and (BA==4) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+			</Rules>
+        </SubRuleSet>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+                    <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==5) and (BT==2) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==5) and (BT==2) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==5) and (BT==3) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==5) and (BT==3) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+			</Rules>
+        </SubRuleSet>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+                    <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==6) and (BT==2) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==6) and (BT==2) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==6) and (BT==3) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==6) and (BT==3) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==6) and (BT==3) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==6) and (BT==3) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==6) and (BT==4) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==6) and (BT==4) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+			</Rules>
+        </SubRuleSet>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+                    <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==7) and (BT==2) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==7) and (BT==2) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==7) and (BT==3) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>8</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>8</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==7) and (BT==3) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==7) and (BT==3) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>8</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>8</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==7) and (BT==3) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>8</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>8</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==7) and (BT==4) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==7) and (BT==4) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+			</Rules>
+        </SubRuleSet>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+                    <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==2) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==2) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>1</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==3) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==3) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==3) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==3) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==4) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==4) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==4) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==4) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==4) and (BA==4) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==8) and (BT==4) and (BA==4) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>3</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+			</Rules>
+        </SubRuleSet>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+                    <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==9) and (BT==3) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==9) and (BT==3) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>6</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==9) and (BT==3) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==9) and (BT==3) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==9) and (BT==4) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==9) and (BT==4) and (BA==2) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==9) and (BT==4) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==9) and (BT==4) and (BA==3) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==9) and (BT==4) and (BA==4) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==9) and (BT==4) and (BA==4) and (BF==0)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>11</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+			</Rules>
+        </SubRuleSet>
+        <SubRuleSet>
+            <MetaInfo>
+                <Inputs></Inputs>
+                <Outputs>
+                    <Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+                    <Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+                </Outputs>
+                <Caches>
+                    <Param name="Cache1" type="uint32"/>
+                </Caches>
+            </MetaInfo>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==10) and (BT==4) and (BA==2) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==10) and (BT==4) and (BA==3) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            (MS==10) and (BT==4) and (BA==4) and (BF==1)
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>leader_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>wingman_tacticID</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+			</Rules>
+        </SubRuleSet>
+		<SubRuleSet>
+			<MetaInfo>
+				<Inputs></Inputs>
+				<Outputs>
+					<Param name="leader_tacticID" type="uint64" display_name="长机战术号"/>
+					<Param name="wingman_tacticID" type="uint64" display_name="僚机战术号"/>
+				</Outputs>
+				<Caches>
+					<Param name="Cache1" type="uint32"/>
+				</Caches>
+			</MetaInfo>
+			<Rules>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==1) and (BA==1) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>9</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>9</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==1) and (BA==2) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==1) and (BA==3) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==1) and (BA==4) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==2) and (BA==1) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>4</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>4</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==2) and (BA==1) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>9</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>9</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==2) and (BA==2) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>4</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>4</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==2) and (BA==2) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==2) and (BA==3) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==2) and (BA==3) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==2) and (BA==4) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==2) and (BA==4) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==3) and (BA==1) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==3) and (BA==1) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==3) and (BA==2) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==3) and (BA==2) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>6</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>6</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==3) and (BA==3) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>2</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>2</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==3) and (BA==3) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==3) and (BA==4) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==3) and (BA==4) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>1</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==4) and (BA==1) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>7</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>7</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==4) and (BA==1) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==4) and (BA==2) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>7</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>7</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==4) and (BA==2) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>10</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==4) and (BA==3) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>7</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>7</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==4) and (BA==3) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>4</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>4</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==4) and (BA==4) and (BF==1)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>7</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>7</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+				<Rule>
+					<Condition>
+						<Expression>
+							(MS==11) and (BT==4) and (BA==4) and (BF==0)
+						</Expression>
+					</Condition>
+					<Consequence>
+						<Assignment>
+							<Target>leader_tacticID</Target>
+							<Value>
+								<Expression>2</Expression>
+							</Value>
+						</Assignment>
+						<Assignment>
+							<Target>wingman_tacticID</Target>
+							<Value>
+								<Expression>2</Expression>
+							</Value>
+						</Assignment>
+					</Consequence>
+				</Rule>
+			</Rules>
+		</SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

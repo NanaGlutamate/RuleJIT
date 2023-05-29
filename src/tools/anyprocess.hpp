@@ -26,7 +26,7 @@ namespace tools::myany {
 
 /**
  * @brief simple functor to call when meet unknown type
- * 
+ *
  */
 struct err {
     struct GernalType {
@@ -57,7 +57,7 @@ concept invocable_on_legal_type = requires(Func f, Any v) {
 
 /**
  * @brief use function to visit data in any
- * 
+ *
  * @tparam FuncOnErr functor to call when meet unknown type
  * @param func function to visit data
  * @param v target std::any
@@ -66,7 +66,10 @@ concept invocable_on_legal_type = requires(Func f, Any v) {
 template <typename FuncOnErr, typename Any, invocable_on_legal_type<Any> Func>
     requires std::is_same_v<std::any, std::remove_cvref_t<Any>> && std::is_invocable_v<FuncOnErr, Any>
 inline auto visit(Func &&func, Any &&v) {
-    // TODO: fix behaviour when Any = std::any&&, should call func(std::vector<std::any>&&) | func(CSValueMap&&) | func(std::string&&)
+    // TODO: fix behaviour when Any = std::any&&, should call func(std::vector<std::any>&&) | func(CSValueMap&&) |
+    // func(std::string&&)
+
+    // TODO: fix bug, if Any == std::any&&, leak
     if (v.type() == typeid(double)) {
         return func(*std::any_cast<double>(&v));
     } else if (v.type() == typeid(float)) {
@@ -98,7 +101,8 @@ inline auto visit(Func &&func, Any &&v) {
     } else {
         if constexpr (std::is_constructible_v<decltype(func(*std::any_cast<double>(&v))),
                                               decltype(std::invoke(FuncOnErr{}, v))>) {
-            return static_cast<decltype(func(*std::any_cast<double>(&v)))>(std::invoke(FuncOnErr{}, std::forward<Any>(v)));
+            return static_cast<decltype(func(*std::any_cast<double>(&v)))>(
+                std::invoke(FuncOnErr{}, std::forward<Any>(v)));
         } else {
             std::invoke(FuncOnErr{}, std::forward<Any>(v));
             error("unhandled failure in myany::visit");
@@ -108,9 +112,9 @@ inline auto visit(Func &&func, Any &&v) {
 
 /**
  * @brief check if data in two std::any is equal
- * 
+ *
  * @attention func fit invocable_on_legal_type must allowed to be called on data in input std::any
- * 
+ *
  * @param lhs first std::any
  * @param rhs second std::any
  * @return bool
@@ -150,4 +154,4 @@ inline bool anyEqual(const std::any &lhs, const std::any &rhs) {
         lhs);
 }
 
-} // namespace rulejit::myany
+} // namespace tools::myany

@@ -69,7 +69,11 @@ struct typedReal{{
     typedReal(double v) : v(v){{}}
     typedReal() : v(0.){{}}
     typedReal(const typedReal&) = default;
-    typedReal& operator=(const typedReal&) = default;
+    template<typename Other>
+    void operator=(const typedReal<Other>& o){{
+        // type trans?
+        v = o.v;
+    }}
 }};
 
 template <typename T> constexpr inline bool is_typedReal_v = false;

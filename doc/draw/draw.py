@@ -4,18 +4,46 @@ import numpy as np
 
 mpl.rcParams['font.sans-serif'] = ['SimHei']
 
-data1 = [0.000151167, 0.000142042, 0.000133556, 0.000143708, 0.000139283, 0.000193583, 0.000217762, 0.00022375, 0.000205278,
-         0.000148642, 0.000147621, 0.000140042, 0.000138705, 0.000178423, 0.0001881, 0.000150583, 0.000170608, 0.000169954, 0.000144561,]
-data2 = [1.26667e-05, 9.66667e-06, 9.69444e-06, 9.29167e-06, 9.36667e-06, 9.34722e-06, 9.95238e-06, 1.12396e-05, 1.08426e-05,
-         9.45833e-06, 9.25e-06, 9.51389e-06, 9.45513e-06, 1.45238e-05, 1.83889e-05, 1.78594e-05, 1.88186e-05, 1.88056e-05, 1.75263e-05,]
+"""car1v1"""
+datac1 = [0.1872,0.15712,0.150293,0.15328,0.160096,]
+datac2 = [0.01368,0.01232,0.0128,0.0125,0.0124,]
+
+"""air2v2"""
+dataa1 = [0.271326,0.245251,0.247909,0.244892,0.244982,]
+dataa2 = [0.0113799,0.0113799,0.0114695,0.0115367,0.011595,]
 width = 0.4
 
-x = np.arange(1, 20)
-plt.bar(x + width/2, data1, width, align='center',
-        tick_label=[str(i*10) for i in x], label='解释引擎')
-plt.bar(x - width/2, data2, width, align='center',
-        tick_label=[str(i*10) for i in x], label='代码生成引擎')
-plt.xlabel('数据量/条')
-plt.ylabel('平均每Tick耗时/ms')
-plt.legend()
+x = np.arange(1, 6)
+
+ax1 = plt.subplot(1, 2, 2)
+ax1.set_ybound(0, 0.00045)
+ax1.bar(x + width/2, datac1, width, align='center', #edgecolor='black', color='white', hatch='//',
+        label='解释引擎')
+ax1.bar(x - width/2, datac2, width, align='center', #edgecolor='black', color='white', hatch='xx',
+        label='代码生成引擎')
+ax1.set_xticks(x)
+ax1.set_xticklabels([str(i*1250) for i in x])
+ax1.set_xlabel('数据量/条')
+ax1.set_ylabel('平均每Tick耗时/ms')
+ax1.legend()
+ax1_ = ax1.twinx()
+ax1_.plot(x, [i / j for i, j in zip(datac1, datac2)], 'o-', color='black')
+ax1_.set_ylabel('加速比')
+ax1.set_title('陆战一对一测试场景')
+
+ax1 = plt.subplot(1, 2, 1)
+ax1.bar(x + width/2, dataa1, width, align='center', #edgecolor='black', color='white', hatch='//',
+        label='解释引擎')
+ax1.bar(x - width/2, dataa2, width, align='center', #edgecolor='black', color='white', hatch='xx',
+        label='代码生成引擎')
+ax1.set_xticks(x)
+ax1.set_xticklabels([str(i*1250) for i in x])
+ax1.set_xlabel('数据量/条')
+ax1.set_ylabel('平均每Tick耗时/ms')
+ax1.legend()
+ax1_ = ax1.twinx()
+ax1_.plot(x, [i / j for i, j in zip(dataa1, dataa2)], 'o-', color='black')
+ax1_.set_ylabel('加速比')
+plt.title('空战二对二测试场景')
+
 plt.show()

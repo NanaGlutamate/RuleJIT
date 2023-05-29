@@ -32,12 +32,13 @@
 #include <chrono>
 #include <filesystem>
 #include <ranges>
-
-#include "data.hpp"
+#include <fstream>
 
 #include "../csmodel_base/csmodel_base.h"
 #include "testcase.hpp"
 #include "tools/printcsvaluemap.hpp"
+#include "tools/parseany.hpp"
+#include "tools/anyprocess.hpp"
 
 CSModelObject *loadModel(const std::string &lib_path_) {
 #ifdef _WIN32
@@ -71,49 +72,83 @@ CSModelObject *loadModel(const std::string &lib_path_) {
     return create_obj_();
 }
 
+// air2v2 / car1v1
+#define TARGET "car1v1"
+
 int main() {
     using namespace std;
     using namespace views;
+    using namespace rapidxml;
     using namespace chrono;
+    using namespace tools::myany;
     using CSValueMap = std::unordered_map<std::string, std::any>;
 
     CSModelObject *interpreter = loadModel("cq_interpreter.dll");
-    CSModelObject *cppengine = loadModel("ruleset.dll");
+    CSModelObject *cppengine = loadModel(__PROJECT_ROOT_PATH "/doc/collected/" TARGET ".dll");
+
     interpreter->SetLogFun([](const auto &, auto) {});
     cppengine->SetLogFun([](const auto &, auto) {});
-    interpreter->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/rule.xml")}});
+    interpreter->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/collected/" TARGET "rule.xml")}});
+
+    std::ifstream file(__PROJECT_ROOT_PATH "/doc/collected/" TARGET ".xml");
+    std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    buffer.push_back(0);
+    xml_document<> doc;
+    doc.parse<parse_default>(buffer.data());
+    vector<any> inputdata = any_cast<vector<any>>(parseXML(doc.first_node("data")->first_node("input")->first_node()));
 
     std::vector<double> time_int, time_cpp;
-    constexpr int test_time = 20;
+    constexpr int test_time = 10;
+    constexpr int slice = 5 + 1;
 
-    for (auto cnt : iota(1, test_time)) {
+    //for (auto&& i : inputdata) {
+    //    auto p = std::any_cast<CSValueMap>(&i);
+    //    interpreter->SetInput(*p);
+    //    interpreter->Tick(0.05);
+    //    auto p1 = interpreter->GetOutput();
+    //    cppengine->SetInput(*p); 
+    //    cppengine->Tick(0.05);
+    //    auto p2 = cppengine->GetOutput();
+    //    printCSValueMap(*p);
+    //    std::cout << "\noutput\n";
+    //    printCSValueMap(*p1);
+    //    std::cout << "\n\n";
+    //    printCSValueMap(*p2);
+    //    if (!anyEqual(*p1, *p2)) {
+    //        return 0;
+    //    }
+    //}
+
+    for (auto cnt : iota(1, slice)) {
+        auto ticks = test_time * inputdata.size() * cnt / slice;
         auto start = high_resolution_clock::now();
-        for (auto _ : iota(0, cnt)) {
-            for (auto &&i : inputdata) {
-                interpreter->SetInput(i);
+        for (auto _ : iota(0, test_time)) {
+            for (auto&& i : inputdata | take(inputdata.size() * cnt / slice)) {
+                auto p = std::any_cast<CSValueMap>(&i);
+                interpreter->SetInput(*p);
                 interpreter->Tick(0.05);
                 interpreter->GetOutput();
             }
         }
         auto end = high_resolution_clock::now();
-        auto duration = duration_cast<microseconds>(end - start);
-        time_int.push_back(double(duration.count()) * microseconds::period::num / microseconds::period::den / cnt /
-                           inputdata.size());
+        auto duration = duration_cast<milliseconds>(end - start);
+        time_int.push_back(double(duration.count()) / ticks);
     }
 
-    for (auto cnt : iota(1, test_time)) {
+    for (auto cnt : iota(1, slice)) {
+        auto ticks = test_time * inputdata.size() * cnt / slice;
         auto start = high_resolution_clock::now();
-        for (auto _ : iota(0, cnt)) {
-            for (auto &&i : inputdata) {
-                cppengine->SetInput(i);
+        for (auto _ : iota(0, test_time)) {
+            for (auto &&i : inputdata | take(inputdata.size() * cnt / slice)) {
+                auto p = std::any_cast<CSValueMap>(&i);
+                cppengine->SetInput(*p);
                 cppengine->Tick(0.05);
                 cppengine->GetOutput();
             }
         }
         auto end = high_resolution_clock::now();
-        auto duration = duration_cast<microseconds>(end - start);
-        time_cpp.push_back(double(duration.count()) * microseconds::period::num / microseconds::period::den / cnt /
-                           inputdata.size());
+        auto duration = duration_cast<milliseconds>(end - start);
+        time_cpp.push_back(double(duration.count()) / ticks);
     }
 
     // cout << "interpreter:\t";

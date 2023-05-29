@@ -32,6 +32,7 @@
 #include "defines/marco.hpp"
 #include "tools/seterror.hpp"
 #include "tools/showmsg.hpp"
+#include "tools/parseany.hpp"
 
 namespace {
 
@@ -104,24 +105,24 @@ bool RuleEngine::Tick(double time) {
         return false;
     }
 
-#ifdef __RULEENGINE_LOG
+// #define __RULEENGINE_RECORD
+
+#ifdef __RULEENGINE_RECORD
     static RuleEngine& logger = *this;
     static size_t cnt = 0;
     static std::vector<std::any> input, output;
     if(&logger == this){
         cnt++;
         input.push_back(engine.getInput());
-        output.push_back(*engine.getOutput());
-        if(cnt%500==0){
-            ofstream f{__PROJECT_ROOT_PATH"/bin/collected/data.hpp"};
-            f << "#include <unordered_map>\n#include <any>\n#include <string>\n#include <vector>\nusing CSValueMap = std::unordered_map<std::string, std::any>;\n";
-            f << "inline auto inputdata=";
-            f << tools::myany::printAnyToString<tools::myany::CppFormat>(input) << ";";
-            f << "inline auto outputdata=";
-            f << tools::myany::printAnyToString<tools::myany::CppFormat>(output) << ";";
+        if(cnt%100==0){
+            // ofstream f{ __PROJECT_ROOT_PATH"/bin/collected/data.xml" };
+            ofstream f{ "D:/data.xml" };
+            f << "<data><input>";
+            f << tools::myany::printAnyToString<tools::myany::XMLFormat>(input);
+            f << "</input></data>";
         }
     }
-#endif // __RULEENGINE_LOG
+#endif // __RULEENGINE_RECORD
 
     std::string info = "RuleEngine model Hit rules: " + (engine.hitRules() | std::views::transform([](int x) {return std::to_string(x); }) | tools::mystr::join(", ")) + "\n\n";
     info += std::format("RuleEngine model Cache: {}\n\n", tools::myany::printCSValueMapToString(engine.getCache()));

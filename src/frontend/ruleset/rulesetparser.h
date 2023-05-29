@@ -50,7 +50,9 @@ struct RuleSetMetaInfo {
     std::unordered_map<std::string, std::string> varType;
     /// @brief Stored type defines, type -> member name -> member type
     std::unordered_map<std::string, std::vector<std::tuple<std::string, std::string>>> typeDefines;
-    /// @brief Vars each atom rule changes, subruleset ID -> atom rule ID -> changed var names
+
+    // TODO: no need to store in info, move it to RuleSetParseInfo
+    /// @brief Vars that each atom rule changes, subruleset ID -> atom rule ID -> changed var names
     std::vector<std::vector<std::set<std::string>>> modifiedValue;
 };
 

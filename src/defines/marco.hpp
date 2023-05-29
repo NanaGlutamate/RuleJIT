@@ -26,3 +26,5 @@
 // #define __RULEJIT_PARALLEL_ENGINE
 
 // #define __DISABLE_ASSERT
+
+// #define __RULEENGINE_RECORD

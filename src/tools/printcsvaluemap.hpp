@@ -63,7 +63,7 @@ namespace helper {
 struct DefaultFormat {
     inline static constexpr auto ArrayFormat = "[{}]";
     inline static constexpr auto CSValueMapFormat = "{{{}}}";
-    inline static constexpr auto PairFormat = "{} : {}";
+    inline static constexpr auto PairFormat = "\"{}\" : {}";
     inline static constexpr auto StringFormat = "\"{}\"";
     inline static constexpr auto NumericalFormat = "{1}";
     inline static constexpr auto UnknownFormat = "[[Unknown]]";
@@ -93,7 +93,7 @@ inline std::string printAnyToString(const std::any &a) {
     return myany::visit<UnknownTypeHandler>(
         [](const auto& a) {
             if constexpr (std::is_same_v<std::vector<std::any>, std::remove_cvref_t<decltype(a)>>) {
-                return std::format(Formation::ArrayFormat, mystr::join(a | std::views::transform(printAnyToString<Formation>), ", "));
+                return std::format(Formation::ArrayFormat, mystr::join(a | std::views::transform(printAnyToString<Formation>), Formation::Spliter));
             }
             else if constexpr (std::is_same_v<std::unordered_map<std::string, std::any>,
                 std::remove_cvref_t<decltype(a)>>) {
@@ -117,8 +117,6 @@ inline std::string printCSValueMapToString(const std::unordered_map<std::string,
         }),
         Formation::Spliter));
 }
-
-
 
 /**
  * @brief tool function to print CSValueMap to std::cout
