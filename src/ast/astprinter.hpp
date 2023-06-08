@@ -202,7 +202,7 @@ struct ASTPrinter : public ASTVisitor {
         buffer << v.name;
         buffer << ", ";
         printIndent();
-        buffer << v.definedType->toString();
+        // buffer << v.definedType->toString();
         cnt--;
         printIndent();
         buffer << ")";

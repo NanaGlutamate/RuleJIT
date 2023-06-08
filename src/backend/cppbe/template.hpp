@@ -66,13 +66,13 @@ struct typedReal{{
     double v;
     using type = T;
     operator double() const{{ return v; }}
-    typedReal(double v) : v(v){{}}
+    typedReal(double v) : v(static_cast<T>(v)){{}}
     typedReal() : v(0.){{}}
     typedReal(const typedReal&) = default;
     template<typename Other>
     void operator=(const typedReal<Other>& o){{
         // type trans?
-        v = o.v;
+        v = static_cast<T>(o.v);
     }}
 }};
 

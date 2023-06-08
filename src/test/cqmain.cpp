@@ -38,11 +38,11 @@ int main() {
         std::cout << e.what() << std::endl;
         return 0;
     }
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 10; i++) {
         // engine.setInput(
         //     CSValueMap{{"Input1", std::vector<std::any>{double(1), double(3), double(5)}}, {"Input2", double(2)}});
         engine.setInput(
-            CSValueMap{{"Input1", std::vector<std::any>{double(1), double(3), double(5)}}, {"Input2", double(2)}});
+            CSValueMap{{"Input1", std::vector<std::any>{double(1), double(3), double(5)}}, {"Input2", double(2)}, {"Input3", std::string{"init"}}});
         try {
             engine.tick();
         } catch (std::logic_error(e)) {
