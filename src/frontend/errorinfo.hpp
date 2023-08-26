@@ -59,7 +59,7 @@ struct ErrorLocation {
  * @param now current pointer of lexer
  * @return ErrorLocation
  */
-ErrorLocation genErrorInfo(const std::vector<ExprAST *> &callStack,
+inline ErrorLocation genErrorInfo(const std::vector<ExprAST *> &callStack,
                            const std::map<ExprAST *, std::string_view> &ast2place,
                            const std::vector<const char *> &linePointer, const char *now, const char *next) {
     ExprAST *nearestAST = nullptr;

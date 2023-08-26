@@ -454,7 +454,7 @@ struct CQInterpreter : public ASTVisitor {
 
   public:
     std::vector<ExprAST *> currentExpr;
-    int getReturned() {
+    double getReturned() {
         my_assert(returned.type == Value::VALUE);
         return returned.value;
     }

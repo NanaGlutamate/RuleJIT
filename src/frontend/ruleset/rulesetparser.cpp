@@ -316,6 +316,7 @@ RuleSetParseInfo RuleSetParser::readSource(const std::string &srcXML, ContextSta
         data.modifiedValue.emplace_back();
         // std::vector<std::set<std::string>> singleModifiedValue;
         std::string expr = "{";
+        // ID of subruleset
         size_t cnt = 0;
         auto rules = subruleset->first_node("Rules");
         for (auto rule = rules->first_node("Rule"); rule; rule = rule->next_sibling("Rule"), cnt++) {

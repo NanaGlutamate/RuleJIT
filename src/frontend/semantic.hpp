@@ -81,6 +81,7 @@ struct ExpressionSemantic : public ASTVisitor {
      * @return std::string real function name which contains top-level expressions and global variable assignment
      */
     std::string friend operator|(ExpressionParser &parser, ExpressionSemantic &semantic) {
+        semantic.callStack.clear();
         std::vector<std::unique_ptr<ExprAST>> topLevelExprs;
         std::unique_ptr<ExprAST> tmp;
         while ((tmp = parser.getNextExpr()) != nullptr) {
@@ -97,6 +98,7 @@ struct ExpressionSemantic : public ASTVisitor {
      * @return std::string real function name which contains current input expression
      */
     std::string friend operator|(std::unique_ptr<ExprAST> ast, ExpressionSemantic &semantic) {
+        semantic.callStack.clear();
         std::vector<std::unique_ptr<ExprAST>> tmp;
         tmp.push_back(std::move(ast));
         return semantic.addUnnamedFunction(std::move(tmp));
@@ -149,6 +151,9 @@ struct ExpressionSemantic : public ASTVisitor {
                 // struct member access; TODO: access overload
                 auto definedType = globalInfo().typeDef.find(v.baseVar->type->getBaseTypeString());
                 if (definedType == globalInfo().typeDef.end()) {
+                    if(BuildInType.contains(*(v.baseVar->type))){
+                        return setError(std::format("Type \"{}\" has no member", v.baseVar->type->getBaseTypeString()));
+                    }
                     return setError(std::format("Type \"{}\" not defined", v.baseVar->type->getBaseTypeString()));
                 }
                 auto it = std::ranges::find_if(definedType->second, [&](const auto &it) {

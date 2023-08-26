@@ -69,7 +69,7 @@ inline auto visit(Func &&func, Any &&v) {
     // TODO: fix behaviour when Any = std::any&&, should call func(std::vector<std::any>&&) | func(CSValueMap&&) |
     // func(std::string&&)
 
-    // TODO: fix bug, if Any == std::any&&, leak
+    // TODO: use if constexpr to identify if func can called on data in std::any
     if (v.type() == typeid(double)) {
         return func(*std::any_cast<double>(&v));
     } else if (v.type() == typeid(float)) {

@@ -142,10 +142,10 @@ struct RuleSetEngine {
     std::vector<int> hitRules() {
         std::vector<int> ret;
         for (auto& ruleset : preprocess.subRuleSets) {
-            ret.push_back(ruleset.interpreter.getReturned());
+            ret.push_back(static_cast<int>(ruleset.interpreter.getReturned()));
         }
         for (auto& ruleset : ruleset.subRuleSets) {
-            ret.push_back(ruleset.interpreter.getReturned());
+            ret.push_back(static_cast<int>(ruleset.interpreter.getReturned()));
         }
         return ret;
     }
