@@ -56,7 +56,7 @@
                                 if (selfInfo.baseInfo.side == scannedInfo[i].baseInfo.side and (scannedInfo[i].baseInfo.damageLevel == 0 or scannedInfo[i].baseInfo.damageLevel == 1)){
                                     if (head_id == -1) {
                                         head_id = i
-                                    } else if (scannedInfo[i].baseInfo.id &lt; scannedInfo[head_id].baseInfo.id) {
+                                    } else if (scannedInfo[i].baseInfo.id &gt; scannedInfo[head_id].baseInfo.id) {
                                         head_id = i
                                     }
                                 }
@@ -77,7 +77,7 @@
                                 if (selfInfo.baseInfo.side != scannedInfo[i].baseInfo.side and (scannedInfo[i].baseInfo.damageLevel == 0 or scannedInfo[i].baseInfo.damageLevel == 1)){
                                     if (head_id == -1) {
                                         head_id = i
-                                    } else if (scannedInfo[i].baseInfo.id &lt; scannedInfo[head_id].baseInfo.id) {
+                                    } else if (scannedInfo[i].baseInfo.id &gt; scannedInfo[head_id].baseInfo.id) {
                                         head_id = i
                                     }
                                 }
@@ -100,6 +100,79 @@
                     </Expression>
                 </Value>
             </Param>
+            <Param name="position_offset" type="Vector3">
+                <Value>
+                    <Expression>
+                        {
+                            var tar = Vector3{.x = 0, .y = 0, .z = 0}
+                            if (head_index != -1 and enemy_head_index != -1) {
+                                var diff = scannedInfo[head_index].baseInfo.id - selfInfo.baseInfo.id
+                                var target_v = scannedInfo[head_index].velocity
+                                var n = pow(target_v.x * target_v.x + target_v.y * target_v.y, 0.5)
+                                var sin_yaw = if (n == 0) 0 else target_v.y / n
+                                var cos_yaw = if (n == 0) 1 else target_v.x / n
+                                if (distance > 6000) {
+                                    tar.x = -20 * cos_yaw * diff
+                                    tar.y = -20 * sin_yaw * diff
+                                } else {
+                                    var side = if (diff % 2) 1 else -1
+                                    diff = floor(diff / 2 + 0.75)
+                                    tar.x = 20 * sin_yaw * diff * side
+                                    tar.y = -20 * cos_yaw * diff * side
+                                }
+                            }
+                            tar
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="p_exp" type="Vector3">
+                <Value>
+                    <Expression>
+                        if (head_index == -1 or enemy_head_index == -1) {
+                            selfInfo.position
+                        } else {
+                            var tar = scannedInfo[head_index].position
+                            Vector3{
+                                .x = tar.x + position_offset.x,
+                                .y = tar.y + position_offset.y,
+                                .z = tar.z + position_offset.z
+                            }
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="position_diff" type="Vector3">
+                <Value>
+                    <Expression>
+                        Vector3{
+                            .x = p_exp.x - selfInfo.position.x,
+                            .y = p_exp.y - selfInfo.position.y,
+                            .z = 0
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="v_exp" type="Vector3">
+                <Value>
+                    <Expression>
+                        {
+                            var K1 = 0.8
+                            var K2 = 3
+                            Vector3{
+                                .x = v_target.x + K1 * position_diff.x + K2 * (v_target.x - selfInfo.velocity.x),
+                                .y = v_target.y + K1 * position_diff.y + K2 * (v_target.y - selfInfo.velocity.y),
+                                .z = 0
+                            }
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="v_target" type="Vector3">
+                <Value>
+                    <Expression>if (head_index == -1) Vector3{.x = 0, .y = 0, .z = 0} else scannedInfo[head_index].velocity</Expression>
+                </Value>
+            </Param>
             <Param name="realyaw" type="float64">
                 <Value>
                     <Expression>
@@ -110,56 +183,37 @@
             <Param name="yawdiff" type="float64">
                 <Value>
                     <Expression>
-                        if (head_index == -1 or (scannedInfo[head_index].baseInfo.id == selfInfo.baseInfo.id)) 0
-                        else atan2(
-                            scannedInfo[head_index].position.y - selfInfo.position.y,
-                            scannedInfo[head_index].position.x - selfInfo.position.x
-                        ) - realyaw
-                    </Expression>
-                </Value>
-            </Param>
-            <Param name="position_diff" type="Vector3">
-                <Value>
-                    <Expression>
-                        if (head_index == -1 or enemy_head_index == -1) {
-                            Vector3{.x = 0, .y = 0, .z = 0}
-                        } else {
-                            var diff = selfInfo.baseInfo.id - head_index
-                            var target_v = scannedInfo[head_index].velocity
-                            var n = pow(target_v.x * target_v.x + target_v.y * target_v.y, 0.5)
-                            var sin_yaw = target_v.y / n
-                            var cos_yaw = target_v.x / n
-                            var tar = scannedInfo[enemy_head_index].position
-                            if (distance > 5000) {
-                                tar.x = tar.x - 15 * cos_yaw * diff
-                                tar.y = tar.y - 15 * sin_yaw * diff
-                            } else {
-                                var side = if ((selfInfo.baseInfo.id - head_index) % 2) 1 else -1
-                                diff = floor(diff / 2 + 0.6)
-                                tar.x = tar.x - 10 * sin_yaw * diff * side
-                                tar.y = tar.y - 10 * cos_yaw * diff * side
-                            }
-                            tar.x = tar.x - selfInfo.position.x
-                            tar.y = tar.y - selfInfo.position.y
-                            tar.z = 0
-                            tar
+                        {
+                            var tmp = atan2(v_target.y, v_target.x) - realyaw
+                            if (tmp &gt; 3.1415926) tmp = tmp - 2 * 3.1415926
+                            if (tmp &lt; -3.1415926) tmp = tmp + 2 * 3.1415926
+                            tmp
                         }
                     </Expression>
                 </Value>
             </Param>
-            <Param name="v_exp" type="Vector3">
+            <Param name="same_direction" type="float64">
+                <Value>
+                    <Expression>fabs(yawdiff) &lt; 1.7</Expression>
+                </Value>
+            </Param>
+            <Param name="in_front" type="float64">
                 <Value>
                     <Expression>
                         {
-                            var K1 = 1
-                            var K2 = 5
-                            var v_target = if (head_index == -1) Vector3{.x = 0, .y = 0, .z = 0} else scannedInfo[head_index].velocity
-                            Vector3{
-                                .x = v_target.x + K1 * position_diff.x + K2 * (v_target.x - selfInfo.velocity.x),
-                                .y = v_target.y + K1 * position_diff.y + K2 * (v_target.y - selfInfo.velocity.y),
-                                .z = 0
-                            }
+                            var tmp = atan2(position_diff.y, position_diff.x) - realyaw
+                            if (tmp &gt; 3.1415926) tmp = tmp - 2 * 3.1415926
+                            if (tmp &lt; -3.1415926) tmp = tmp + 2 * 3.1415926
+                            fabs(tmp) &lt; 1.7
                         }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="is_head" type="float64">
+                <Value>
+                    <Expression>
+                        if (head_index == -1 or enemy_head_index == -1) false
+                        else scannedInfo[head_index].baseInfo.id == selfInfo.baseInfo.id
                     </Expression>
                 </Value>
             </Param>
@@ -172,21 +226,29 @@
             <Rules>
                 <Rule>
                     <Condition>
-                        <Expression>(not attacked) and distance &lt; 500</Expression>
+                        <Expression>true</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
-                            <Target>attacked</Target>
+                            <Target>ActionId</Target>
                             <Value>
-                                <Expression>true</Expression>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>15</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>1.2</Expression>
                             </Value>
                         </Assignment>
                     </Consequence>
                 </Rule>
-            </Rules>
-        </SubRuleSet>
-        <SubRuleSet>
-            <Rules>
                 <Rule>
                     <Condition>
                         <Expression>head_index == -1 or enemy_head_index == -1</Expression>
@@ -202,7 +264,7 @@
                 </Rule>
                 <Rule>
                     <Condition>
-                        <Expression>distance &lt; 4000 and not start_fire</Expression>
+                        <Expression>distance + ((selfInfo.baseInfo.id * 7) % 17) * 3 &lt; 2000 and not start_fire</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
@@ -221,37 +283,7 @@
                 </Rule>
                 <Rule>
                     <Condition>
-                        <Expression>scannedInfo[head_index].baseInfo.id == selfInfo.baseInfo.id and distance &gt; 5000</Expression>
-                    </Condition>
-                    <Consequence>
-                        <Assignment>
-                            <Target>ActionId</Target>
-                            <Value>
-                                <Expression>7</Expression>
-                            </Value>
-                        </Assignment>
-                        <Assignment>
-                            <Target>Param1</Target>
-                            <Value>
-                                <Expression>20</Expression>
-                            </Value>
-                        </Assignment>
-                        <Assignment>
-                            <Target>Param2</Target>
-                            <Value>
-                                <Expression>
-                                    atan2(
-                                        scannedInfo[enemy_head_index].position.y - selfInfo.position.y,
-                                        scannedInfo[enemy_head_index].position.x - selfInfo.position.x
-                                    )
-                                </Expression>
-                            </Value>
-                        </Assignment>
-                    </Consequence>
-                </Rule>
-                <Rule>
-                    <Condition>
-                        <Expression>attacked</Expression>
+                        <Expression>is_head and attacked</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
@@ -264,7 +296,7 @@
                 </Rule>
                 <Rule>
                     <Condition>
-                        <Expression>scannedInfo[head_index].baseInfo.id == selfInfo.baseInfo.id</Expression>
+                        <Expression>is_head and distance &gt; 5000</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
@@ -276,7 +308,7 @@
                         <Assignment>
                             <Target>Param1</Target>
                             <Value>
-                                <Expression>25</Expression>
+                                <Expression>15</Expression>
                             </Value>
                         </Assignment>
                         <Assignment>
@@ -288,6 +320,144 @@
                                         scannedInfo[enemy_head_index].position.x - selfInfo.position.x
                                     )
                                 </Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>is_head and distance &gt; 4500</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>
+                                    atan2(
+                                        scannedInfo[enemy_head_index].position.y - selfInfo.position.y,
+                                        scannedInfo[enemy_head_index].position.x - selfInfo.position.x
+                                    )
+                                </Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>is_head</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>15</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>
+                                    atan2(
+                                        scannedInfo[enemy_head_index].position.y - selfInfo.position.y,
+                                        scannedInfo[enemy_head_index].position.x - selfInfo.position.x
+                                    )
+                                </Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>
+                            // same_direction and in_front
+                            true
+                        </Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>pow(pow(v_exp.x, 2) + pow(v_exp.y, 2), 0.5)</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>atan2(v_exp.y, v_exp.x)</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>not same_direction and in_front</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>-5</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>atan2(v_exp.y, v_exp.x)</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>same_direction and not in_front</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>pow(pow(v_target.x, 2) + pow(v_target.y, 2), 0.5) / 2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>atan2(v_exp.y, v_exp.x)</Expression>
                             </Value>
                         </Assignment>
                     </Consequence>
@@ -306,7 +476,7 @@
                         <Assignment>
                             <Target>Param1</Target>
                             <Value>
-                                <Expression>pow(pow(v_exp.x, 2) + pow(v_exp.y, 2), 0.5)</Expression>
+                                <Expression>-5</Expression>
                             </Value>
                         </Assignment>
                         <Assignment>

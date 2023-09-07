@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<ModelInfo id="e467b638-31ff-4f14-93ec-11d0397c87f5" name="car_hull" category="ATOMIC_ENTITY" hasGeoInfo="false" dllName="car_1v1_behaviour" multiples="1" displayName="car_hull">
+ <Parameters>
+  <Parameter usage="init,output" value="" name="ID" type="uint64" displayName="ID" unit=""/>
+  <Parameter usage="init,output" value="" name="InstanceName" type="string" displayName="名称" unit=""/>
+  <Parameter usage="init,output" value="" name="ForceSideID" type="uint16" displayName="所属阵营" unit=""/>
+  <Parameter usage="init,output" value="e467b638-31ff-4f14-93ec-11d0397c87f5" name="ModelID" type="string" displayName="模型类型ID" unit=""/>
+  <Parameter usage="output" value="" name="KeyMessages" type="string[]" displayName="关键信息" unit=""/>
+  <Parameter usage="output" value="" name="State" type="uint16" displayName="模型状态" unit=""/>
+  <Parameter usage="output" value="0" name="ActionId" type="uint64" displayName="ActionId" unit=""/>
+  <Parameter usage="output" value="0" name="Param1" type="float64" displayName="Param1" unit=""/>
+  <Parameter usage="output" value="0" name="Param2" type="float64" displayName="Param2" unit=""/>
+  <Parameter usage="input" value="" name="selfInfo" type="EntityInfo" displayName="selfInfo" unit=""/>
+  <Parameter usage="input" value="" name="scannedInfo" type="EntityInfo[]" displayName="scannedInfo" unit=""/>
+  <Parameter usage="input" value="" name="weaponinfo" type="WeaponInfo[]" displayName="weaponinfo" unit=""/>
+  <Parameter usage="input" value="0" name="roll" type="float64" displayName="roll" unit=""/>
+  <Parameter usage="input" value="0" name="yaw" type="float64" displayName="yaw" unit=""/>
+  <Parameter usage="input" value="0" name="pitch" type="float64" displayName="pitch" unit=""/>
+ </Parameters>
+</ModelInfo>

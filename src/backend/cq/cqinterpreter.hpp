@@ -245,6 +245,8 @@ struct CQInterpreter : public ASTVisitor {
             {">", [](auto x, auto y) { return x > y; }},   {"<", [](auto x, auto y) { return x < y; }},
             {"==", [](auto x, auto y) { return x == y; }}, {"!=", [](auto x, auto y) { return x != y; }},
             {">=", [](auto x, auto y) { return x >= y; }}, {"<=", [](auto x, auto y) { return x <= y; }},
+            // TODO: not make sense
+            {"%", [](auto x, auto y) { return static_cast<int64_t>(x) % static_cast<int64_t>(y); }},
         };
         static std::map<std::string, std::function<double(double, double)>> shortCutBinOp{
             {"&&", [](auto x, auto y) { return x && y; }},
