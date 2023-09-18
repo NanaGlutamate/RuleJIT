@@ -49,8 +49,8 @@ inline static std::map<TypeIndentifier, TypeLayoutInfo> buildInTypeLayoutInfo{
     ADD_BUILDIN_TYPE(float32), ADD_BUILDIN_TYPE(float64), ADD_BUILDIN_TYPE(bool),
 };
 
-using StructInfo = std::vector<std::tuple<MemberIdentifier, TypeIndentifier>>;
 struct ComplexType {
+    using StructInfo = std::vector<std::tuple<MemberIdentifier, TypeIndentifier>>;
     ComplexType(const StructInfo &defines, const StructManager &structManager) {
         size_t align = 0, offset = 0;
         for (auto &&[ident, type] : defines) {

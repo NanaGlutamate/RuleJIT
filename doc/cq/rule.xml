@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- <?xml-model href="example1.0.xsd"?> -->
+<RuleSet version="1.0">
+    <TypeDefines>
+        <TypeDefine type="Location">
+            <Variable name="altitude" type="float64" />
+            <Variable name="longitude" type="float64" />
+            <Variable name="latitude" type="float64" />
+        </TypeDefine>
+        <TypeDefine type="Vector3">
+            <Variable name="x" type="float64" />
+            <Variable name="y" type="float64" />
+            <Variable name="z" type="float64" />
+        </TypeDefine>
+        <TypeDefine type="BaseInfo">
+            <Variable name="id" type="uint64"/>
+            <Variable name="side" type="uint16"/>
+            <Variable name="type" type="uint16"/>
+            <Variable name="damageLevel" type="uint16"/>
+        </TypeDefine>
+        <TypeDefine type="EntityInfo">
+            <Variable name="baseInfo" type="BaseInfo"/>
+            <Variable name="velocity" type="Vector3"/>
+            <Variable name="position" type="Vector3"/>
+        </TypeDefine>
+        <TypeDefine type="WeaponInfo">
+            <Variable name="ammo" type="int32"/>
+            <Variable name="reloadingState" type="float64"/>
+            <Variable name="range" type="float64"/>
+            <Variable name="direction" type="float64"/>
+            <Variable name="weaponName" type="string"/>
+        </TypeDefine>
+    </TypeDefines>
+    <MetaInfo>
+        <Inputs>
+            <Param name="selfInfo" type="EntityInfo"/>
+            <Param name="scannedInfo" type="EntityInfo[]"/>
+            <Param name="roll" type="float64"/>
+            <Param name="pitch" type="float64"/>
+            <Param name="yaw" type="float64"/>
+            <Param name="weaponinfo" type="WeaponInfo[]"/>
+        </Inputs>
+        <Outputs>
+            <Param name="ActionId" type="uint64"/>
+            <Param name="Param1" type="float64"/>
+            <Param name="Param2" type="float64"/>
+        </Outputs>
+        <Caches></Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>true</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>15</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>1.2</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

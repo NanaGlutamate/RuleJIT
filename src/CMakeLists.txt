@@ -4,6 +4,7 @@ add_subdirectory(tools)
 
 add_subdirectory(frontend)
 
+add_subdirectory(bytecode)
 add_subdirectory(ir)
 
 add_subdirectory(backend)
