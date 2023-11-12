@@ -7,13 +7,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # LLVM is not required if jit/aot module is not needed
 
 # set(LLVM_DIR ${PROJECT_SOURCE_DIR}/../llvm-install-x86-debug-1507-nozlibstd/lib/cmake/llvm)
-# # set(LLVM_DIR ${PROJECT_SOURCE_DIR}/../llvm-install-x86-relwithdebinfo-1507-nozlibstd/lib/cmake/llvm)
-# find_package(LLVM REQUIRED CONFIG)
-# message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-# message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-# include_directories(AFTER ${LLVM_INCLUDE_DIRS})
-# separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
-# add_definitions(${LLVM_DEFINITIONS_LIST})
+set(LLVM_DIR ${PROJECT_SOURCE_DIR}/../llvm-install-x86-relwithdebinfo-1507-nozlibstd/lib/cmake/llvm)
+
+find_package(LLVM REQUIRED CONFIG)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+include_directories(AFTER ${LLVM_INCLUDE_DIRS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
 
 include_directories(AFTER ${PROJECT_SOURCE_DIR}/src)
 include_directories(AFTER ${PROJECT_SOURCE_DIR}/extern)

@@ -17,6 +17,7 @@ add_executable(cppbe_test ${FRONTEND_SRC} ${RULESET_SRC} ${AST_SRC} ${CPP_BACKEN
 
 add_executable(temp_test temp.cpp)
 
+add_executable(bytecode_test ${BYTECODE_SRC} bytecodemain.cpp)
 add_executable(jit_test ${FRONTEND_SRC} ${RULESET_SRC} ${AST_SRC} ${JIT_BACKEND_SRC} jitmain.cpp)
 
 # llvm_map_components_to_libnames(

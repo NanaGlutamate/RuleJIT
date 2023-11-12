@@ -187,6 +187,9 @@
         "codecvt": "cpp",
         "filesystem": "cpp",
         "queue": "cpp",
-        "execution": "cpp"
+        "execution": "cpp",
+        "coroutine": "cpp",
+        "*.inc": "cpp",
+        "*.rh": "cpp"
     }
 }

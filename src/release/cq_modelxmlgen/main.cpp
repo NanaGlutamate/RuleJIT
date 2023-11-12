@@ -82,5 +82,13 @@ int main(int argc, const char **argv) {
         }
 
     }
-    gen.gen(output, in);
+    try{
+        gen.gen(output, in);
+    }catch(std::exception& e){
+        std::cout << "error: " << e.what() << std::endl;
+        return 1;
+    }catch(...){
+        std::cout << "unknown error." << std::endl;
+        return 1;
+    }
 }
