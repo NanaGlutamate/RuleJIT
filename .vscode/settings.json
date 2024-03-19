@@ -190,6 +190,7 @@
         "execution": "cpp",
         "coroutine": "cpp",
         "*.inc": "cpp",
-        "*.rh": "cpp"
+        "*.rh": "cpp",
+        "expected": "cpp"
     }
 }

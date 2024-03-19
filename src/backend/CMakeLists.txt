@@ -1,5 +1,6 @@
 add_subdirectory(cbe)
 add_subdirectory(cppbe)
+add_subdirectory(pybe)
 add_subdirectory(jit)
 add_subdirectory(cq)
 
@@ -8,5 +9,6 @@ file(GLOB_RECURSE SRC ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_D
 # set(BACKEND_SRC ${SRC} PARENT_SCOPE)
 set(C_BACKEND_SRC ${C_BACKEND_SRC} PARENT_SCOPE)
 set(CPP_BACKEND_SRC ${CPP_BACKEND_SRC} PARENT_SCOPE)
+set(PY_BACKEND_SRC ${PY_BACKEND_SRC} PARENT_SCOPE)
 set(JIT_BACKEND_SRC ${JIT_BACKEND_SRC} PARENT_SCOPE)
 set(CQ_BACKEND_SRC ${CQ_BACKEND_SRC} PARENT_SCOPE)

@@ -12,7 +12,7 @@
   <Parameter usage="output" value="0" name="Param2" type="float64" displayName="Param2" unit=""/>
   <Parameter usage="input" value="" name="selfInfo" type="EntityInfo" displayName="selfInfo" unit=""/>
   <Parameter usage="input" value="" name="scannedInfo" type="EntityInfo[]" displayName="scannedInfo" unit=""/>
-  <Parameter usage="input" value="" name="weaponinfo" type="WeaponInfo[]" displayName="weaponinfo" unit=""/>
+  <Parameter usage="input" value="" name="weaponInfo" type="WeaponInfo[]" displayName="weaponinfo" unit=""/>
   <Parameter usage="input" value="0" name="roll" type="float64" displayName="roll" unit=""/>
   <Parameter usage="input" value="0" name="yaw" type="float64" displayName="yaw" unit=""/>
   <Parameter usage="input" value="0" name="pitch" type="float64" displayName="pitch" unit=""/>

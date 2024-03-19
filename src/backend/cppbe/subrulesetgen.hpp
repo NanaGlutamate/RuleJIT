@@ -144,16 +144,16 @@ struct SubRuleSetCodeGen : public ASTVisitor {
                 {"and", "&&"},
                 {"xor", "^"},
             };
-            // returned += "(double(";
+            returned += "(double(";
             v.lhs->accept(this);
             auto tmp = v.op;
             if (auto it = opTrans.find(tmp); it != opTrans.end()) {
                 tmp = it->second;
             }
-            // returned += ") " + tmp + " double(";
+            returned += ") " + tmp + " double(";
             returned += " " + tmp + " ";
             v.rhs->accept(this);
-            // returned += "))";
+            returned += "))";
         } else {
             // TODO: check if assign to cache, if so, add write func to modified
             // Assign to local var whose name is same as cache?

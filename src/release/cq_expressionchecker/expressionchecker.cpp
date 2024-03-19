@@ -9,22 +9,24 @@ int main(){
 
     ExpressionChecker checker;
 
-    checker.addTypeDef("Vector3", {{"x", "float64"}, {"y", "float64"}, {"z", "float64"}});
-    checker.addVarDef("add", "float64");
-    checker.addVarDef("v", "Vector3");
+    checker.checkXML("D:\\Desktop\\rule.xml");
 
-    CHECK("a + b");
-    CHECK("add + v");
-    CHECK("{var a = 1; a + add}");
+    // checker.addTypeDef("Vector3", {{"x", "float64"}, {"y", "float64"}, {"z", "float64"}});
+    // checker.addVarDef("add", "float64");
+    // checker.addVarDef("v", "Vector3");
 
-    checker.removeTypeDef("Vector3");
+    // CHECK("a + b");
+    // CHECK("add + v");
+    // CHECK("{var a = 1; a + add}");
 
-    CHECK("add");
-    CHECK("v");
+    // checker.removeTypeDef("Vector3");
 
-    checker.removeVarDef("add");
+    // CHECK("add");
+    // CHECK("v");
 
-    CHECK("add");
+    // checker.removeVarDef("add");
+
+    // CHECK("add");
 
     return 0;
 }

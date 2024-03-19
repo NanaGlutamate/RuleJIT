@@ -1,3 +1,5 @@
+#pragma once
+
 #include <format>
 #include <string>
 #include <tuple>

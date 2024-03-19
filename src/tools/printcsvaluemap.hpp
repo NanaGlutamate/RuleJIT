@@ -70,6 +70,16 @@ struct DefaultFormat {
     inline static constexpr auto Spliter = ", ";
 };
 
+struct PythonFormat {
+    inline static constexpr auto ArrayFormat = "[{}]";
+    inline static constexpr auto CSValueMapFormat = "{{{}}}";
+    inline static constexpr auto PairFormat = "\"{}\" : {}";
+    inline static constexpr auto StringFormat = "\"{}\"";
+    inline static constexpr auto NumericalFormat = "{1}";
+    inline static constexpr auto UnknownFormat = "[[Unknown]]";
+    inline static constexpr auto Spliter = ", ";
+};
+
 struct CppFormat {
     inline static constexpr auto ArrayFormat = "std::vector<std::any>{{{}}}";
     inline static constexpr auto CSValueMapFormat = "CSValueMap{{{}}}";

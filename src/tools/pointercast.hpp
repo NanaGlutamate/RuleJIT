@@ -30,7 +30,7 @@ namespace tools::myunique {
  * @param src source unique pointer
  * @return std::unique_ptr<Tar> casted unique pointer
  */
-template <typename Tar, typename Src> std::unique_ptr<Tar> unique_cast(std::unique_ptr<Src> &src) {
+template <typename Tar, typename Src> [[deprecated]] std::unique_ptr<Tar> unique_cast(std::unique_ptr<Src> &src) {
     if constexpr (std::is_base_of_v<Tar, Src>) {
         return std::move(src);
     } else {

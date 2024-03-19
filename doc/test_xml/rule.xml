@@ -38,7 +38,7 @@
             <Param name="roll" type="float64"/>
             <Param name="pitch" type="float64"/>
             <Param name="yaw" type="float64"/>
-            <Param name="weaponinfo" type="WeaponInfo[]"/>
+            <Param name="weaponInfo" type="WeaponInfo[]"/>
         </Inputs>
         <Outputs>
             <Param name="ActionId" type="uint64"/>
@@ -121,7 +121,7 @@
             <Param name="enemyid" type="float64">
                 <Value>
                     <Expression>
-                        if(not scannedInfo.length())
+                        if(scannedInfo.length() == 0)
                             0
                         else
                             scannedInfo[enemy_index].baseInfo.id
@@ -145,10 +145,10 @@
                 <Value>
                     <Expression>
                         // greater than 0 if target in right, less than 0 if target in left; rad
-                        if(not weaponinfo.length()){
+                        if(not weaponInfo.length()){
                             0
                         }else{
-                            var i = phi - weaponinfo[0].direction
+                            var i = phi - weaponInfo[0].direction
                             while(i &gt; 3.14159265358979324) i = i - 2 * 3.14159265358979324
                             while(i &lt; -3.14159265358979324) i = i + 2 * 3.14159265358979324
                             i
@@ -163,7 +163,7 @@
             <Rules>
                 <Rule>
                     <Condition>
-                        <Expression>scannedInfo.length() == 0 or weaponinfo.length() == 0</Expression>
+                        <Expression>scannedInfo.length() == 0 or weaponInfo.length() == 0</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
@@ -176,7 +176,7 @@
                 </Rule>
                 <Rule>
                     <Condition>
-                        <Expression>weaponinfo[0].ammo == 0</Expression>
+                        <Expression>weaponInfo[0].ammo == 0</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>

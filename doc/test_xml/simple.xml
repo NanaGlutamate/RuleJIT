@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="example1.0.xsd"?>
+<RuleSet version="1.0">
+    <TypeDefines></TypeDefines>
+    <MetaInfo>
+        <Inputs>
+            <Param name="selfPos" type="float64"/>
+            <Param name="tarPos" type="float64"/>
+        </Inputs>
+        <Outputs>
+            <Param name="acc" type="float64"/>
+        </Outputs>
+        <Caches>
+            <Param name="diff" type="float64">
+                <Value>
+                    <Expression>tarPos - selfPos</Expression>
+                </Value>
+            </Param>
+        </Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>diff &gt; 0.5</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>acc</Target>
+                            <Value>
+                                <Expression>-0.5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>diff &lt; -0.5</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>acc</Target>
+                            <Value>
+                                <Expression>0.5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

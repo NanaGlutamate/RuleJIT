@@ -72,6 +72,11 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
         auto library_dir_ = getLibDir();
         filePath = library_dir_ + "rule.xml";
     }
+    if (auto it = value.find("enableLog"); it != value.end()) {
+        enableLog = std::any_cast<bool>(it->second);
+    } else {
+        enableLog = false;
+    }
     if (!log_) {
         SetLogFun([](const std::string& msg, int level) {
             std::cout << msg;
@@ -149,12 +154,12 @@ std::unordered_map<std::string, std::any> *RuleEngine::GetOutput() {
     return &params_;
 }
 
-CSModelObject *__stdcall CreateModelObject() {
+extern "C" CSModelObject *__stdcall CreateModelObject() {
     CSModelObject *model = new RuleEngine();
     return model;
 }
 
-void __stdcall DestroyMemory(void *mem, bool is_array) {
+extern "C" void __stdcall DestroyMemory(void *mem, bool is_array) {
     if (is_array) {
         delete[] ((RuleEngine *)mem);
     } else {
