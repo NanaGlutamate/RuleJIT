@@ -20,27 +20,27 @@
 
 namespace tools::mystr {
 
-template <std::ranges::range _Range> inline constexpr std::string join(_Range &&range, const std::string &middle) {
+template <std::ranges::range _Range>
+inline constexpr std::string join(_Range &&range, const std::string &middle) {
     std::string result;
     bool first = true;
     for (auto &&item : range) {
         static_assert(std::is_same_v<std::string, std::remove_cvref_t<decltype(item)>> ||
-                          std::is_same_v<std::string_view, std::remove_cvref_t<decltype(item)>>,
-                      "join only support std::string and std::string_view");
+                            std::is_same_v<std::string_view, std::remove_cvref_t<decltype(item)>>,
+                        "join only support std::string and std::string_view");
         if (first) {
             first = false;
         } else {
             result += middle;
         }
-        if constexpr (std::is_constructible_v<std::string, decltype(item)>) {
-            result += item;
-        }
+        result += item;
     }
     return result;
 }
 
 struct StringJoinner {
-    template <std::ranges::range Ty> friend constexpr std::string operator|(Ty &&tar, const StringJoinner &j) {
+    template <std::ranges::range Ty>
+    friend constexpr std::string operator|(Ty &&tar, const StringJoinner &j) {
         return join(std::forward<Ty>(tar), j.middle);
     }
     std::string middle;

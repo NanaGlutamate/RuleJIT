@@ -70,7 +70,17 @@ class RuleEngine : public CSModelObject {
      * @return std::unordered_map<std::string, std::any>* output value
      */
     virtual std::unordered_map<std::string, std::any> *GetOutput() override;
+  
+  protected:
+    void WriteLog(const std::string &msg, uint32_t level = 0) {
+        if(!enableLog){
+            return;
+        }
+        CSModelObject::WriteLog(msg, level);
+    }
 
   private:
+    std::unordered_map<std::string, std::vector<std::any>> autoCollectedArray;
     rulejit::cq::RuleSetEngine engine;
+    bool enableLog;
 };

@@ -12,11 +12,13 @@
  * <tr><th>Author</th><th>Date</th><th>Changes</th></tr>
  * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
  * <tr><td>djw</td><td>2023-03-29</td><td>Move XML-Parsering to frontend/ruleset</td></tr>
- * <tr><td>djw</td><td>2023-04-18</td><td>make every <Value> a single subruleset</td></tr>
- * <tr><td>djw</td><td>2023-04-18</td><td>make <Value> a single subruleset</td></tr>
+ * <tr><td>djw</td><td>2023-04-18</td><td>make every intermediate var a subruleset</td></tr>
+ * <tr><td>djw</td><td>2023-04-18</td><td>make all intermediate var a single subruleset</td></tr>
+ * <tr><td>djw</td><td>2023-05-11</td><td>sort type before generate defines</td></tr>
  * </table>
  */
 #include <iostream>
+#include <ranges>
 
 #include "backend/cppbe/template.hpp"
 #include "cppengine.h"
@@ -44,7 +46,7 @@ std::string CppStyleParamType(const TypeInfo &type) {
     
     if (type.isBaseType()) {
         auto tmp = type.getBaseTypeString();
-        if (rulesetxml::baseNumericalData.contains(tmp)) {
+        if (ruleset::baseNumericalData.contains(tmp)) {
             return "typedReal<" + tmp + ">";
         } else {
             return "const " + tmp + "&";
@@ -67,7 +69,7 @@ std::string CppStyleParamType(const TypeInfo &type) {
  * @return std::vector<std::tuple<std::string, std::string>> assembled type which can used in type defines
  */
 std::vector<std::tuple<std::string, std::string>> assembleType(const std::vector<std::string> &src,
-                                                               rulesetxml::RuleSetMetaInfo &m) {
+                                                               ruleset::RuleSetMetaInfo &m) {
     std::vector<std::tuple<std::string, std::string>> ret;
     for (auto &&name : src) {
         if (auto it = m.varType.find(name); it != m.varType.end()) {
@@ -77,6 +79,19 @@ std::vector<std::tuple<std::string, std::string>> assembleType(const std::vector
     return ret;
 }
 
+/**
+ * @brief get base type of given type
+ * 
+ * @param type given type
+ * @return std::string_view 
+ */
+std::string_view baseType(std::string_view type){
+    if(type.ends_with("[]")){
+        return baseType(type.substr(type.size()-2));
+    }
+    return type;
+}
+
 } // namespace
 
 namespace rulejit::cppgen {
@@ -84,15 +99,12 @@ namespace rulejit::cppgen {
 void CppEngine::buildFromSource(const std::string &srcXML) {
 
     using namespace rulejit::cppgen::templates;
-    using namespace rulejit::rulesetxml;
+    using namespace rulejit::ruleset;
 
     // discard statements in preDefines
     // TODO: execute preDefines once(in RuleSet::Init()) to handle init value?
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
-    auto [preDefines, preProcess, subRuleSets, _] = RuleSetParser::readSource(srcXML, context, data);
-#else
     auto [preDefines, preProcess, subRuleSets] = RuleSetParser::readSource(srcXML, context, data);
-#endif
+    context.scope.begin()->varDef.clear();
 
     std::set<std::string> notGenerate{preProcess.begin(), preProcess.end()};
     notGenerate.emplace(preDefines);
@@ -152,8 +164,30 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     data.typeDefines.emplace("_Input", assembleType(data.inputVar, data));
     data.typeDefines.emplace("_Output", assembleType(data.outputVar, data));
     data.typeDefines.emplace("_Cache", assembleType(data.cacheVar, data));
-    // collect typedefs in XML
-    for (auto &&[name, members] : data.typeDefines) {
+
+    std::map<std::string, std::set<std::string>> incompleteType;
+    std::vector<std::string> completeType;
+    for (auto&& [name, members] : data.typeDefines){
+        std::set<std::string> tmp;
+        for (auto&& [mname, mtype] : members){
+            auto tmp1 = mtype.substr(0, mtype.find_first_of('['));
+            if(baseData.contains(tmp1)){
+                continue;
+            }
+            tmp.emplace(tmp1);
+        }
+        if(tmp.empty()){
+            completeType.emplace_back(name);
+        }else{
+            incompleteType.emplace(name, std::move(tmp));
+        }
+    }
+
+    while(!completeType.empty()){
+        auto name = completeType.back();
+        completeType.pop_back();
+        auto& members = data.typeDefines[name];
+
         std::string member, serialize, deserialize;
         for (auto& [token, _type] : members) {
             auto type = _type;
@@ -173,29 +207,61 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
             deserialize += std::format(typeDeserialize, type, token);
         }
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
+
+        for (auto it = incompleteType.begin(); it != incompleteType.end();){
+            it->second.erase(name);
+            if(it->second.empty()){
+                completeType.push_back(it->first);
+                it = incompleteType.erase(it);
+            }else{
+                ++it;
+            }
+        }
     }
+    // // collect typedefs in XML
+    // for (auto &&[name, members] : data.typeDefines) {
+    //     std::string member, serialize, deserialize;
+    //     for (auto& [token, _type] : members) {
+    //         auto type = _type;
+    //         std::string pre, suf;
+    //         while (type.back() == ']') {
+    //             type.erase(type.end() - 2, type.end());
+    //             pre += "std::vector<";
+    //             suf += ">";
+    //         }
+    //         if (baseNumericalData.contains(type)) {
+    //             pre += "typedReal<";
+    //             suf += ">";
+    //         }
+    //         type = pre + type + suf;
+    //         member += std::format(typeMember, type, token);
+    //         serialize += std::format(typeSerialize, type, token);
+    //         deserialize += std::format(typeDeserialize, type, token);
+    //     }
+    //     typedefs += std::format(typeDef, name, member, deserialize, serialize);
+    // }
+
     // collect typedefs in Expression
     for (auto &&[name, type] : context.global.typeDef) {
         if (data.typeDefines.contains(name)) {
-            // means type is defined in XML and add to context, so skip
+            // means type is already added to context, so skip
             continue;
         }
         std::string member, serialize, deserialize;
-        if (type.getIdent() != "struct") {
-            error(std::format("unsupported type: {}", type.toString()));
+        if (auto it = context.global.typeType.find(name); it == context.global.typeType.end() || it->second != "struct") {
+            error(std::format("do not support class type for now: {}", name));
         }
-        auto& subTypes = type.getSubTypes();
-        auto& tokens = type.getTokens();
-        for (size_t i = 0; i < subTypes.size(); ++i) {
-            member += std::format(typeMember, SubRuleSetCodeGen::CppStyleType(subTypes[i]), tokens[i + 1]);
-            serialize += std::format(typeSerialize, SubRuleSetCodeGen::CppStyleType(subTypes[i]), tokens[i + 1]);
-            deserialize += std::format(typeDeserialize, SubRuleSetCodeGen::CppStyleType(subTypes[i]), tokens[i + 1]);
+        for (auto& [memberName, memberType] : type) {
+            auto cppType = SubRuleSetCodeGen::CppStyleType(memberType);
+            member += std::format(typeMember, cppType, memberName);
+            serialize += std::format(typeSerialize, cppType, memberName);
+            deserialize += std::format(typeDeserialize, cppType, memberName);
         }
         typedefs += std::format(typeDef, name, member, deserialize, serialize);
     }
 
     // collect func def
-    std::string funcDefs, externDefs;
+    std::string funcDefs, funcPreDefs, externDefs;
     for (auto &&[name, func] : context.global.realFuncDefinition) {
         if (notGenerate.contains(name)) {
             continue;
@@ -210,6 +276,11 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
         if (!params.empty()) {
             params.erase(params.size() - 2, 2);
         }
+        ContextStack::ScopeGuard guard{context};
+        for (auto& param : func->params) {
+            context.top().varDef.emplace(param->name, *param->type);
+        }
+        funcPreDefs += std::format(funcPreDef, SubRuleSetCodeGen::CppStyleType(func->funcType->getReturnedType()), codegen.toLegalName(name), params);
         funcDefs +=
             std::format(funcDef, SubRuleSetCodeGen::CppStyleType(func->funcType->getReturnedType()), codegen.toLegalName(name), params,
                         (func->funcType->isReturnedFunctionType() ? "return" : "") + (func->returnValue | codegen));
@@ -239,7 +310,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
 
     // generate funcdef.hpp
     std::ofstream funcDefFile(outputPath + prefix + "funcdef.hpp");
-    funcDefFile << std::format(funcDefHpp, namespaceName, prefix, funcDefs, externDefs);
+    funcDefFile << std::format(funcDefHpp, namespaceName, prefix, funcPreDefs, funcDefs, externDefs);
 
     // generate ruleset.cpp
     std::ofstream rulesetCppFile(outputPath + prefix + "ruleset.cpp");

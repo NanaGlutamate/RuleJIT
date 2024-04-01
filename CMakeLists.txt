@@ -1,23 +1,23 @@
 cmake_minimum_required(VERSION 3.12)
 set(PROJ_NAME RuleJIT)
 project(${PROJ_NAME})
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # LLVM is not required if jit/aot module is not needed
 
-set(LLVM_DIR ${PROJECT_SOURCE_DIR}/../llvm-install-x86-debug-1507-nozlibstd/lib/cmake/llvm)
-# set(LLVM_DIR ${PROJECT_SOURCE_DIR}/../llvm-install-x86-relwithdebinfo-1507-nozlibstd/lib/cmake/llvm)
+# set(LLVM_DIR ${PROJECT_SOURCE_DIR}/../llvm-install-x86-debug-1507-nozlibstd/lib/cmake/llvm)
+set(LLVM_DIR ${PROJECT_SOURCE_DIR}/../llvm-install-x86-relwithdebinfo-1507-nozlibstd/lib/cmake/llvm)
+
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
-include_directories(AFTER ${PROJECT_SOURCE_DIR}/src)
-include_directories(AFTER ${PROJECT_SOURCE_DIR}/extern)
-
 include_directories(AFTER ${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
+
+include_directories(AFTER ${PROJECT_SOURCE_DIR}/src)
+include_directories(AFTER ${PROJECT_SOURCE_DIR}/extern)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)

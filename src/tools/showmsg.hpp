@@ -16,15 +16,19 @@
 
 #include <string>
 #include <iostream>
+#include <vector>
 
 #include "defines/marco.hpp"
 
 
 namespace rulejit{
 
-void debugMsg(const std::string& msg){
+inline std::vector<std::string> debugMessages;
+
+inline void debugMsg(const std::string& msg){
 #ifndef __RULEJIT_NO_MSG
     std::cout << msg << std::endl;
+    debugMessages.push_back(msg);
 #endif // __RULEJIT_NO_MSG
 }
 

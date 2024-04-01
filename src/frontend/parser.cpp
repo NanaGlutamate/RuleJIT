@@ -280,7 +280,7 @@ std::unique_ptr<ExprAST> ExpressionParser::parsePrimary() {
                 type.addParamType(*(param->type));
             }
             type.addParamType(retType);
-        }else{
+        } else {
             type = AutoType;
         }
         auto ret = parseExpr();
@@ -361,8 +361,8 @@ std::unique_ptr<ExprAST> ExpressionParser::parseBlock() {
 std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
     if (lexer->top() == "var" || lexer->top() == "const") {
         // var def
-        VarDefAST::VarDefType varDefType = lexer->top() == "var" ? VarDefAST::VarDefType::NORMAL
-                                                                 : VarDefAST::VarDefType::CONSTANT;
+        VarDefAST::VarDefType varDefType =
+            lexer->top() == "var" ? VarDefAST::VarDefType::NORMAL : VarDefAST::VarDefType::CONSTANT;
         lexer->pop(IGNORE_BREAK);
         if (lexer->tokenType() != TokenType::IDENT) {
             return setError("expected ident as var name, found: " + lexer->topCopy());
@@ -458,12 +458,36 @@ std::unique_ptr<ExprAST> ExpressionParser::parseDef() {
         }
         auto name = lexer->popCopy(IGNORE_BREAK);
         TypeDefAST::TypeDefType typeDefType = TypeDefAST::TypeDefType::NORMAL;
-        if (lexer->topChar() == '=') {
+        if (lexer->top() == "=") {
             lexer->pop(IGNORE_BREAK);
+            setError("donot support type alias");
             typeDefType = TypeDefAST::TypeDefType::ALIAS;
+        } else if (lexer->top() == "struct") {
+            lexer->pop(IGNORE_BREAK);
+            typeDefType = TypeDefAST::TypeDefType::NORMAL;
+        } else {
+            return setError("expected \"=\" or \"struct\" or \"class\" after type name, found: " + lexer->topCopy());
         }
-        auto type = (*lexer) | TypeParser();
-        return std::make_unique<TypeDefAST>(std::move(name), std::make_unique<TypeInfo>(type), typeDefType);
+        std::vector<std::tuple<std::string, TypeInfo>> members;
+        if (lexer->pop(IGNORE_BREAK) != "{") {
+            return setError("expect \"{\", found: " + lexer->topCopy());
+        }
+        while (lexer->top() != "}") {
+            if (lexer->tokenType() != TokenType::IDENT && !KEYWORDS.contains(lexer->top())) {
+                return setError("expect member name, found: " + lexer->topCopy());
+            }
+            auto memberName = lexer->popCopy(IGNORE_BREAK);
+            auto memberType = *lexer | TypeParser();
+            members.emplace_back(memberName, memberType);
+            if (lexer->tokenType() != TokenType::ENDLINE && lexer->top() != "}") {
+                return setError("expect ENDLINE or \"}\", found: " + lexer->topCopy());
+            }
+            if (lexer->tokenType() == TokenType::ENDLINE) {
+                lexer->pop(IGNORE_BREAK);
+            }
+        }
+        lexer->pop();
+        return std::make_unique<TypeDefAST>(std::move(name), std::move(members), typeDefType);
     } else {
         return setError("expect definition keywords like \"var\", \"func\" or \"type\", found: " + lexer->topCopy());
     }

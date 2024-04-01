@@ -31,7 +31,7 @@ inline int my_assert(bool check, const std::string &message = "[assertion failed
                       const std::source_location location = std::source_location::current()) {
     using namespace std;
     if (!check) {
-        error(format("error: {}\nin file {}, line {}", message, location.file_name(), location.line()));
+        error(format("Assertion Failed: {}\nin file {}, line {}", message, location.file_name(), location.line()));
     }
     return 0;
 }

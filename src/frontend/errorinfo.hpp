@@ -29,7 +29,7 @@ struct ErrorLocation {
     std::string_view line;
     size_t start, length;
     std::string genIdentifier() const { return tools::mystr::repeat(" ", start) + tools::mystr::repeat("^", length); }
-    std::string concatenateIdentifier(size_t maxCharPerLine = 80, size_t ident = 4) const {
+    std::string concatenateIdentifier(size_t maxCharPerLine = 110, size_t ident = 4) const {
         std::string line1, line2, ret;
         size_t totalCnt = 0;
         for (auto &c : line) {
@@ -59,7 +59,7 @@ struct ErrorLocation {
  * @param now current pointer of lexer
  * @return ErrorLocation
  */
-ErrorLocation genErrorInfo(const std::vector<ExprAST *> &callStack,
+inline ErrorLocation genErrorInfo(const std::vector<ExprAST *> &callStack,
                            const std::map<ExprAST *, std::string_view> &ast2place,
                            const std::vector<const char *> &linePointer, const char *now, const char *next) {
     ExprAST *nearestAST = nullptr;

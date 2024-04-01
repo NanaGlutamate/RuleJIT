@@ -106,8 +106,10 @@ struct ContextGlobal {
 
     /// @brief type alias name -> type name(may recursion)
     std::unordered_map<std::string, std::string> typeAlias;
-    /// @brief type name -> defined type
-    std::unordered_map<std::string, TypeInfo> typeDef;
+    /// @brief type name -> member name -> member type
+    std::unordered_map<std::string, std::vector<std::tuple<std::string, TypeInfo>>> typeDef;
+    /// @brief type name -> struct | class
+    std::unordered_map<std::string, std::string> typeType;
 };
 
 /**
@@ -283,6 +285,17 @@ struct ContextStack {
         scope.pop_back();
         return top();
     }
+
+    struct ScopeGuard {
+        ScopeGuard(ContextStack& c) :c(c) {
+            c.push();
+        }
+        ~ScopeGuard() {
+            c.pop();
+        }
+    private:
+        ContextStack& c;
+    };
 
   private:
     /**

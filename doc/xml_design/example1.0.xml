@@ -18,9 +18,12 @@
             <!-- init value not fully supported -->
             <Param name="Input1" type="float64[]" />
             <Param name="Input2" type="float64" />
+            <Param name="Input3" type="string" />
         </Inputs>
         <Outputs>
             <Param name="Output1" type="float64" />
+            <Param name="Output2" type="Vector3" />
+            <Param name="Output3" type="string" />
         </Outputs>
         <Caches>
             <Param name="Cache1" type="float64">
@@ -36,7 +39,7 @@
             <Rules>
                 <Rule>
                     <Condition>
-                        <Expression>Cache2.length()==0</Expression>
+                        <Expression>Cache2.length()==0 and Input3=="init"</Expression>
                     </Condition>
                     <Consequence>
                         <Assignment>
@@ -77,6 +80,12 @@
                                 </Expression>
                             </Value>
                         </Assignment>
+                        <Assignment>
+                            <Target>Output3</Target>
+                            <Value>
+                                <Expression>"114514"</Expression>
+                            </Value>
+                        </Assignment>
                     </Consequence>
                 </Rule>
             </Rules>
@@ -105,6 +114,18 @@
                             <Target>Cache2[0]</Target>
                             <Value>
                                 <Expression>Cache2[Cache2.length()-1]</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Output2</Target>
+                            <Value>
+                                <Expression>Vector3{.x = 0, .y = 1, .z = 2}</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Output3</Target>
+                            <Value>
+                                <Expression>Input3</Expression>
                             </Value>
                         </Assignment>
                     </Consequence>

@@ -18,10 +18,8 @@
 #include <array>
 #include <fstream>
 #include <list>
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
 #include "tools/stringprocess.hpp"
 #include <ranges>
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
 #ifdef __RULEJIT_PARALLEL_ENGINE
 #include <algorithm>
 #include <execution>
@@ -134,7 +132,25 @@ struct RuleSetEngine {
      */
     const std::unordered_map<std::string, std::any> &getCache() { return dataStorage.cache; }
 
-  private:
+    /**
+     * @brief get the input data from the rule set engine.
+     *
+     * @return const std::unordered_map<std::string, std::any>&
+     */
+    const std::unordered_map<std::string, std::any>& getInput() { return dataStorage.input; }
+
+    std::vector<int> hitRules() {
+        std::vector<int> ret;
+        for (auto& ruleset : preprocess.subRuleSets) {
+            ret.push_back(static_cast<int>(ruleset.interpreter.getReturned()));
+        }
+        for (auto& ruleset : ruleset.subRuleSets) {
+            ret.push_back(static_cast<int>(ruleset.interpreter.getReturned()));
+        }
+        return ret;
+    }
+
+  // private:
     void execute() {
         for (auto &ruleset : std::array<RuleSet *, 2>{&preprocess, &ruleset}) {
 #ifdef __RULEJIT_PARALLEL_ENGINE
@@ -159,22 +175,10 @@ struct RuleSetEngine {
                     std::string name = ruleset == &preprocess ? "pre processing"
                                                               : "sub ruleset " + std::to_string(cnt) + "(zero-based)";
                     std::string info = e.what() + "\n\nin "s + name + " when try to execute expression\n";
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
-                    for (auto p : s.interpreter.currentExpr | reverse |
-                                      filter([&](auto curr) { return debugInfo[cnt].contains(curr); }) | take(5)) {
-                        info += ("    at context: "s + debugInfo[cnt][p] |
-                                 transform([](char c) { return c == '\n' ? std::string("\\n") : ""s + c; }) |
-                                 tools::mystr::join("")) +
-                                "\n";
-                        if (debugInfo[cnt][p].back() == '\n' || debugInfo[cnt][p].back() == ';') {
-                            break;
-                        }
-                    }
-#else  // __RULEJIT_DEBUG_IN_RUNTIME
-                    for (auto p : s.interpreter.currentExpr | reverse | take(5)) {
+                    info += "decompiled context:\n";
+                    for (auto p : s.interpreter.currentExpr | reverse | take(7)) {
                         info += ("    at context(decompiled): "s + decompiler.decompile(p) + "\n");
                     }
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
                     info += "Core dump: \n\n";
                     info += dataStorage.dump();
                     auto typeCheck = dataStorage.genTypeCheckInfo();
@@ -202,10 +206,6 @@ struct RuleSetEngine {
     ContextStack context;
     /// @brief pre-process subruleset, which will called tick() and writeBack() before all subruleset
     RuleSet preprocess;
-
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
-    std::vector<std::map<ExprAST *, std::string>> debugInfo;
-#endif // __RULEJIT_DEBUG_IN_RUNTIME
 };
 
 } // namespace rulejit::cq

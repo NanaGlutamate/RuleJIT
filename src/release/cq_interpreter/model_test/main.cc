@@ -29,16 +29,18 @@
 #else
 #include <dlfcn.h>
 #endif
+#include <chrono>
 #include <filesystem>
+#include <ranges>
+#include <fstream>
 
 #include "../csmodel_base/csmodel_base.h"
 #include "testcase.hpp"
 #include "tools/printcsvaluemap.hpp"
+#include "tools/parseany.hpp"
+#include "tools/anyprocess.hpp"
 
-int main() {
-    using CSValueMap = std::unordered_map<std::string, std::any>;
-    std::string lib_path_ = "cq_interpreter.dll";
-
+CSModelObject *loadModel(const std::string &lib_path_) {
 #ifdef _WIN32
     auto hmodule = LoadLibraryExA(lib_path_.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
 #else  // _WIN32
@@ -48,7 +50,7 @@ int main() {
         std::cout << "load "
                   << "cq_interpreter"
                   << " failed" << std::endl;
-        return false;
+        return nullptr;
     }
 
 #ifdef _WIN32
@@ -65,11 +67,132 @@ int main() {
         if (!dlclose(hmodule))
 #endif // _WIN32
             std::cout << "release dll error" << std::endl;
-        return false;
+        return nullptr;
+    }
+    return create_obj_();
+}
+
+// air2v2 / car1v1
+#define TARGET "car1v1"
+
+int main() {
+    using namespace std;
+    using namespace views;
+    using namespace rapidxml;
+    using namespace chrono;
+    using namespace tools::myany;
+    using CSValueMap = std::unordered_map<std::string, std::any>;
+
+    CSModelObject *interpreter = loadModel("cq_interpreter.dll");
+    CSModelObject *cppengine = loadModel(__PROJECT_ROOT_PATH "/doc/collected/" TARGET ".dll");
+
+    interpreter->SetLogFun([](const auto &, auto) {});
+    cppengine->SetLogFun([](const auto &, auto) {});
+    interpreter->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/collected/" TARGET "rule.xml")}});
+
+    std::ifstream file(__PROJECT_ROOT_PATH "/doc/collected/" TARGET ".xml");
+    std::vector<char> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    buffer.push_back(0);
+    xml_document<> doc;
+    doc.parse<parse_default>(buffer.data());
+    vector<any> inputdata = any_cast<vector<any>>(parseXML(doc.first_node("data")->first_node("input")->first_node()));
+
+    std::vector<double> time_int, time_cpp;
+    constexpr int test_time = 10;
+    constexpr int slice = 5 + 1;
+
+    //for (auto&& i : inputdata) {
+    //    auto p = std::any_cast<CSValueMap>(&i);
+    //    interpreter->SetInput(*p);
+    //    interpreter->Tick(0.05);
+    //    auto p1 = interpreter->GetOutput();
+    //    cppengine->SetInput(*p); 
+    //    cppengine->Tick(0.05);
+    //    auto p2 = cppengine->GetOutput();
+    //    printCSValueMap(*p);
+    //    std::cout << "\noutput\n";
+    //    printCSValueMap(*p1);
+    //    std::cout << "\n\n";
+    //    printCSValueMap(*p2);
+    //    if (!anyEqual(*p1, *p2)) {
+    //        return 0;
+    //    }
+    //}
+
+    for (auto cnt : iota(1, slice)) {
+        auto ticks = test_time * inputdata.size() * cnt / slice;
+        auto start = high_resolution_clock::now();
+        for (auto _ : iota(0, test_time)) {
+            for (auto&& i : inputdata | take(inputdata.size() * cnt / slice)) {
+                auto p = std::any_cast<CSValueMap>(&i);
+                interpreter->SetInput(*p);
+                interpreter->Tick(0.05);
+                interpreter->GetOutput();
+            }
+        }
+        auto end = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(end - start);
+        time_int.push_back(double(duration.count()) / ticks);
     }
 
-    CSModelObject *model_obj_, *engine;
+    for (auto cnt : iota(1, slice)) {
+        auto ticks = test_time * inputdata.size() * cnt / slice;
+        auto start = high_resolution_clock::now();
+        for (auto _ : iota(0, test_time)) {
+            for (auto &&i : inputdata | take(inputdata.size() * cnt / slice)) {
+                auto p = std::any_cast<CSValueMap>(&i);
+                cppengine->SetInput(*p);
+                cppengine->Tick(0.05);
+                cppengine->GetOutput();
+            }
+        }
+        auto end = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(end - start);
+        time_cpp.push_back(double(duration.count()) / ticks);
+    }
 
+    // cout << "interpreter:\t";
+    cout << "data1 = [";
+    for (auto i : time_int) {
+        cout << i << ",";
+    }
+    cout << "]" << endl;
+
+    // cout << "generated cpp:\t";
+    cout << "data2 = [";
+    for (auto i : time_cpp) {
+        cout << i << ",";
+    }
+    cout << "]" << endl;
+
+    // auto tmp = CSValueMap{
+    //     {"A_output",
+    //      CSValueMap{
+    //          {"Longitude", (double)106},
+    //          {"Latitude", (double)36},
+    //          {"Altitude", (double)500},
+    //          {"vx", (double)300},
+    //          {"vy", (double)0},
+    //          {"vz", (double)0},
+    //          {"Speed", (double)300},
+    //          {"Roll", (double)0},
+    //          {"Pitch", (double)0},
+    //          {"Yaw", (double)0},
+    //      }},
+    //     {"T_output",
+    //      CSValueMap{
+    //          {"Longitude", (double)106.1},
+    //          {"Latitude", (double)36.2},
+    //          {"Altitude", (double)500},
+    //          {"vx", (double)300},
+    //          {"vy", (double)0},
+    //          {"vz", (double)0},
+    //          {"Speed", (double)300},
+    //          {"Roll", (double)0},
+    //          {"Pitch", (double)0},
+    //          {"Yaw", (double)0},
+    //      }},
+    // };
     // model_obj_ = create_obj_();
     // if (nullptr == model_obj_) {
     //     std::cerr << "create model error" << std::endl;
@@ -78,94 +201,16 @@ int main() {
     // engine = model_obj_;
     // // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
     // engine->SetLogFun([](const std::string &msg, uint32_t type) {});
-    // engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/BVR1.0.xml")}});
-    // for (auto &&input : inputs) {
-    //     std::cout << std::endl;
-    //     engine->SetInput(input);
+    // try {
+    //     // engine->Init(CSValueMap{ {"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/rule_err.xml")} });
+    //     engine->Init(CSValueMap{ {"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/car_rule.xml")} });
+    //     engine->SetInput(CSValueMap{});
     //     engine->Tick(0.02);
-    //     printCSValueMap(*(engine->GetOutput()));
+    // } catch (std::logic_error& e) {
+    //     std::cout << e.what();
+    //     return 0;
     // }
-
-    // model_obj_ = create_obj_();
-    // if (nullptr == model_obj_) {
-    //     std::cerr << "create model error" << std::endl;
-    //     return -1;
-    // }
-    // engine = model_obj_;
-    // // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
-    // engine->SetLogFun([](const std::string &msg, uint32_t type) {});
-    // engine->Init(CSValueMap{{"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/WVR1.0(1).xml")}});
-    // for (auto &&input : inputs2) {
-    //     std::cout << std::endl;
-    //     input.emplace("flag", (double)1);
-    //     engine->SetInput(input);
-    //     engine->Tick(0.02);
-    //     printCSValueMap(*(engine->GetOutput()));
-    // }
-
-    // model_obj_ = create_obj_();
-    // if (nullptr == model_obj_) {
-    //     std::cerr << "create model error" << std::endl;
-    //     return -1;
-    // }
-    // engine = model_obj_;
-    // // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
-    // engine->SetLogFun([](const std::string &msg, uint32_t type) {});
-    // engine->Init(CSValueMap{});
-    // for (auto &&input : inputs3) {
-    //     std::cout << std::endl;
-    //     input.emplace("flag", (double)1);
-    //     engine->SetInput(input);
-    //     engine->Tick(0.02);
-    //     printCSValueMap(*(engine->GetOutput()));
-    // }
-
-    auto tmp = CSValueMap{
-        {"A_output",
-         CSValueMap{
-             {"Longitude", (double)106},
-             {"Latitude", (double)36},
-             {"Altitude", (double)500},
-             {"vx", (double)300},
-             {"vy", (double)0},
-             {"vz", (double)0},
-             {"Speed", (double)300},
-             {"Roll", (double)0},
-             {"Pitch", (double)0},
-             {"Yaw", (double)0},
-         }},
-        {"T_output",
-         CSValueMap{
-             {"Longitude", (double)106.1},
-             {"Latitude", (double)36.2},
-             {"Altitude", (double)500},
-             {"vx", (double)300},
-             {"vy", (double)0},
-             {"vz", (double)0},
-             {"Speed", (double)300},
-             {"Roll", (double)0},
-             {"Pitch", (double)0},
-             {"Yaw", (double)0},
-         }},
-    };
-    model_obj_ = create_obj_();
-    if (nullptr == model_obj_) {
-        std::cerr << "create model error" << std::endl;
-        return -1;
-    }
-    engine = model_obj_;
-    // engine->SetLogFun([](const std::string &msg, uint32_t type) { std::cout << msg << std::endl;});
-    engine->SetLogFun([](const std::string &msg, uint32_t type) {});
-    try {
-        // engine->Init(CSValueMap{ {"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/rule_err.xml")} });
-        engine->Init(CSValueMap{ {"filePath", std::string(__PROJECT_ROOT_PATH "/doc/test_xml/car_rule.xml")} });
-        engine->SetInput(tmp);
-        engine->Tick(0.02);
-    } catch (std::logic_error& e) {
-        std::cout << e.what();
-        return 0;
-    }
-    tools::myany::printCSValueMap(*(engine->GetOutput()));
+    // tools::myany::printCSValueMap(*(engine->GetOutput()));
 
     return 0;
 }

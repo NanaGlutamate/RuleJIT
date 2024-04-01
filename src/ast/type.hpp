@@ -49,7 +49,7 @@ struct TypeInfo {
 
     /**
      * @brief "spaceship operators" provides compare function between TypeInfo,
-     * allows TypeInfo to act as key in std::set or std::map
+     * enables TypeInfo to act as key in std::set or std::map
      *
      */
     std::strong_ordering operator<=>(const TypeInfo &other) const {
@@ -247,15 +247,15 @@ struct TypeInfo {
                 // returned function; if not returned, do nothing
                 res += "->" + subTypes.back().toString();
             }
-        } else if (ident == "struct" || ident == "class" || ident == "dynamic") {
-            res += ident;
-            res += "{";
-            auto it1 = tokens.begin();
-            auto it2 = subTypes.begin();
-            for (; it1 != tokens.end(); ++it1, ++it2) {
-                res += *it1 + " " + it2->toString() + ";";
-            }
-            res += "}";
+        // } else if (ident == "struct" || ident == "class" || ident == "dynamic") {
+        //     res += ident;
+        //     res += "{";
+        //     auto it1 = tokens.begin();
+        //     auto it2 = subTypes.begin();
+        //     for (; it1 != tokens.end(); ++it1, ++it2) {
+        //         res += *it1 + " " + it2->toString() + ";";
+        //     }
+        //     res += "}";
         } else if (isValid()) {
             my_assert(isBaseType());
             return ident;
@@ -310,59 +310,59 @@ struct TypeInfo {
      */
     bool isUndecorateType() const { return !(ident == "*" || ident == "const" || ident[0] == '['); }
 
-    /**
-     * @brief return if this type a complex type
-     *
-     * @return bool
-     */
-    bool isComplexType() const { return isValid() && (ident == "struct" || ident == "class" || ident == "dynamic"); }
+    // /**
+    //  * @brief return if this type a complex type
+    //  *
+    //  * @return bool
+    //  */
+    // bool isComplexType() const { return isValid() && (ident == "struct" || ident == "class" || ident == "dynamic"); }
 
-    /**
-     * @brief check if complex type have given member
-     *
-     * @param token member name need to be checked
-     * @return bool
-     */
-    bool hasMember(std::string token) const {
-        my_assert(isComplexType(), "only complex type has member");
-        auto it = std::find(tokens.begin(), tokens.end(), token);
-        return it != tokens.end();
-    }
+    // /**
+    //  * @brief check if complex type have given member
+    //  *
+    //  * @param token member name need to be checked
+    //  * @return bool
+    //  */
+    // bool hasMember(std::string token) const {
+    //     my_assert(isComplexType(), "only complex type has member");
+    //     auto it = std::find(tokens.begin(), tokens.end(), token);
+    //     return it != tokens.end();
+    // }
 
-    /**
-     * @brief get type of member with given name
-     *
-     * @param token member name
-     * @return const TypeInfo& type of that member
-     */
-    const TypeInfo &getMemberType(std::string token) const {
-        my_assert(isComplexType(), "only complex type has member");
-        auto it = std::find(tokens.begin(), tokens.end(), token);
-        my_assert(it != tokens.end(), "member not found: " + token);
-        return subTypes[it - tokens.begin()];
-    }
+    // /**
+    //  * @brief get type of member with given name
+    //  *
+    //  * @param token member name
+    //  * @return const TypeInfo& type of that member
+    //  */
+    // const TypeInfo &getMemberType(std::string token) const {
+    //     my_assert(isComplexType(), "only complex type has member");
+    //     auto it = std::find(tokens.begin(), tokens.end(), token);
+    //     my_assert(it != tokens.end(), "member not found: " + token);
+    //     return subTypes[it - tokens.begin()];
+    // }
 
-    /**
-     * @brief get name of the index-th one member
-     *
-     * @param index member index
-     * @return const std::string& member name
-     */
-    const std::string &getMemberName(size_t index) const {
-        my_assert(isComplexType(), "only complex type has member");
-        return tokens[index];
-    }
+    // /**
+    //  * @brief get name of the index-th one member
+    //  *
+    //  * @param index member index
+    //  * @return const std::string& member name
+    //  */
+    // const std::string &getMemberName(size_t index) const {
+    //     my_assert(isComplexType(), "only complex type has member");
+    //     return tokens[index];
+    // }
 
-    /**
-     * @brief get count of member this complex type have
-     *
-     * @return size_t count of member
-     */
-    size_t getMemberCount() const {
-        my_assert(isComplexType(), "only complex type has member");
-        my_assert(tokens.size() == subTypes.size(), "idents and subTypes size mismatch");
-        return subTypes.size();
-    }
+    // /**
+    //  * @brief get count of member this complex type have
+    //  *
+    //  * @return size_t count of member
+    //  */
+    // size_t getMemberCount() const {
+    //     my_assert(isComplexType(), "only complex type has member");
+    //     my_assert(tokens.size() == subTypes.size(), "idents and subTypes size mismatch");
+    //     return subTypes.size();
+    // }
 
     /**
      * @brief check if this type is function type
@@ -591,32 +591,29 @@ struct TypeParser {
             auto returnType = e | TypeParser();
             info.subTypes.push_back(returnType);
             return info;
-        } else if (e.top() == "struct" || e.top() == "dynamic" || e.top() == "class") {
-            // "struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"
-            // complex def: {"struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"}
-            info.ident = e.popCopy(ignore_break);
-            if (e.pop(ignore_break) != "{") {
-                return setError("expect \"{\", found: " + e.topCopy());
-            }
-            while (e.top() != "}") {
-                if (e.tokenType() != TokenType::IDENT && !KEYWORDS.contains(e.top())) {
-                    return setError("expect member name, found: " + e.topCopy());
-                }
-                info.tokens.push_back(e.popCopy(ignore_break));
-                auto memberType = e | TypeParser();
-                info.subTypes.push_back(memberType);
-                if (e.tokenType() != TokenType::ENDLINE && e.top() != "}") {
-                    return setError("expect ENDLINE or \"}\", found: " + e.topCopy());
-                }
-                if (e.tokenType() == TokenType::ENDLINE) {
-                    e.pop(ignore_break);
-                }
-            }
-            e.pop();
-            return info;
-        // } else if (e.top()[0] == '<') {
-        //     // template
-        //     // TODO: check "<<"
+        // } else if (e.top() == "struct" || e.top() == "dynamic" || e.top() == "class") {
+        //     // "struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"
+        //     // complex def: {"struct"|"class"|"dynamic", "{", (ident, type, ";",)* "}"}
+        //     info.ident = e.popCopy(ignore_break);
+        //     if (e.pop(ignore_break) != "{") {
+        //         return setError("expect \"{\", found: " + e.topCopy());
+        //     }
+        //     while (e.top() != "}") {
+        //         if (e.tokenType() != TokenType::IDENT && !KEYWORDS.contains(e.top())) {
+        //             return setError("expect member name, found: " + e.topCopy());
+        //         }
+        //         info.tokens.push_back(e.popCopy(ignore_break));
+        //         auto memberType = e | TypeParser();
+        //         info.subTypes.push_back(memberType);
+        //         if (e.tokenType() != TokenType::ENDLINE && e.top() != "}") {
+        //             return setError("expect ENDLINE or \"}\", found: " + e.topCopy());
+        //         }
+        //         if (e.tokenType() == TokenType::ENDLINE) {
+        //             e.pop(ignore_break);
+        //         }
+        //     }
+        //     e.pop();
+        //     return info;
         } else {
             return setError("expect type identifier, found: " + e.topCopy());
         }

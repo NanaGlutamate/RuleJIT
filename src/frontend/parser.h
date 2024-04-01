@@ -60,11 +60,9 @@ struct ExpressionParser {
     /**
      * @brief pick next expression in ExpressionParser
      *
-     * TODO: donot use type conversion operator here
-     *
      * @return std::unique_ptr<ExprAST>
      */
-    operator std::unique_ptr<ExprAST>() {
+    std::unique_ptr<ExprAST> getNextExpr() {
         selectNextExpr();
         if (lexer->tokenType() == TokenType::END) {
             return nullptr;

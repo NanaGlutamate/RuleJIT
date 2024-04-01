@@ -14,6 +14,7 @@
  * <tr><td>djw</td><td>2023-03-27</td><td>Initial version.</td></tr>
  * </table>
  */
+#include <ranges>
 #ifdef _WIN32
 #include <Windows.h>
 #include <atlbase.h>
@@ -24,9 +25,14 @@
 #include <format>
 #include <string>
 #include <filesystem>
+#include <fstream>
+#include <iostream>
 
 #include "RuleEngine.h"
+#include "defines/marco.hpp"
 #include "tools/seterror.hpp"
+#include "tools/showmsg.hpp"
+#include "tools/parseany.hpp"
 
 namespace {
 
@@ -66,40 +72,91 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
         auto library_dir_ = getLibDir();
         filePath = library_dir_ + "rule.xml";
     }
+    if (auto it = value.find("enableLog"); it != value.end()) {
+        enableLog = std::any_cast<bool>(it->second);
+    } else {
+        enableLog = true;
+    }
+    if (!log_) {
+        SetLogFun([](const std::string& msg, int level) {
+            std::cout << msg;
+        });
+    }
     if(!std::filesystem::exists(filePath)){
         WriteLog(std::format("Init RuleEngine error: file {} not exists", filePath), 4);
-        error(std::format("Init RuleEngine error: file {} not exists", filePath));
         return false;
     }
     try {
         engine.buildFromFile(filePath);
     } catch (std::exception &e) {
-         WriteLog(std::string("Init RuleEngine Error: \n") + e.what(), 4);
-         return false;
+        WriteLog(std::string("Init RuleEngine Error: \n") + e.what(), 5);
+        return false;
     }
-    if(!log_){
-        SetLogFun([](const std::string &msg, int level) {});
+    for (auto& msg : rulejit::debugMessages) {
+        WriteLog(std::move(msg), 1);
     }
+    rulejit::debugMessages.clear();
     engine.init();
+    engine.setInput(value);
     return true;
 }
 
 bool RuleEngine::Tick(double time) {
     try {
+        if (autoCollectedArray.size()) {
+            std::unordered_map<std::string, std::any> tmp;
+            for(auto& [k, v] : autoCollectedArray){
+                tmp.emplace(std::move(k), std::move(v));
+            }
+            autoCollectedArray.clear();
+            engine.setInput(tmp);
+        }
         engine.tick();
     }
     catch (std::exception& e) {
         WriteLog(std::string("RuleEngine Tick Error: \n") + e.what(), 4);
         return false;
     }
-    engine.tick();
-    WriteLog("RuleEngine model Tick", 1);
+
+// #define __RULEENGINE_RECORD
+
+#ifdef __RULEENGINE_RECORD
+    static RuleEngine& logger = *this;
+    static size_t cnt = 0;
+    static std::vector<std::any> input, output;
+    if(&logger == this){
+        cnt++;
+        input.push_back(engine.getInput());
+        if(cnt%100==0){
+            // ofstream f{ __PROJECT_ROOT_PATH"/bin/collected/data.xml" };
+            ofstream f{ "D:/data.xml" };
+            f << "<data><input>";
+            f << tools::myany::printAnyToString<tools::myany::XMLFormat>(input);
+            f << "</input></data>";
+        }
+    }
+#endif // __RULEENGINE_RECORD
+
+    std::string info = "RuleEngine model Hit rules: " + (engine.hitRules() | std::views::transform([](int x) {return std::to_string(x); }) | tools::mystr::join(", ")) + "\n\n";
+    info += std::format("RuleEngine model Cache: {}\n\n", tools::myany::printCSValueMapToString(engine.getCache()));
+    info += std::format("RuleEngine model Input: {}\n\n",
+        tools::myany::printCSValueMapToString(engine.getInput()));
+    info += std::format("RuleEngine model Output: {}\n\n", tools::myany::printCSValueMapToString(*engine.getOutput()));
+    WriteLog(info, 1);
     return true;
 }
 
 bool RuleEngine::SetInput(const std::unordered_map<std::string, std::any> &value) {
     engine.setInput(value);
-    WriteLog("RuleEngine model SetInput", 1);
+    for(auto&& [k, v] : value) {
+        auto it = engine.dataStorage.metaInfo.varType.find(k);
+        if (it == engine.dataStorage.metaInfo.varType.end()){
+            continue;
+        }
+        if (it->second.ends_with("[]") && v.type() != typeid(std::vector<std::any>)) {
+            autoCollectedArray[k].push_back(v);
+        }
+    }
     return true;
 }
 
@@ -111,16 +168,15 @@ std::unordered_map<std::string, std::any> *RuleEngine::GetOutput() {
     params_.emplace("InstanceName", GetInstanceName());
     params_.emplace("ID", GetID());
     params_.emplace("State", uint16_t(GetState()));
-    WriteLog("RuleEngine model GetOutput", 1);
     return &params_;
 }
 
-CSModelObject *__stdcall CreateModelObject() {
+extern "C" CSModelObject *__stdcall CreateModelObject() {
     CSModelObject *model = new RuleEngine();
     return model;
 }
 
-void __stdcall DestroyMemory(void *mem, bool is_array) {
+extern "C" void __stdcall DestroyMemory(void *mem, bool is_array) {
     if (is_array) {
         delete[] ((RuleEngine *)mem);
     } else {

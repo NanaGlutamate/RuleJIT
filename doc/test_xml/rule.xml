@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="example1.0.xsd"?>
+<RuleSet version="1.0">
+    <TypeDefines>
+        <TypeDefine type="Location">
+            <Variable name="altitude" type="float64" />
+            <Variable name="longitude" type="float64" />
+            <Variable name="latitude" type="float64" />
+        </TypeDefine>
+        <TypeDefine type="Vector3">
+            <Variable name="x" type="float64" />
+            <Variable name="y" type="float64" />
+            <Variable name="z" type="float64" />
+        </TypeDefine>
+        <TypeDefine type="BaseInfo">
+            <Variable name="id" type="uint64"/>
+            <Variable name="side" type="uint16"/>
+            <Variable name="type" type="uint16"/>
+            <Variable name="damageLevel" type="uint16"/>
+        </TypeDefine>
+        <TypeDefine type="EntityInfo">
+            <Variable name="baseInfo" type="BaseInfo"/>
+            <Variable name="velocity" type="Vector3"/>
+            <Variable name="position" type="Vector3"/>
+        </TypeDefine>
+        <TypeDefine type="WeaponInfo">
+            <Variable name="ammo" type="int32"/>
+            <Variable name="reloadingState" type="float64"/>
+            <Variable name="range" type="float64"/>
+            <Variable name="direction" type="float64"/>
+            <Variable name="weaponName" type="string"/>
+        </TypeDefine>
+    </TypeDefines>
+    <MetaInfo>
+        <Inputs>
+            <Param name="selfInfo" type="EntityInfo"/>
+            <Param name="scannedInfo" type="EntityInfo[]"/>
+            <Param name="roll" type="float64"/>
+            <Param name="pitch" type="float64"/>
+            <Param name="yaw" type="float64"/>
+            <Param name="weaponInfo" type="WeaponInfo[]"/>
+        </Inputs>
+        <Outputs>
+            <Param name="ActionId" type="uint64"/>
+            <Param name="Param1" type="float64"/>
+            <Param name="Param2" type="float64"/>
+        </Outputs>
+        <Caches>
+            <Param name="enemy_index" type="float64">
+                <Value>
+                    <Expression>
+                        {
+                            var a = 1.0e20
+                            var index = 0
+                            var i = 0
+                            while(i &lt; scannedInfo.length()){
+                                if (selfInfo.baseInfo.side != scannedInfo[i].baseInfo.side){
+                                    var tmp = pow((scannedInfo[i].position.x - selfInfo.position.x), 2) + 
+                                        pow((scannedInfo[i].position.z - selfInfo.position.z), 2) + 
+                                        pow((scannedInfo[i].position.y - selfInfo.position.y), 2)
+                                    index = if(tmp &lt; a) i else index
+                                    a = if(tmp &lt; a) tmp else a
+                                }
+                                i = i + 1
+                            }
+                            index
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="d" type="float64">
+                <Value>
+                    <Expression>
+                        if(not scannedInfo.length())
+                            0
+                        else
+                            sqrt(
+                                pow((scannedInfo[enemy_index].position.x - selfInfo.position.x), 2) + 
+                                pow((scannedInfo[enemy_index].position.z - selfInfo.position.z), 2) + 
+                                pow((scannedInfo[enemy_index].position.y - selfInfo.position.y), 2)
+                            )
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="phi" type="float64">
+                <Value>
+                    <Expression>
+                        if(not scannedInfo.length())
+                            0
+                        else
+                            atan2(
+                                scannedInfo[enemy_index].position.y - selfInfo.position.y,
+                                scannedInfo[enemy_index].position.x - selfInfo.position.x
+                            )
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="damagelevel" type="float64">
+                <Value>
+                    <Expression>
+                        if(not scannedInfo.length())
+                            0
+                        else
+                            scannedInfo[enemy_index].baseInfo.damageLevel
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="realyaw" type="float64">
+                <Value>
+                    <Expression>
+                        // yaw in NED coordinate, rad
+                        {
+                            var i = (yaw + 90) / 180.0 * 3.14159265358979324
+                            while(i &gt; 3.14159265358979324) i = i - 2 * 3.14159265358979324
+                            while(i &lt; -3.14159265358979324) i = i + 2 * 3.14159265358979324
+                            i
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="enemyid" type="float64">
+                <Value>
+                    <Expression>
+                        if(scannedInfo.length() == 0)
+                            0
+                        else
+                            scannedInfo[enemy_index].baseInfo.id
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="yawdiff" type="float64">
+                <Value>
+                    <Expression>
+                        // greater than 0 if target in right, less than 0 if target in left; rad
+                        {
+                            var i = phi - realyaw
+                            while(i &gt; 3.14159265358979324) i = i - 2 * 3.14159265358979324
+                            while(i &lt; -3.14159265358979324) i = i + 2 * 3.14159265358979324
+                            i
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+            <Param name="turrentdiff" type="float64">
+                <Value>
+                    <Expression>
+                        // greater than 0 if target in right, less than 0 if target in left; rad
+                        if(not weaponInfo.length()){
+                            0
+                        }else{
+                            var i = phi - weaponInfo[0].direction
+                            while(i &gt; 3.14159265358979324) i = i - 2 * 3.14159265358979324
+                            while(i &lt; -3.14159265358979324) i = i + 2 * 3.14159265358979324
+                            i
+                        }
+                    </Expression>
+                </Value>
+            </Param>
+        </Caches>
+    </MetaInfo>
+    <SubRuleSets>
+        <SubRuleSet>
+            <Rules>
+                <Rule>
+                    <Condition>
+                        <Expression>scannedInfo.length() == 0 or weaponInfo.length() == 0</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>5</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>weaponInfo[0].ammo == 0</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>9</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>-100</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>phi</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>selfInfo.baseInfo.damageLevel&gt;damagelevel and d&lt;2500</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>4</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>-100</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>fabs(turrentdiff)&gt;0.1 and d&lt;3100</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>13</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>0</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>phi</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>fabs(turrentdiff)&lt;0.1 and d&lt;2500</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>0</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>enemyid</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>fabs(turrentdiff)&lt;0.1 and d&lt;3000 and pitch>25</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>10</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>0</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>enemyid</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>fabs(yawdiff)&gt;0.1 and d&gt;2500</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>7</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>100</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param2</Target>
+                            <Value>
+                                <Expression>phi</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+                <Rule>
+                    <Condition>
+                        <Expression>fabs(yawdiff)&lt;0.1 and d&gt;2500</Expression>
+                    </Condition>
+                    <Consequence>
+                        <Assignment>
+                            <Target>ActionId</Target>
+                            <Value>
+                                <Expression>2</Expression>
+                            </Value>
+                        </Assignment>
+                        <Assignment>
+                            <Target>Param1</Target>
+                            <Value>
+                                <Expression>100</Expression>
+                            </Value>
+                        </Assignment>
+                    </Consequence>
+                </Rule>
+            </Rules>
+        </SubRuleSet>
+    </SubRuleSets>
+</RuleSet>

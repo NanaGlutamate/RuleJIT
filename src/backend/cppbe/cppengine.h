@@ -66,7 +66,7 @@ struct CppEngine {
     std::string prefix, namespaceName, outputPath;
 
   private:
-    rulesetxml::RuleSetMetaInfo data;
+    ruleset::RuleSetMetaInfo data;
     ContextStack context;
     ExpressionLexer lexer;
     ExpressionParser parser;

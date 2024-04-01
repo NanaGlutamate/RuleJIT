@@ -16,7 +16,7 @@
 
 
 #define __RULEJIT_GC_DEBUG
-#define __RULEJIT_NO_MSG
+// #define __RULEJIT_NO_MSG
 #define __RULEJIT_DEBUG_IN_RUNTIME
 
 // #define __RULEJIT_DISABLE_EXCEPTION
@@ -26,3 +26,5 @@
 // #define __RULEJIT_PARALLEL_ENGINE
 
 // #define __DISABLE_ASSERT
+
+// #define __RULEENGINE_RECORD

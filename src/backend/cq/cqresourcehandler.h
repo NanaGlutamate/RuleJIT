@@ -44,7 +44,7 @@ struct DataStore {
     CSValueMap input;
     CSValueMap output;
     CSValueMap cache;
-    rulesetxml::RuleSetMetaInfo metaInfo;
+    ruleset::RuleSetMetaInfo metaInfo;
 
     /**
      * @brief generate core dump
@@ -70,7 +70,7 @@ struct DataStore {
         if (s.ends_with("[]")) {
             return "[]" + XMLType2InnerType(s.substr(0, s.size() - 2));
         }
-        if (rulesetxml::baseNumericalData.contains(s)) {
+        if (ruleset::baseNumericalData.contains(s)) {
             return "f64";
         } else {
             return s;
@@ -103,10 +103,10 @@ struct DataStore {
         std::string ret;
         // use inner class act as a recursible lambda to avoid private function used only once / y-combinator
         struct TypeChecker {
-            rulesetxml::RuleSetMetaInfo &metaInfo;
+            ruleset::RuleSetMetaInfo &metaInfo;
             DataStore &dataStore;
             std::string check(const std::string &name, const std::string &type, std::any &real) {
-                if (rulesetxml::baseData.contains(type)) {
+                if (ruleset::baseData.contains(type)) {
                     // base type
                     if (dataStore.makeTypeEmptyInstance(type).type() != real.type()) {
                         return std::format("    variable \"{}\" is not of type \"{}\"\n", name, type);
@@ -230,7 +230,7 @@ struct DataStore {
         if (isArray(type)) {
             return std::vector<std::any>();
         }
-        if (rulesetxml::baseData.contains(type)) {
+        if (ruleset::baseData.contains(type)) {
             if (type == "bool")
                 return bool(false);
             if (type == "int8")
@@ -438,6 +438,11 @@ struct ResourceHandler {
      */
     void assign(size_t dst, size_t src) {
         // TODO: allow assign base type to base type
+        if (ruleset::baseNumericalData.contains(std::get<1>(buffer[dst])) && ruleset::baseNumericalData.contains(std::get<1>(buffer[src]))) {
+            auto v = readValue(src);
+            writeValue(dst, v);
+            return;
+        }
         my_assert(std::get<1>(buffer[dst]) == std::get<1>(buffer[src]),
                   "assignment of different types are not allowed");
         auto &tmp = assemble(src);
@@ -554,15 +559,11 @@ struct ResourceHandler {
      * (which means it is not an array or a struct)
      *
      * @param index token referring to the value
+     * 
      * @return bool
      */
     bool isBaseType(size_t index) {
-        try {
-            readValue(index);
-            return true;
-        } catch (...) {
-            return false;
-        }
+        return ruleset::baseData.contains(std::get<1>(buffer[index]));
     }
 
     /**
@@ -590,9 +591,19 @@ struct ResourceHandler {
         } else if (v.type() == typeid(uint32_t)) {
             return std::any_cast<uint32_t>(v);
         } else if (v.type() == typeid(int64_t)) {
-            return (double)std::any_cast<int64_t>(v);
+            // TODO: check if lose precision
+            auto tmp = std::any_cast<int64_t>(v);
+            auto tmpv = static_cast<double>(tmp);
+            // my_assert(tmp == static_cast<int64_t>(tmpv),
+            //     "Ruleset engine use float64 as inner type to execute, data provided overflow");
+            return tmpv;
         } else if (v.type() == typeid(uint64_t)) {
-            return (double)std::any_cast<uint64_t>(v);
+            // TODO: check if lose precision
+            auto tmp = std::any_cast<uint64_t>(v);
+            auto tmpv = static_cast<double>(tmp);
+            // my_assert(tmp == static_cast<int64_t>(tmpv),
+            //     "Ruleset engine use float64 as inner type to execute, data provided overflow");
+            return tmpv;
         } else if (v.type() == typeid(float)) {
             return std::any_cast<float>(v);
         } else if (v.type() == typeid(double)) {
@@ -640,16 +651,10 @@ struct ResourceHandler {
     }
 
   private:
-    void doubleToAny(std::any &tar, double v) {
-        // TODO:
-    }
-
-    // TODO: add to buffer
-    void addToBuffer() {}
 
     std::any &assemble(size_t index) {
         auto &[v, type] = buffer[index];
-        if (rulesetxml::baseData.contains(type)) {
+        if (ruleset::baseData.contains(type)) {
             return v;
         }
         if (data.isArray(type)) {

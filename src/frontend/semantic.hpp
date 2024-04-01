@@ -81,9 +81,10 @@ struct ExpressionSemantic : public ASTVisitor {
      * @return std::string real function name which contains top-level expressions and global variable assignment
      */
     std::string friend operator|(ExpressionParser &parser, ExpressionSemantic &semantic) {
+        semantic.callStack.clear();
         std::vector<std::unique_ptr<ExprAST>> topLevelExprs;
         std::unique_ptr<ExprAST> tmp;
-        while ((tmp = parser) != nullptr) {
+        while ((tmp = parser.getNextExpr()) != nullptr) {
             topLevelExprs.push_back(std::move(tmp));
         }
         return semantic.addUnnamedFunction(std::move(topLevelExprs));
@@ -97,6 +98,7 @@ struct ExpressionSemantic : public ASTVisitor {
      * @return std::string real function name which contains current input expression
      */
     std::string friend operator|(std::unique_ptr<ExprAST> ast, ExpressionSemantic &semantic) {
+        semantic.callStack.clear();
         std::vector<std::unique_ptr<ExprAST>> tmp;
         tmp.push_back(std::move(ast));
         return semantic.addUnnamedFunction(std::move(tmp));
@@ -149,9 +151,18 @@ struct ExpressionSemantic : public ASTVisitor {
                 // struct member access; TODO: access overload
                 auto definedType = globalInfo().typeDef.find(v.baseVar->type->getBaseTypeString());
                 if (definedType == globalInfo().typeDef.end()) {
+                    if(BuildInType.contains(*(v.baseVar->type))){
+                        return setError(std::format("Type \"{}\" has no member", v.baseVar->type->getBaseTypeString()));
+                    }
                     return setError(std::format("Type \"{}\" not defined", v.baseVar->type->getBaseTypeString()));
                 }
-                auto memberType = definedType->second.getMemberType(p->value);
+                auto it = std::ranges::find_if(definedType->second, [&](const auto &it) {
+                    return std::get<0>(it) == p->value;
+                });
+                if(it == definedType->second.end()){
+                    return setError(std::format("Type \"{}\" has no member \"{}\"", v.baseVar->type->getBaseTypeString(), p->value));
+                }
+                auto& memberType = std::get<1>(*it);
                 v.type = std::make_unique<TypeInfo>(memberType);
                 processType(*v.type);
                 return;
@@ -429,22 +440,19 @@ struct ExpressionSemantic : public ASTVisitor {
                 return setError(std::format("Type \"{}\" not defined", v.type->toString()));
             }
             auto def = it->second;
-            if (!def.isComplexType()) {
-                return setError(std::format("Defined type \"{}\" required to be a complex type", v.type->toString()));
-            }
             if (v.members.size() == 0) {
                 return;
             }
             bool designate = std::get<0>(v.members[0]) != nullptr;
             if (!designate) {
-                if (v.members.size() != def.getMemberCount()) {
-                    return setError(std::format("Type \"{}\" need {} members, {} given", v.type->toString(),
-                                                def.getMemberCount(), v.members.size()));
+                if (v.members.size() != def.size()) {
+                    return setError(std::format("Type \"{}\" need {} members, {} given", v.type->toString(), def.size(),
+                                                v.members.size()));
                 }
                 size_t cnt = 0;
                 for (auto &&[index, _] : v.members) {
                     index = std::make_unique<LiteralExprAST>(std::make_unique<TypeInfo>(StringType),
-                                                             def.getMemberName(cnt++));
+                                                             std::get<0>(def[cnt++]));
                 }
             }
             size_t cnt = 0;
@@ -455,9 +463,11 @@ struct ExpressionSemantic : public ASTVisitor {
                 if (!p || *(p->type) != StringType) {
                     return setError("Non literal designate do not supported");
                 }
-                if (def.getMemberType(p->value) != *(member->type)) {
+                auto &type = std::get<1>(
+                    *std::ranges::find_if(def, [&](const auto &it) { return std::get<0>(it) == p->value; }));
+                if (type != *(member->type)) {
                     return setError(std::format("Designate type mismatch, \"{}\" expected, \"{}\" given",
-                                                def.getMemberType(p->value).toString(), member->type->toString()));
+                                                type.toString(), member->type->toString()));
                 }
             }
         } else if (v.type->isArrayType()) {
@@ -481,7 +491,7 @@ struct ExpressionSemantic : public ASTVisitor {
         }
     }
     VISIT_FUNCTION(LoopAST) {
-        c.push();
+        ContextStack::ScopeGuard scope(c);
         callAccept(v.init);
         callAccept(v.condition);
         if (*(v.condition->type) != RealType || *(v.condition->type) != IntType) {
@@ -493,11 +503,10 @@ struct ExpressionSemantic : public ASTVisitor {
         } else {
             v.type = std::make_unique<TypeInfo>(*(v.body->type));
         }
-        c.pop();
         processType(*v.type);
     }
     VISIT_FUNCTION(BlockExprAST) {
-        c.push();
+        ContextStack::ScopeGuard scope(c);
         TypeInfo *last = nullptr;
         for (auto &stmt : v.exprs) {
             callAccept(stmt);
@@ -508,7 +517,6 @@ struct ExpressionSemantic : public ASTVisitor {
         } else {
             v.type = std::make_unique<TypeInfo>(NoInstanceType);
         }
-        c.pop();
         processType(*v.type);
     }
     VISIT_FUNCTION(ControlFlowAST) {
@@ -524,16 +532,13 @@ struct ExpressionSemantic : public ASTVisitor {
         if (v.typeDefType != TypeDefAST::TypeDefType::NORMAL) {
             return setError("Only support normal type def for now");
         }
-        if (!v.definedType->isComplexType() || v.definedType->getIdent() != "struct") {
-            return setError("only allow struct type define");
-        }
         if (auto type = TypeInfo(v.name); BuildInType.contains(type)) {
             return setError(std::format("Type \"{}\" is a build-in type", v.name));
         }
-        for (auto &&t : v.definedType->getSubTypes()) {
-            if (t.isComplexType()) {
-                return setError(std::format("unnamed type \"{}\" is not allowed", t.toString()));
-            }
+        if (globalInfo().typeDef.contains(v.name)) {
+            return setError(std::format("Type \"{}\" redefined", v.name));
+        }
+        for (auto &&[m, t] : v.definedType) {
             processType(t);
             if (!BuildInType.contains(t) && t != IntType && t.isBaseType() &&
                 !globalInfo().typeDef.contains(t.toString())) {
@@ -542,10 +547,8 @@ struct ExpressionSemantic : public ASTVisitor {
                 return setError(std::format("type \"{}\" is not defined", t.toString()));
             }
         }
-        if (globalInfo().typeDef.contains(v.name)) {
-            return setError(std::format("Type \"{}\" redefined", v.name));
-        }
-        globalInfo().typeDef.emplace(v.name, *(v.definedType));
+        globalInfo().typeDef.emplace(v.name, std::move(v.definedType));
+        globalInfo().typeType.emplace(v.name, "struct");
         needChange = nop();
         return;
     }
@@ -683,7 +686,7 @@ struct ExpressionSemantic : public ASTVisitor {
         needChange = nop();
     }
     VISIT_FUNCTION(ClosureExprAST) {
-        c.push();
+        ContextStack::ScopeGuard scope(c);
         for (auto &&p : v.params) {
             my_assert(c.addVarDef(p->name, *(p->type)));
         }
@@ -728,9 +731,7 @@ struct ExpressionSemantic : public ASTVisitor {
         funcDefAST->captures = std::move(v.captures);
         globalInfo().realFuncDefinition.emplace(name, std::move(funcDefAST));
         globalInfo().checkedFunc.emplace(name);
-        // TODO: add to real func
-        c.pop();
-        needChange = std::make_unique<LiteralExprAST>(std::move(v.type), name);
+        needChange = std::make_unique<LiteralExprAST>(std::move(v.type), std::move(name));
     }
 
   private:
@@ -810,8 +811,6 @@ struct ExpressionSemantic : public ASTVisitor {
             }
         } else if (type.isPointerType()) {
             return setError(std::format("pointer type \"{}\" is not support for now", type.toString()));
-        } else if (type.isComplexType()) {
-            return setError(std::format("unnamed type \"{}\" is not allowed", type.toString()));
         } else if (type.isArrayType()) {
             return processType(type.getElementType());
         } else if (type.isFunctionType()) {
@@ -846,7 +845,7 @@ struct ExpressionSemantic : public ASTVisitor {
         }
         auto &func = globalInfo().realFuncDefinition.find(name)->second;
         my_assert(funcDependencyRealName.empty());
-        c.push();
+        ContextStack::ScopeGuard scope(c);
         for (auto &&param : func->params) {
             // TODO: var name conflit with func?
             processType(*(param->type));
@@ -858,7 +857,6 @@ struct ExpressionSemantic : public ASTVisitor {
             setError(std::format("function \"{}\" declared return \"{}\", but return \"{}\" actually", func->name,
                                  returnedType.toString(), func->returnValue->type->toString()));
         }
-        c.pop();
         if (auto it = globalInfo().funcDependency.find(name); it != globalInfo().funcDependency.end()) {
             my_assert(funcDependencyRealName == it->second);
         }
@@ -903,7 +901,8 @@ struct ExpressionSemantic : public ASTVisitor {
                 if (definedType == globalInfo().typeDef.end()) {
                     return false;
                 }
-                return definedType->second.hasMember(p->value);
+                return std::ranges::find_if(definedType->second, [&](const auto &it) { return std::get<0>(it) == p->value; }) !=
+                       definedType->second.end();
             }
         }
         return (v.baseVar->type->isArrayType() &&
@@ -1020,7 +1019,8 @@ struct ExpressionSemantic : public ASTVisitor {
             if (alreadyMatch.empty()) {
                 return {false, ""};
             } else if (alreadyMatch.size() != 1) {
-                setError("ambiguous template instantiation: " + (std::views::keys(alreadyMatch) | tools::mystr::join(", ")));
+                setError("ambiguous template instantiation: " +
+                         (std::views::keys(alreadyMatch) | tools::mystr::join(", ")));
             }
             // 1 match, add to realfuncdef
             auto [matchName, funcAST] = std::move(*alreadyMatch.begin());

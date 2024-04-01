@@ -77,25 +77,17 @@ struct CQInterpreter : public ASTVisitor {
 #ifdef __RULEJIT_INTERPRETER_DEBUG
         interpreter.ruleCnt = 1;
 #endif
+        interpreter.currentExpr.clear();
         interpreter.callAccept(expr);
     }
 
   protected:
     VISIT_FUNCTION(IdentifierExprAST) {
-        returned.type = Value::EMPTY;
-        if (v.name == "true") {
-            returned.value = 1.;
-            returned.type = Value::VALUE;
-        } else if (v.name == "false") {
-            returned.value = 0.;
-            returned.type = Value::VALUE;
-        } else {
-            auto find = seekValue(v.name);
-            if (!find) {
-                // !find means its a variable hold by CQResourceHandler, so read it
-                returned.token = handler.readIn(v.name);
-                returned.type = Value::TOKEN;
-            }
+        auto find = seekValue(v.name);
+        if (!find) {
+            // !find means its a variable hold by CQResourceHandler, so read it
+            returned.token = handler.readIn(v.name);
+            returned.type = Value::TOKEN;
         }
     }
     VISIT_FUNCTION(MemberAccessExprAST) {
@@ -253,6 +245,8 @@ struct CQInterpreter : public ASTVisitor {
             {">", [](auto x, auto y) { return x > y; }},   {"<", [](auto x, auto y) { return x < y; }},
             {"==", [](auto x, auto y) { return x == y; }}, {"!=", [](auto x, auto y) { return x != y; }},
             {">=", [](auto x, auto y) { return x >= y; }}, {"<=", [](auto x, auto y) { return x <= y; }},
+            // TODO: not make sense
+            {"%", [](auto x, auto y) { return static_cast<int64_t>(x) % static_cast<int64_t>(y); }},
         };
         static std::map<std::string, std::function<double(double, double)>> shortCutBinOp{
             {"&&", [](auto x, auto y) { return x && y; }},
@@ -436,29 +430,7 @@ struct CQInterpreter : public ASTVisitor {
         symbolStack.back().pop_back();
     }
     VISIT_FUNCTION(ControlFlowAST) { setError("ControlFlowAST should never be visit directly"); }
-    VISIT_FUNCTION(TypeDefAST) {
-        if (!v.definedType->isComplexType()) {
-            setError("only allow complex type define for now");
-        }
-        auto name = v.name;
-        if (!v.definedType->isComplexType() || v.definedType->getIdent() != "struct") {
-            setError("only allow struct type (no reference type support) define for now");
-        }
-        std::unordered_map<std::string, std::string> t;
-        for (int i = 0; i < v.definedType->getSubTypes().size(); ++i) {
-            static std::unordered_map<std::string, std::string> typeAlias{
-                {"i8", "int8"},    {"u8", "uint8"},  {"i16", "int16"},  {"u16", "uint16"},  {"i32", "int32"},
-                {"u32", "uint32"}, {"i64", "int64"}, {"u64", "uint64"}, {"f32", "float32"}, {"f64", "float64"},
-            };
-            auto tmp = v.definedType->getSubTypes()[i].toString();
-            if (typeAlias.contains(tmp)) {
-                tmp = typeAlias[tmp];
-            }
-            t[v.definedType->getTokens()[i]] = tmp;
-        }
-        handler.defineType(name, t);
-        returned.type = Value::EMPTY;
-    }
+    VISIT_FUNCTION(TypeDefAST) { setError("TypeDefAST should never be visit directly"); }
     VISIT_FUNCTION(VarDefAST) {
         returned.type = Value::EMPTY;
         if (auto it = symbolStack.back().back().find(v.name); it != symbolStack.back().back().end()) {
@@ -482,21 +454,19 @@ struct CQInterpreter : public ASTVisitor {
     VISIT_FUNCTION(FunctionDefAST) { setError("function def should never be visit directly"); }
     VISIT_FUNCTION(SymbolDefAST) { setError("symbol def should never be visit directly"); }
 
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
   public:
     std::vector<ExprAST *> currentExpr;
-#endif
+    double getReturned() {
+        my_assert(returned.type == Value::VALUE);
+        return returned.value;
+    }
   private:
     void callAccept(std::unique_ptr<ExprAST> &v) {
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
         currentExpr.push_back(v.get());
-#endif
         if (v != nullptr) {
             v->accept(this);
         }
-#ifdef __RULEJIT_DEBUG_IN_RUNTIME
         currentExpr.pop_back();
-#endif
     }
 
     /**

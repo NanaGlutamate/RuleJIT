@@ -26,7 +26,8 @@ namespace typeident {
 inline constexpr std::string_view NoInstanceTypeIdent{""};
 inline constexpr std::string_view StringTypeIdent{"string"};
 inline constexpr std::string_view RealTypeIdent{"f64"};
-inline constexpr std::string_view IntTypeIdent{"f64"};
+inline constexpr std::string_view IntTypeIdent{ "f64" };
+inline constexpr std::string_view UIntTypeIdent{ "f64" };
 inline constexpr std::string_view AutoTypeIdent{"auto"};
 
 } // namespace typeident

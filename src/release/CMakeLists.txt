@@ -1,3 +1,5 @@
 add_subdirectory(cq_interpreter)
 add_subdirectory(cq_codegen)
 add_subdirectory(cq_modelxmlgen)
+add_subdirectory(cq_expressionchecker)
+add_subdirectory(cq_pygen)
