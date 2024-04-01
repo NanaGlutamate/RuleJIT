@@ -125,11 +125,11 @@ struct PYTransformCodeGen : public ASTVisitor {
                     return;
 
                 auto p1 = newParaName();
-                paras.push_back({p1, 1.0});
+                paras.push_back({p1, 0.0});
                 auto p2 = newParaName();
                 paras.push_back({p2, 0.0});
                 auto index = newIndexName();
-                returned = std::format("F(self.state[self.{}] * self.{} + self.{})", index, p1, p2);
+                returned = std::format("F(self.state[:,self.{}] * (self.{} + 1.0 / None) + self.{})", index, p1, p2);
                 states.emplace_back(std::move(index), std::format("({0} - {1})", lhs, rhs));
             } else if (op_lt.contains(v.op)) {
                 topLevel = false;
@@ -142,11 +142,11 @@ struct PYTransformCodeGen : public ASTVisitor {
                     return;
 
                 auto p1 = newParaName();
-                paras.push_back({p1, 1.0});
+                paras.push_back({p1, 0.0});
                 auto p2 = newParaName();
                 paras.push_back({p2, 0.0});
                 auto index = newIndexName();
-                returned = std::format("F(self.state[self.{}] * self.{} + self.{})", index, p1, p2);
+                returned = std::format("F(self.state[:,self.{}] * (self.{} + 1.0 / None) + self.{})", index, p1, p2);
                 states.emplace_back(std::move(index), std::format("({1} - {0})", lhs, rhs));
             } else if (op_and.contains(v.op)) {
                 accept(v.lhs);
@@ -273,6 +273,7 @@ struct PYCodeGen : public ASTVisitor {
             }
             paramList += acceptWithReturn(p);
         }
+        // TODO: emit side effect?
         returned = std::format("{}({})", acceptWithReturn(v.functionIdent), paramList);
     }
     VISIT_FUNCTION(BinOpExprAST) {
@@ -300,18 +301,21 @@ struct PYCodeGen : public ASTVisitor {
         if (!isTopLevel) {
             if (*(v.type) != NoInstanceType) {
                 auto id = getUnusedID("i");
-                emitLine(std::format("{} = ({} if {} else {})", id, acceptWithReturn(v.trueExpr),
-                                     acceptWithReturn(v.condition), acceptWithReturn(v.falseExpr)));
+                emitLine(std::format("{} = None", id));
+                emitLine(std::format("if {}:", acceptWithReturn(v.condition)), 1);
+                emitLine(std::format("{} = {}", id, acceptWithReturn(v.trueExpr)));
+                emitEmptyLine(-1);
+                emitLine("else:", 1);
+                emitLine(std::format("{} = {}", id, acceptWithReturn(v.falseExpr)), -1);
                 returned = std::move(id);
                 return;
             }
             emitLine(std::format("if {}:", acceptWithReturn(v.condition)), 1);
-            acceptIgnoreReturn(v.trueExpr);
-            emitEmptyLine(-1);
+            auto t = acceptWithReturn(v.trueExpr);
+            emitLine((t.size() == 0) ? "pass" : t, -1);
             emitLine("else:", 1);
-            auto size = code.size();
-            acceptIgnoreReturn(v.falseExpr);
-            emitLine((code.size() == size) ? "pass" : "", -1);
+            auto f = acceptWithReturn(v.falseExpr);
+            emitLine((f.size() == 0) ? "pass" : f, -1);
             return;
         }
         isTopLevel = false;
@@ -326,7 +330,7 @@ struct PYCodeGen : public ASTVisitor {
         codeClear();
         emitEmptyLine(2);
         emitLine(std::format("def condition{}(self: SubRuleSet{}):", atomicRuleID, subRuleSetID), 1);
-        PYTransformCodeGen cg{};
+        PYTransformCodeGen cg;
         auto ans = cg.gen(v.condition, *this);
         if (ans.has_value()) {
             auto&& [_code, _states, _paras] = ans.value();
@@ -334,9 +338,38 @@ struct PYCodeGen : public ASTVisitor {
             states.insert_range(states.end(), std::move(_states));
             paras.insert_range(paras.end(), std::move(_paras));
         } else {
-            auto s = getUnusedID("index");
-            emitLine(std::format("return self.state[self.{}]", s));
-            states.emplace_back(std::move(s), std::format("1.0 if {} else 0.0", acceptWithReturn(v.condition)));
+            // TODO: toooo specific, need gernalize
+            auto p1 = dynamic_cast<BlockExprAST*>(v.condition.get());
+            if (auto p = dynamic_cast<BinOpExprAST*>(p1 ? p1->exprs[0].get() : nullptr);
+                p && (p->op == "and" || p->op == "&&" || p->op == "or" || p->op == "||")) {
+                PYTransformCodeGen cg;
+                auto lhs = cg.gen(p->lhs, *this);
+                auto rhs = cg.gen(p->rhs, *this);
+                rulejit::ExprAST* tmp = p->lhs.get();
+                if (lhs && !rhs) {
+                    tmp = p->rhs.get();
+                    swap(lhs, rhs);
+                }
+                if (rhs && !lhs) {
+                    states.insert_range(states.end(), std::move(rhs.value().states));
+                    paras.insert_range(paras.end(), std::move(rhs.value().paras));
+                    auto s = getUnusedID("index");
+                    if (p->op == "and" || p->op == "&&") {
+                        emitLine(std::format("return self.state[:,self.{}] * ({})", s, rhs.value().code));
+                    } else if (p->op == "or" || p->op == "||") {
+                        emitLine(std::format("return 1.0 - ((1.0 - self.state[:,self.{}]) * (1.0 - ({})))", s, rhs.value().code));
+                    }
+                    states.emplace_back(std::move(s), std::format("1.0 if {} else 0.0", acceptWithReturn(tmp)));
+                } else {
+                    auto s = getUnusedID("index");
+                    emitLine(std::format("return self.state[:,self.{}]", s));
+                    states.emplace_back(std::move(s), std::format("1.0 if {} else 0.0", acceptWithReturn(v.condition)));
+                }
+            } else {
+                auto s = getUnusedID("index");
+                emitLine(std::format("return self.state[:,self.{}]", s));
+                states.emplace_back(std::move(s), std::format("1.0 if {} else 0.0", acceptWithReturn(v.condition)));
+            }
         }
         conditions.push_back(std::move(code));
 
@@ -374,7 +407,7 @@ struct PYCodeGen : public ASTVisitor {
             return;
         }
         for (auto&& expr : v.exprs | std::views::take(v.exprs.size() - 1)) {
-            // TODO: emit? side-effect
+            // TODO: emit? side-effect ignored
             acceptIgnoreReturn(expr);
         }
         returned = acceptWithReturn(v.exprs[v.exprs.size() - 1]);
@@ -397,7 +430,7 @@ struct PYCodeGen : public ASTVisitor {
     void acceptIgnoreReturn(Ty& expr) {
         returned.clear();
         expr->accept(this);
-        if (!returned.empty()){
+        if (!returned.empty()) {
             emitLine(std::move(returned));
             returned.clear();
         }
@@ -451,7 +484,7 @@ class SubRuleSet{}:
         state = []
 
 {}
-        self.state = torch.tensor(state, device=device, requires_grad=False)
+        self.state = torch.tensor([state], device=device, requires_grad=False)
         
     def forward(self, x=None):
         if x is not None:

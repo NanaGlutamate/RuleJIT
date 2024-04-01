@@ -80,6 +80,7 @@ class RuleEngine : public CSModelObject {
     }
 
   private:
+    std::unordered_map<std::string, std::vector<std::any>> autoCollectedArray;
     rulejit::cq::RuleSetEngine engine;
     bool enableLog;
 };

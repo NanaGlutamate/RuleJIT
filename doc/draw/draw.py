@@ -1,8 +1,8 @@
-from pylab import mpl
-from matplotlib import pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
+from pylab import mpl
 
-mpl.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['font.sans-serif'] = ['SimHei']
 
 """car1v1"""
 datac1 = [0.1872,0.15712,0.150293,0.15328,0.160096,]

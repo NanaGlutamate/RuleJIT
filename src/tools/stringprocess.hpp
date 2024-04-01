@@ -33,9 +33,7 @@ inline constexpr std::string join(_Range &&range, const std::string &middle) {
         } else {
             result += middle;
         }
-        if constexpr (std::is_constructible_v<std::string, decltype(item)>) {
-            result += item;
-        }
+        result += item;
     }
     return result;
 }

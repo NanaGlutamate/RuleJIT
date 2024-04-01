@@ -90,13 +90,13 @@ void emplaceFromAny(T& t, const std::any& v){{
     }}else if constexpr(is_typedReal_v<Ty>){{
         t = double(std::any_cast<typename Ty::type>(v));
     }}else if constexpr(is_vector_v<Ty>){{
-        auto tmp = std::any_cast<std::vector<std::any>>(&(v));
+        auto tmp = std::any_cast<std::vector<std::any>>(&v);
         t.resize(tmp->size());
         for(size_t i = 0; i < tmp->size(); ++i){{
             emplaceFromAny(t[i], (*tmp)[i]);
         }}
     }}else{{
-        t.FromValueMap(std::any_cast<CSValueMap>(v));
+        t.FromValueMap(*std::any_cast<CSValueMap>(&v));
     }}
 }}
 
@@ -142,6 +142,8 @@ struct {0} {{
         CSValueMap tmp;
 {3}        return tmp;
     }}
+    void ToValueMap(CSValueMap& tmp) const {{
+{3}    }}
 }};
 )";
 
@@ -151,7 +153,7 @@ inline constexpr auto typeDeserialize = R"(
         if(auto it = v.find("{1}"); it != v.end()){{
             emplaceFromAny({1}, it->second);
         }})";
-inline constexpr auto typeSerialize = "        tmp.emplace(\"{1}\", toAny({1}));\n";
+inline constexpr auto typeSerialize = "        tmp[\"{1}\"] = toAny({1});\n";
 
 // namespace, prefix, predefs, defs, externs
 inline constexpr auto funcDefHpp = R"(#pragma once
@@ -232,7 +234,7 @@ struct RuleSet{{
 {6}
 {7}
 {2}
-{3}        out_map = out.ToValueMap();
+{3}        out.ToValueMap(out_map);
     }}
 {4}
 }};
@@ -245,6 +247,7 @@ inline constexpr auto subRulesetCall = "        subRuleSet{0}.Tick(*this);\n";
 inline constexpr auto subRulesetWrite = "        subRuleSet{0}.writeBack(*this);\n";
 
 // TODO: use double-buffer / copy-on-write to replace unconditional buffer copy
+// TODO: record modified output to avoid meaningless serialization
 // id, func, writeback
 inline constexpr auto subRulesetDef = R"(    struct {{
         _Cache cache;
@@ -324,29 +327,26 @@ class RuleEngine : public CSModelObject {{
   public:
     virtual bool Init(const std::unordered_map<std::string, std::any> &value) override{{
         engine.Init();
-        if(!log_)SetLogFun([](const std::string &msg, uint32_t type) {{}});
+        auto params_ = engine.GetOutput();
+        engine.SetInput(value);
+        params_->emplace("ForceSideID", GetForceSideID());
+        params_->emplace("ModelID", GetModelID());
+        params_->emplace("InstanceName", GetInstanceName());
+        params_->emplace("ID", GetID());
+        params_->emplace("State", uint16_t(CSInstanceState::IS_RUNNING));
+        state_ = CSInstanceState::IS_RUNNING;
         return true;
     }};
     virtual bool Tick(double time) override{{
         engine.Tick();
-        WriteLog("RuleEngine model Tick", 1);
         return true;
     }};
     virtual bool SetInput(const std::unordered_map<std::string, std::any> &value) override{{
         engine.SetInput(value);
-        WriteLog("RuleEngine model SetInput", 1);
         return true;
     }};
     virtual std::unordered_map<std::string, std::any> *GetOutput() override{{
-        state_ = CSInstanceState::IS_RUNNING;
-        auto &params_ = *(engine.GetOutput());
-        params_.emplace("ForceSideID", GetForceSideID());
-        params_.emplace("ModelID", GetModelID());
-        params_.emplace("InstanceName", GetInstanceName());
-        params_.emplace("ID", GetID());
-        params_.emplace("State", uint16_t(GetState()));
-        WriteLog("RuleEngine model GetOutput", 1);
-        return &params_;
+        return engine.GetOutput();
     }};
   private:
     {0}::RuleSet engine;

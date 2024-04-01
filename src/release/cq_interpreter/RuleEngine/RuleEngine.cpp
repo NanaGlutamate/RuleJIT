@@ -75,7 +75,7 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
     if (auto it = value.find("enableLog"); it != value.end()) {
         enableLog = std::any_cast<bool>(it->second);
     } else {
-        enableLog = false;
+        enableLog = true;
     }
     if (!log_) {
         SetLogFun([](const std::string& msg, int level) {
@@ -84,7 +84,6 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
     }
     if(!std::filesystem::exists(filePath)){
         WriteLog(std::format("Init RuleEngine error: file {} not exists", filePath), 4);
-        error(std::format("Init RuleEngine error: file {} not exists", filePath));
         return false;
     }
     try {
@@ -98,11 +97,20 @@ bool RuleEngine::Init(const std::unordered_map<std::string, std::any> &value) {
     }
     rulejit::debugMessages.clear();
     engine.init();
+    engine.setInput(value);
     return true;
 }
 
 bool RuleEngine::Tick(double time) {
     try {
+        if (autoCollectedArray.size()) {
+            std::unordered_map<std::string, std::any> tmp;
+            for(auto& [k, v] : autoCollectedArray){
+                tmp.emplace(std::move(k), std::move(v));
+            }
+            autoCollectedArray.clear();
+            engine.setInput(tmp);
+        }
         engine.tick();
     }
     catch (std::exception& e) {
@@ -140,6 +148,15 @@ bool RuleEngine::Tick(double time) {
 
 bool RuleEngine::SetInput(const std::unordered_map<std::string, std::any> &value) {
     engine.setInput(value);
+    for(auto&& [k, v] : value) {
+        auto it = engine.dataStorage.metaInfo.varType.find(k);
+        if (it == engine.dataStorage.metaInfo.varType.end()){
+            continue;
+        }
+        if (it->second.ends_with("[]") && v.type() != typeid(std::vector<std::any>)) {
+            autoCollectedArray[k].push_back(v);
+        }
+    }
     return true;
 }
 

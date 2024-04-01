@@ -144,14 +144,14 @@ struct SubRuleSetCodeGen : public ASTVisitor {
                 {"and", "&&"},
                 {"xor", "^"},
             };
-            returned += "(double(";
-            v.lhs->accept(this);
             auto tmp = v.op;
+            returned += tmp == "%" ? "(int64_t(" : "(double(";
+            v.lhs->accept(this);
             if (auto it = opTrans.find(tmp); it != opTrans.end()) {
                 tmp = it->second;
             }
-            returned += ") " + tmp + " double(";
-            returned += " " + tmp + " ";
+            returned += ") " + tmp + (tmp == "%" ? " int64_t(" : " double(");
+            // returned += " " + tmp + " ";
             v.rhs->accept(this);
             returned += "))";
         } else {

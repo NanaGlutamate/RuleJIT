@@ -150,7 +150,7 @@ struct RuleSetEngine {
         return ret;
     }
 
-  private:
+  // private:
     void execute() {
         for (auto &ruleset : std::array<RuleSet *, 2>{&preprocess, &ruleset}) {
 #ifdef __RULEJIT_PARALLEL_ENGINE
