@@ -69,12 +69,14 @@ int main(int argc, const char **argv) {
     if (!std::filesystem::exists(codegen.outputPath)) {
         // check if codegen.outputPath exists, if not, create it.
         std::filesystem::create_directories(codegen.outputPath);
-    } else {
-        // if already exists, ask user if continue
-        if (!opt.askIfContinue("directory " + codegen.outputPath + " already exists, continue?")) {
-            return 0;
-        }
-    }
+    } 
+    // donot ask to enable direct use in codegenUI
+    // else {
+    //     // if already exists, ask user if continue
+    //     if (!opt.askIfContinue("directory " + codegen.outputPath + " already exists, continue?")) {
+    //         return 0;
+    //     }
+    // }
     // start code generation, catch exceptions while throwed, and print exception message.
     try {
         codegen.buildFromFile(in);
