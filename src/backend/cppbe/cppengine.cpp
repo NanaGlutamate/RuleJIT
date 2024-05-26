@@ -158,12 +158,21 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
     // collect typedefs
     std::string typedefs;
     if (data.typeDefines.contains("_Input") || data.typeDefines.contains("_Output") ||
-        data.typeDefines.contains("_Cache")) {
-        error("CPP-Backend donot support user defined type name _Input/_Output/_Cache");
+        data.typeDefines.contains("_Cache") || data.typeDefines.contains("__AutoCollector")) {
+        error("CPP-Backend donot support user defined type name _Input/_Output/_Cache/__AutoCollector");
     }
     data.typeDefines.emplace("_Input", assembleType(data.inputVar, data));
     data.typeDefines.emplace("_Output", assembleType(data.outputVar, data));
     data.typeDefines.emplace("_Cache", assembleType(data.cacheVar, data));
+
+    std::string autocollector;
+    std::string autocollectorReaders;
+    for (auto&& name : data.inputVar) {
+        if (auto it = data.varType.find(name); it->second.ends_with("[]")){
+            autocollectorReaders += std::format(autoCollecterReader, name);
+        }
+    }
+    autocollector = std::format(autoCollecter, autocollectorReaders);
 
     std::map<std::string, std::set<std::string>> incompleteType;
     std::vector<std::string> completeType;
@@ -306,7 +315,7 @@ void CppEngine::buildFromSource(const std::string &srcXML) {
 
     // generate typedef.hpp
     std::ofstream typeDefFile(outputPath + prefix + "typedef.hpp");
-    typeDefFile << std::format(typeDefHpp, namespaceName, prefix, typedefs);
+    typeDefFile << std::format(typeDefHpp, namespaceName, prefix, typedefs, autocollector);
 
     // generate funcdef.hpp
     std::ofstream funcDefFile(outputPath + prefix + "funcdef.hpp");

@@ -14,6 +14,7 @@
  */
 #include "ast/astprinter.hpp"
 #include "frontend/parser.h"
+#include "frontend/semantic.hpp"
 
 #define CATCH_EXCEPTION
 
@@ -23,12 +24,14 @@ int printAST(const std::string &s, bool expectError = false) {
 
     static ExpressionLexer lexer;
     static ExpressionParser parser;
+    // static ExpressionSemantic semantic;
     static ASTPrinter printer;
 
 #ifdef CATCH_EXCEPTION
     try {
 #endif
-        std::unique_ptr<ExprAST> ast = s | lexer | parser;
+        s | lexer | parser;
+        std::unique_ptr<ExprAST> ast = parser.getNextExpr();
         std::string ast_str = ast | printer;
 #ifdef CATCH_EXCEPTION
         if (!expectError) {
@@ -77,30 +80,30 @@ int main() {
     // printAST("a+b;+c");
     // printAST("(a+b;+c)", true);
     // printAST("a-12=a+b+c*123-12=c+d", true);
-    printAST(R"({
-        extern func len(a []i32):i64
-        var a []i32 = []i32{1,2,3,4,5,6,7,8,9,10}
-        func isPrime(n i32): i32 -> {
-            var i i32 = 2
-            var isP i32 = 1
-            while (isP && n % i != 0 && i*i <= n) {
-                i = i + 1
-            }
-            isP
-        }
-        func (a []i32)len(): i32->{
-            len(a)
-        }
-        {
-            var i i32 = 0
-            while (i < a.len()) {
-                if (isPrime(a[i])) {
-                    print(a[i])
-                }
-                i = i + 1
-            }
-        }
-    })");
+    // printAST(R"({
+    //     extern func len(a []i32):i64
+    //     var a []i32 = []i32{1,2,3,4,5,6,7,8,9,10}
+    //     func isPrime(n i32): i32 -> {
+    //         var i i32 = 2
+    //         var isP i32 = 1
+    //         while (isP && n % i != 0 && i*i <= n) {
+    //             i = i + 1
+    //         }
+    //         isP
+    //     }
+    //     func (a []i32)len(): i32->{
+    //         len(a)
+    //     }
+    //     {
+    //         var i i32 = 0
+    //         while (i < a.len()) {
+    //             if (isPrime(a[i])) {
+    //                 print(a[i])
+    //             }
+    //             i = i + 1
+    //         }
+    //     }
+    // })");
     // printAST(R"({
     //     func isPrime(n i32): i32 -> {
     //         var i i32 = 2
@@ -125,7 +128,7 @@ int main() {
     //         print(iter())
     //     }
     // })");
-    printAST("a = if(a > 0) 1 else 0");
+    printAST("damageLevel == max - 1 and distance > 100");
 
     return 0;
 }

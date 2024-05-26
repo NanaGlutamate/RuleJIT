@@ -111,7 +111,7 @@
                                 var n = pow(target_v.x * target_v.x + target_v.y * target_v.y, 0.5)
                                 var sin_yaw = if (n == 0) 0 else target_v.y / n
                                 var cos_yaw = if (n == 0) 1 else target_v.x / n
-                                if (distance > 6000) {
+                                if (distance &gt; 6000) {
                                     tar.x = -20 * cos_yaw * diff
                                     tar.y = -20 * sin_yaw * diff
                                 } else {

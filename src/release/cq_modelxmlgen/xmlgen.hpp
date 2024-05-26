@@ -24,8 +24,7 @@
 namespace rulejit::xmlgen {
 
 // name, displayname, dllname, category, parameters
-inline constexpr auto filetemplate = R"(
-<?xml version="1.0" encoding="UTF-8"?>
+inline constexpr auto filetemplate = R"(<?xml version="1.0" encoding="UTF-8"?>
 <ModelInfo id="" name="{}" displayName="{}" dllName="{}" hasGeoInfo="false" category="{}" multiples="">
 	<Parameters>
 		<Parameter name="ID" type="uint64" displayName="ID" usage="init,output" value="" unit=""/>
@@ -40,7 +39,7 @@ inline constexpr auto filetemplate = R"(
 
 // name, type, usage
 inline constexpr auto paramtemplate = R"(
-		<Parameter name="{}" type="{}" displayName="" usage="{}" value="" unit=""/>)";
+		<Parameter name="{0}" type="{1}" displayName="{0}" usage="{2}" value="" unit=""/>)";
 
 struct ModelXMLGenerator {
     std::string dllName, name, displayName, category;

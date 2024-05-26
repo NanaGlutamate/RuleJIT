@@ -20,7 +20,7 @@
 
 namespace rulejit::cppgen::templates {
 
-// namespace, prefix, defs
+// namespace, prefix, defs, autocollector
 inline constexpr auto typeDefHpp = R"(#pragma once
 
 #include <unordered_map>
@@ -91,6 +91,10 @@ void emplaceFromAny(T& t, const std::any& v){{
         t = double(std::any_cast<typename Ty::type>(v));
     }}else if constexpr(is_vector_v<Ty>){{
         auto tmp = std::any_cast<std::vector<std::any>>(&v);
+        if(tmp==nullptr){{
+            t.clear();
+            return;
+        }}
         t.resize(tmp->size());
         for(size_t i = 0; i < tmp->size(); ++i){{
             emplaceFromAny(t[i], (*tmp)[i]);
@@ -127,6 +131,8 @@ struct NoInstanceType{{
     NoInstanceType& operator=(NoInstanceType&&) = delete;
 }};
 
+{3}
+
 {2}
 
 }}
@@ -145,6 +151,29 @@ struct {0} {{
     void ToValueMap(CSValueMap& tmp) const {{
 {3}    }}
 }};
+)";
+
+// input vector auto-collector
+// readers
+inline constexpr auto autoCollecter = R"(
+struct __AutoCollector{{
+    std::unordered_map<std::string, std::vector<std::any>> buffer;
+    CSValueMap assemble(){{
+        CSValueMap ret;
+        for(auto&&[k, v] : buffer){{
+            ret[k] = std::move(v);
+        }}
+        buffer.clear();
+        return ret;
+    }}
+    void read(const CSValueMap& value){{
+{0}    }}
+}};
+)";
+// value member names
+inline constexpr auto autoCollecterReader = R"(        if(auto it = value.find("{0}"); it != value.end() && it->second.type() != typeid(std::vector<std::any>)){{
+            buffer["{0}"].emplace_back(it->second);
+        }}
 )";
 
 // type token
@@ -215,6 +244,7 @@ struct RuleSet{{
     _Input in;
     _Output out;
     _Cache cache;
+    __AutoCollector ac;
     CSValueMap out_map;
     RuleSet() = default;
     void Init(){{
@@ -224,9 +254,13 @@ struct RuleSet{{
         return &out_map;
     }}
     void SetInput(const CSValueMap& map){{
+        ac.read(map);
         in.FromValueMap(map);
     }}
     void Tick(){{
+        if(ac.buffer.size()){{
+            in.FromValueMap(ac.assemble());
+        }}
         // auto &_in = in;
         // auto &_out = out;
         // auto _base = 0;

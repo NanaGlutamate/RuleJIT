@@ -81,6 +81,7 @@ std::string innerType(std::string type) {
  */
 const inline std::string preDefines = R"(
 // base
+extern func rand()->f64
 extern func sin(a f64)->f64
 extern func cos(a f64)->f64
 extern func tan(a f64)->f64
